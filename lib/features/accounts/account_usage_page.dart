@@ -469,28 +469,31 @@ VoidCallback? _verificationActionForError(BuildContext context, Object error) {
 }
 
 Future<void> _openAccountVerificationUrl(BuildContext context, String actionUrl) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final failureMessage = context.l10n.accountUsageVerificationOpenFailedMessage;
   final uri = Uri.tryParse(actionUrl);
   if (uri == null) {
-    _showVerificationOpenFailedMessage(context);
+    _showVerificationOpenFailedMessage(messenger, failureMessage);
     return;
   }
 
   try {
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened) {
-      _showVerificationOpenFailedMessage(context);
+      _showVerificationOpenFailedMessage(messenger, failureMessage);
     }
   } catch (_) {
-    _showVerificationOpenFailedMessage(context);
+    _showVerificationOpenFailedMessage(messenger, failureMessage);
   }
 }
 
-void _showVerificationOpenFailedMessage(BuildContext context) {
-  if (!context.mounted) {
+void _showVerificationOpenFailedMessage(
+  ScaffoldMessengerState? messenger,
+  String failureMessage,
+) {
+  if (messenger == null) {
     return;
   }
 
-  ScaffoldMessenger.maybeOf(
-    context,
-  )?.showSnackBar(SnackBar(content: Text(context.l10n.accountUsageVerificationOpenFailedMessage)));
+  messenger.showSnackBar(SnackBar(content: Text(failureMessage)));
 }
