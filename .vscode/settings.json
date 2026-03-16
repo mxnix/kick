@@ -1,0 +1,21 @@
+{
+  "editor.formatOnSave": true,
+  "files.exclude": {
+    "**/.dart_tool": true,
+    "**/.flutter-plugins-dependencies": true,
+    "**/build": true
+  },
+  "dart.analysisExcludedFolders": [
+    "${workspaceFolder}/build"
+  ],
+  "dart.flutterHotReloadOnSave": "all",
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.rulers": [
+      100
+    ],
+    "editor.tabSize": 2,
+    "editor.wordBasedSuggestions": "off"
+  }
+}

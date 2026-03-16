@@ -1,0 +1,15 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - "**/*.freezed.dart"
+    - "**/*.g.dart"
+    - "**/*.mocks.dart"
+
+formatter:
+  page_width: 100
+
+linter:
+  rules:
+    directives_ordering: true

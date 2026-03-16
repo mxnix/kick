@@ -1,0 +1,177 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+import '../analytics/kick_analytics.dart';
+import '../core/platform/android_foreground_runtime.dart';
+import '../core/platform/window_bootstrap.dart';
+import '../core/security/proxy_api_key.dart';
+import '../data/app_database.dart';
+import '../data/models/account_profile.dart';
+import '../data/models/app_settings.dart';
+import '../data/repositories/accounts_repository.dart';
+import '../data/repositories/logs_repository.dart';
+import '../data/repositories/secret_store.dart';
+import '../data/repositories/settings_repository.dart';
+import '../proxy/engine/proxy_controller.dart';
+import '../proxy/gemini/gemini_oauth_service.dart';
+
+final appBootstrapProvider = Provider<AppBootstrap>(
+  (ref) => throw UnimplementedError('Bootstrap must be provided before runApp.'),
+);
+
+class AppBootstrap {
+  AppBootstrap({
+    required this.database,
+    required this.secretStore,
+    required this.settingsRepository,
+    required this.accountsRepository,
+    required this.logsRepository,
+    required this.oauthService,
+    required this.analytics,
+    required this.proxyController,
+    required this.initialSettings,
+    required this.initialAccounts,
+  });
+
+  final AppDatabase database;
+  final SecretStore secretStore;
+  final SettingsRepository settingsRepository;
+  final AccountsRepository accountsRepository;
+  final LogsRepository logsRepository;
+  final GeminiOAuthService oauthService;
+  final KickAnalytics analytics;
+  final KickProxyController proxyController;
+  final AppSettings initialSettings;
+  final List<AccountProfile> initialAccounts;
+
+  Future<void> dispose() async {
+    await proxyController.dispose();
+    await database.close();
+  }
+}
+
+Future<AppBootstrap> initializeAppBootstrap() async {
+  final timings = _BootstrapTimings()..mark('initialize:start');
+  await WindowBootstrap.configure();
+  timings.mark('window_bootstrap_ready');
+  await AndroidForegroundRuntime.configure();
+  timings.mark('android_runtime_ready');
+
+  final supportDirectory = await getApplicationSupportDirectory();
+  timings.mark('support_directory_ready');
+  final databasePath = p.join(supportDirectory.path, 'kick.sqlite');
+  final database = await AppDatabase.open(databasePath);
+  timings.mark('database_ready');
+  final secretStore = const SecretStore();
+  final settingsRepository = SettingsRepository(database);
+  final accountsRepository = AccountsRepository(database);
+  final logsRepository = LogsRepository(database);
+  final oauthService = GeminiOAuthService(secretStore: secretStore);
+
+  var apiKey = await secretStore.readProxyApiKey();
+  apiKey ??= await settingsRepository.readLegacyApiKey();
+  apiKey ??= generateProxyApiKey();
+  await secretStore.writeProxyApiKey(apiKey);
+  await settingsRepository.deleteLegacyApiKey();
+  timings.mark('api_key_ready');
+
+  final currentSettings = await settingsRepository.readSettings(apiKey: apiKey);
+  if (currentSettings == null) {
+    await settingsRepository.writeSettings(AppSettings.defaults(apiKey: apiKey));
+  }
+  timings.mark('settings_ready');
+  final effectiveSettings =
+      currentSettings?.copyWith(apiKey: apiKey) ?? AppSettings.defaults(apiKey: apiKey);
+  final initialAccounts = await accountsRepository.readAll();
+  timings.mark('accounts_ready');
+  final analytics = KickAnalytics(trackingAllowed: analyticsTrackingAllowed(effectiveSettings));
+
+  final proxyController = KickProxyController(
+    accountsRepository: accountsRepository,
+    analytics: analytics,
+    logsRepository: logsRepository,
+    secretStore: secretStore,
+  );
+  timings.mark('bootstrap_ready');
+
+  unawaited(
+    _warmBootstrapServices(
+      analytics: analytics,
+      logsRepository: logsRepository,
+      proxyController: proxyController,
+      clearRawPayload: !effectiveSettings.unsafeRawLoggingEnabled,
+      timings: timings,
+    ),
+  );
+
+  return AppBootstrap(
+    database: database,
+    secretStore: secretStore,
+    settingsRepository: settingsRepository,
+    accountsRepository: accountsRepository,
+    logsRepository: logsRepository,
+    oauthService: oauthService,
+    analytics: analytics,
+    proxyController: proxyController,
+    initialSettings: effectiveSettings,
+    initialAccounts: initialAccounts,
+  );
+}
+
+Future<void> _warmBootstrapServices({
+  required KickAnalytics analytics,
+  required LogsRepository logsRepository,
+  required KickProxyController proxyController,
+  required bool clearRawPayload,
+  required _BootstrapTimings timings,
+}) async {
+  await Future<void>.delayed(Duration.zero);
+  try {
+    await logsRepository.scrubSensitiveEntries(clearRawPayload: clearRawPayload);
+    timings.mark('logs_scrubbed');
+  } catch (error, stackTrace) {
+    _debugBootstrapFailure('logs_scrubbed', error, stackTrace);
+  }
+
+  try {
+    await proxyController.initialize();
+    timings.mark('proxy_controller_initialized');
+  } catch (error, stackTrace) {
+    _debugBootstrapFailure('proxy_controller_initialized', error, stackTrace);
+  }
+
+  try {
+    await analytics.trackAppOpen();
+    timings.mark('analytics_tracked');
+  } catch (error, stackTrace) {
+    _debugBootstrapFailure('analytics_tracked', error, stackTrace);
+  }
+}
+
+void _debugBootstrapFailure(String stage, Object error, StackTrace stackTrace) {
+  if (!kDebugMode) {
+    return;
+  }
+  debugPrint('[bootstrap] $stage failed: $error');
+  debugPrint('$stackTrace');
+}
+
+class _BootstrapTimings {
+  final Stopwatch _stopwatch = Stopwatch()..start();
+  Duration _lastElapsed = Duration.zero;
+
+  void mark(String label) {
+    if (!kDebugMode) {
+      return;
+    }
+
+    final elapsed = _stopwatch.elapsed;
+    final delta = elapsed - _lastElapsed;
+    _lastElapsed = elapsed;
+    debugPrint('[bootstrap] $label +${delta.inMilliseconds}ms (${elapsed.inMilliseconds}ms total)');
+  }
+}

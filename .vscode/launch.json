@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Kick (Windows)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "windows"
+    },
+    {
+      "name": "Kick (Android)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "android"
+    },
+    {
+      "name": "Kick (Profile)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile"
+    }
+  ]
+}

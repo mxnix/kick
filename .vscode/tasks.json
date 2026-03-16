@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Flutter: Pub Get",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/flutterw.ps1",
+        "pub",
+        "get"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Flutter: Analyze",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/flutterw.ps1",
+        "analyze"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Flutter: Test",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/flutterw.ps1",
+        "test"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

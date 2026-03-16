@@ -1,0 +1,44 @@
+name: kick
+description: "Kick: a local OpenAI-compatible proxy for Gemini CLI with a Flutter shell"
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  aptabase_flutter: ^0.4.1
+  crypto: ^3.0.7
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  dynamic_color: ^1.8.1
+  drift: ^2.32.0
+  flutter_foreground_task: ^9.2.0
+  flutter_riverpod: ^3.3.1
+  flutter_secure_storage: ^10.0.0
+  go_router: ^17.1.0
+  http: ^1.5.0
+  intl: ^0.20.2
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  sqlite3: ^3.2.0
+  sqlite3_flutter_libs: ^0.6.0+eol
+  url_launcher: ^6.3.2
+  uuid: ^4.5.1
+  window_manager: ^0.5.1
+  share_plus: ^12.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  generate: true
+  uses-material-design: true
+  assets:
+    - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png

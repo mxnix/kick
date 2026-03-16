@@ -1,0 +1,66 @@
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+*.tmp
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains shared launch and task configuration, so keep it
+# in version control unless the repo decides otherwise.
+# .vscode/
+
+# Environment and local overrides
+.env
+.env.*
+!.env.example
+
+# Flutter / Dart / Pub
+**/doc/api/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub/
+.pub-cache/
+/build/
+/coverage/
+
+# Android
+/android/.gradle/
+/android/local.properties
+/android/key.properties
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+**/*.jks
+**/*.keystore
+
+# Apple platforms
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/Flutter-Generated.xcconfig
+
+# Desktop platform ephemerals
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+
+# Symbolication and obfuscation
+app.*.symbols
+app.*.map.json
