@@ -172,7 +172,7 @@ jobs:
             -SkipBuild
 
       - name: Upload Windows release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kick-windows-release
           path: build/dist/*
@@ -291,7 +291,7 @@ jobs:
           echo "artifact_dir=$artifact_dir" >> "$GITHUB_OUTPUT"
 
       - name: Upload Android release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kick-android-release
           path: ${{ steps.android_artifacts.outputs.artifact_dir }}/*
