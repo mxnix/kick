@@ -12,6 +12,10 @@
   #define OutputDir "build\dist"
 #endif
 
+#ifndef RepoRoot
+  #error RepoRoot define is required.
+#endif
+
 [Setup]
 AppId={{1D568E3B-29E9-4C4D-9438-308E83DCC73E}
 AppName={#MyAppName}
@@ -29,9 +33,9 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile=windows\runner\resources\app_icon.ico
+SetupIconFile={#RepoRoot}\windows\runner\resources\app_icon.ico
 UninstallDisplayIcon={app}\KiCk.exe
-LicenseFile=LICENSE.md
+LicenseFile={#RepoRoot}\LICENSE.md
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

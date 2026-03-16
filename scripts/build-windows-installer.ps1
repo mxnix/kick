@@ -44,6 +44,7 @@ New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
 $resolvedSourceDir = (Resolve-Path $SourceDir).Path
 $resolvedOutputDir = (Resolve-Path $OutputDir).Path
+$resolvedRepoRoot = (Resolve-Path $repoRoot).Path
 $portableArchive = Join-Path $resolvedOutputDir "kick-windows-$AppVersion-portable.zip"
 
 if (Test-Path $portableArchive) {
@@ -70,6 +71,7 @@ if (-not (Test-Path $installerScript)) {
 
 & $isccExecutable `
   "/DAppVersion=$AppVersion" `
+  "/DRepoRoot=$resolvedRepoRoot" `
   "/DSourceDir=$resolvedSourceDir" `
   "/DOutputDir=$resolvedOutputDir" `
   $installerScript
