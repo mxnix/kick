@@ -85,17 +85,17 @@ class AccountsPage extends ConsumerWidget {
       context,
       title: context.l10n.connectGoogleAccountTitle,
     );
-    if (draft == null) {
+    if (!context.mounted || draft == null) {
       return;
     }
-    await ref
-        .read(accountsControllerProvider.notifier)
-        .connectGoogleAccount(
-          projectId: draft.projectId,
-          label: draft.label,
-          priority: draft.priority,
-          notSupportedModels: draft.notSupportedModels,
-        );
+    await _connectGoogleAccount(
+      context,
+      ref,
+      projectId: draft.projectId,
+      label: draft.label,
+      priority: draft.priority,
+      notSupportedModels: draft.notSupportedModels,
+    );
   }
 }
 
@@ -216,7 +216,7 @@ class _AccountCard extends ConsumerWidget {
                     initial: account,
                     title: l10n.editAccountTitle,
                   );
-                  if (draft == null) {
+                  if (!context.mounted || draft == null) {
                     return;
                   }
                   await ref
@@ -240,18 +240,18 @@ class _AccountCard extends ConsumerWidget {
                     initial: account,
                     title: l10n.reauthorizeAccountTitle,
                   );
-                  if (draft == null) {
+                  if (!context.mounted || draft == null) {
                     return;
                   }
-                  await ref
-                      .read(accountsControllerProvider.notifier)
-                      .connectGoogleAccount(
-                        existing: account,
-                        projectId: draft.projectId,
-                        label: draft.label.isEmpty ? account.label : draft.label,
-                        priority: draft.priority,
-                        notSupportedModels: draft.notSupportedModels,
-                      );
+                  await _connectGoogleAccount(
+                    context,
+                    ref,
+                    existing: account,
+                    projectId: draft.projectId,
+                    label: draft.label.isEmpty ? account.label : draft.label,
+                    priority: draft.priority,
+                    notSupportedModels: draft.notSupportedModels,
+                  );
                 },
               ),
               _AccountActionButton(
@@ -277,6 +277,36 @@ class _AccountCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+Future<void> _connectGoogleAccount(
+  BuildContext context,
+  WidgetRef ref, {
+  required String projectId,
+  required String label,
+  required int priority,
+  required List<String> notSupportedModels,
+  AccountProfile? existing,
+}) async {
+  try {
+    await ref
+        .read(accountsControllerProvider.notifier)
+        .connectGoogleAccount(
+          existing: existing,
+          projectId: projectId,
+          label: label,
+          priority: priority,
+          notSupportedModels: notSupportedModels,
+        );
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(formatUserFacingError(context.l10n, error))));
   }
 }
 

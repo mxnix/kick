@@ -4,12 +4,24 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models/oauth_tokens.dart';
 import '../../data/repositories/secret_store.dart';
 import 'gemini_auth_constants.dart';
+
+typedef OAuthUrlLauncher = Future<bool> Function(Uri url, {required LaunchMode mode});
+typedef LaunchModeSupportChecker = Future<bool> Function(LaunchMode mode);
+typedef PlatformCheck = bool Function();
+typedef CodeExchangeHandler =
+    Future<OAuthTokens> Function({
+      required String code,
+      required String redirectUri,
+      required String codeVerifier,
+    });
+typedef ProfileFetcher = Future<Map<String, String>> Function(String accessToken);
 
 class AuthenticatedGoogleAccount {
   const AuthenticatedGoogleAccount({
@@ -24,12 +36,32 @@ class AuthenticatedGoogleAccount {
 }
 
 class GeminiOAuthService {
-  GeminiOAuthService({required SecretStore secretStore})
-    : _secretStore = secretStore,
-      _http = http.Client();
+  GeminiOAuthService({
+    required SecretStore secretStore,
+    http.Client? httpClient,
+    OAuthUrlLauncher? launchUrlDelegate,
+    LaunchModeSupportChecker? supportsLaunchModeDelegate,
+    PlatformCheck? isAndroid,
+    CodeExchangeHandler? exchangeCodeForTokens,
+    ProfileFetcher? fetchProfile,
+    Duration authorizationTimeout = const Duration(minutes: 5),
+  }) : _secretStore = secretStore,
+       _http = httpClient ?? http.Client(),
+       _launchUrl = launchUrlDelegate ?? ((url, {required mode}) => launchUrl(url, mode: mode)),
+       _supportsLaunchMode = supportsLaunchModeDelegate ?? supportsLaunchMode,
+       _isAndroid = isAndroid ?? _defaultIsAndroid,
+       _exchangeCodeForTokensDelegate = exchangeCodeForTokens,
+       _fetchProfileDelegate = fetchProfile,
+       _authorizationTimeout = authorizationTimeout;
 
   final SecretStore _secretStore;
   final http.Client _http;
+  final OAuthUrlLauncher _launchUrl;
+  final LaunchModeSupportChecker _supportsLaunchMode;
+  final PlatformCheck _isAndroid;
+  final CodeExchangeHandler? _exchangeCodeForTokensDelegate;
+  final ProfileFetcher? _fetchProfileDelegate;
+  final Duration _authorizationTimeout;
 
   Future<AuthenticatedGoogleAccount> authenticate() async {
     final callbackServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -54,56 +86,63 @@ class GeminiOAuthService {
 
         final params = request.uri.queryParameters;
         if (params['state'] != state) {
-          completer.completeError(StateError('OAuth state mismatch. Please try again.'));
           await _respondHtml(
             request,
             title: 'Authorization failed',
             message: 'State mismatch. You can close this tab.',
             isSuccess: false,
           );
+          if (!completer.isCompleted) {
+            completer.completeError(StateError('OAuth state mismatch. Please try again.'));
+          }
           return;
         }
 
         if (params.containsKey('error')) {
-          completer.completeError(
-            StateError(
-              'Google OAuth error: ${params['error']} ${params['error_description'] ?? ''}'.trim(),
-            ),
-          );
           await _respondHtml(
             request,
             title: 'Authorization failed',
             message: 'Google returned an error. You can close this tab.',
             isSuccess: false,
           );
+          if (!completer.isCompleted) {
+            completer.completeError(
+              StateError(
+                'Google OAuth error: ${params['error']} ${params['error_description'] ?? ''}'
+                    .trim(),
+              ),
+            );
+          }
           return;
         }
 
         final code = params['code'];
         if (code == null || code.isEmpty) {
-          completer.completeError(StateError('No authorization code received from Google.'));
           await _respondHtml(
             request,
             title: 'Authorization failed',
             message: 'No code was received. You can close this tab.',
             isSuccess: false,
           );
+          if (!completer.isCompleted) {
+            completer.completeError(StateError('No authorization code received from Google.'));
+          }
           return;
         }
 
-        completer.complete({'code': code, 'redirect_uri': redirectUri});
         await _respondHtml(
           request,
           title: 'Authorization complete',
           message: 'KiCk received the login. You can close this tab.',
           isSuccess: true,
         );
+        if (!completer.isCompleted) {
+          completer.complete({'code': code, 'redirect_uri': redirectUri});
+        }
       } catch (error) {
         if (!completer.isCompleted) {
           completer.completeError(error);
         }
-      } finally {
-        await callbackServer.close(force: true);
       }
     });
 
@@ -119,28 +158,33 @@ class GeminiOAuthService {
       'code_challenge_method': 'S256',
     });
 
-    final launched = await launchUrl(authUrl, mode: LaunchMode.externalApplication);
-    if (!launched) {
+    try {
+      final launched = await _launchUrl(authUrl, mode: await _resolveLaunchMode());
+      if (!launched) {
+        throw StateError('Could not open the browser for Google OAuth.');
+      }
+
+      final callback = await completer.future.timeout(
+        _authorizationTimeout,
+        onTimeout: () => throw TimeoutException('Google OAuth timed out.'),
+      );
+
+      final exchangeCodeForTokens = _exchangeCodeForTokensDelegate ?? _exchangeCodeForTokens;
+      final fetchProfile = _fetchProfileDelegate ?? _fetchProfile;
+      final tokens = await exchangeCodeForTokens(
+        code: callback['code']!,
+        redirectUri: callback['redirect_uri']!,
+        codeVerifier: codeVerifier,
+      );
+      final profile = await fetchProfile(tokens.accessToken);
+      return AuthenticatedGoogleAccount(
+        email: profile['email'] ?? '',
+        displayName: profile['name'] ?? profile['email'] ?? 'Google account',
+        tokens: tokens,
+      );
+    } finally {
       await callbackServer.close(force: true);
-      throw StateError('Could not open the browser for Google OAuth.');
     }
-
-    final callback = await completer.future.timeout(
-      const Duration(minutes: 5),
-      onTimeout: () => throw TimeoutException('Google OAuth timed out.'),
-    );
-
-    final tokens = await _exchangeCodeForTokens(
-      code: callback['code']!,
-      redirectUri: callback['redirect_uri']!,
-      codeVerifier: codeVerifier,
-    );
-    final profile = await _fetchProfile(tokens.accessToken);
-    return AuthenticatedGoogleAccount(
-      email: profile['email'] ?? '',
-      displayName: profile['name'] ?? profile['email'] ?? 'Google account',
-      tokens: tokens,
-    );
   }
 
   Future<OAuthTokens> refreshTokens(OAuthTokens tokens) async {
@@ -228,6 +272,25 @@ class GeminiOAuthService {
     return payload.map((key, value) => MapEntry(key, value?.toString() ?? ''));
   }
 
+  Future<LaunchMode> _resolveLaunchMode() async {
+    if (!_isAndroid()) {
+      return LaunchMode.externalApplication;
+    }
+
+    try {
+      final supportsInAppBrowser = await _supportsLaunchMode(LaunchMode.inAppBrowserView);
+      if (supportsInAppBrowser) {
+        // Keep Android auth inside a custom tab so the app stays active while
+        // waiting for the loopback callback on devices with aggressive backgrounding.
+        return LaunchMode.inAppBrowserView;
+      }
+    } catch (_) {
+      // Fall back to the external browser flow if launch mode detection fails.
+    }
+
+    return LaunchMode.externalApplication;
+  }
+
   Future<void> _respondHtml(
     HttpRequest request, {
     required String title,
@@ -284,5 +347,9 @@ class GeminiOAuthService {
   String _buildCodeChallenge(String codeVerifier) {
     final digest = sha256.convert(utf8.encode(codeVerifier));
     return base64UrlEncode(digest.bytes).replaceAll('=', '');
+  }
+
+  static bool _defaultIsAndroid() {
+    return !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
   }
 }
