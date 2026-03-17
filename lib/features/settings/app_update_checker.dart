@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -23,20 +24,28 @@ class AppUpdateChecker {
   AppUpdateChecker({
     http.Client? httpClient,
     String apiUrl = kickLatestReleaseApiUrl,
+    Duration requestTimeout = const Duration(seconds: 8),
   }) : _http = httpClient ?? http.Client(),
-       _apiUrl = apiUrl;
+       _apiUrl = apiUrl,
+       _requestTimeout = requestTimeout > Duration.zero
+           ? requestTimeout
+           : const Duration(seconds: 8);
 
   final http.Client _http;
   final String _apiUrl;
+  final Duration _requestTimeout;
 
   Future<AppUpdateInfo> checkForUpdates({required String currentVersion}) async {
     final normalizedCurrentVersion = normalizeVersion(currentVersion);
-    final response = await _http.get(
-      Uri.parse(_apiUrl),
-      headers: {
-        'Accept': 'application/vnd.github+json',
-        'User-Agent': 'KiCk/$normalizedCurrentVersion',
-      },
+    final response = await _runWithTimeout(
+      () => _http.get(
+        Uri.parse(_apiUrl),
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'User-Agent': 'KiCk/$normalizedCurrentVersion',
+        },
+      ),
+      'Checking for updates',
     );
 
     if (response.statusCode >= 400) {
@@ -68,6 +77,13 @@ class AppUpdateChecker {
 
   void dispose() {
     _http.close();
+  }
+
+  Future<T> _runWithTimeout<T>(Future<T> Function() operation, String label) {
+    return operation().timeout(
+      _requestTimeout,
+      onTimeout: () => throw TimeoutException('$label timed out.'),
+    );
   }
 
   @visibleForTesting

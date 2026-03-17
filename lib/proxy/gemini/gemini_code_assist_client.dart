@@ -274,15 +274,20 @@ class GeminiCodeAssistClient {
     http.Client? httpClient,
     Future<void> Function(Duration delay)? wait,
     GeminiRetryPolicy retryPolicy = const GeminiRetryPolicy(),
+    Duration requestTimeout = const Duration(seconds: 45),
   }) : _onTokensUpdated = onTokensUpdated,
        _http = httpClient ?? http.Client(),
        _wait = wait ?? _defaultWait,
-       _retryPolicy = retryPolicy.normalized();
+       _retryPolicy = retryPolicy.normalized(),
+       _requestTimeout = requestTimeout > Duration.zero
+           ? requestTimeout
+           : const Duration(seconds: 45);
 
   final Future<void> Function(ProxyRuntimeAccount account, OAuthTokens tokens) _onTokensUpdated;
   final http.Client _http;
   final Future<void> Function(Duration delay) _wait;
   GeminiRetryPolicy _retryPolicy;
+  final Duration _requestTimeout;
   int _promptSequence = 0;
 
   void updateRetryPolicy(GeminiRetryPolicy retryPolicy) {
@@ -652,15 +657,18 @@ class GeminiCodeAssistClient {
   }
 
   Future<OAuthTokens> _refreshTokens(OAuthTokens tokens) async {
-    final response = await _http.post(
-      Uri.https('oauth2.googleapis.com', '/token'),
-      headers: {HttpHeaders.contentTypeHeader: 'application/x-www-form-urlencoded'},
-      body: {
-        'client_id': geminiOAuthClientId,
-        'client_secret': geminiOAuthClientSecret,
-        'refresh_token': tokens.refreshToken,
-        'grant_type': 'refresh_token',
-      },
+    final response = await _runWithRequestTimeout(
+      () => _http.post(
+        Uri.https('oauth2.googleapis.com', '/token'),
+        headers: {HttpHeaders.contentTypeHeader: 'application/x-www-form-urlencoded'},
+        body: {
+          'client_id': geminiOAuthClientId,
+          'client_secret': geminiOAuthClientSecret,
+          'refresh_token': tokens.refreshToken,
+          'grant_type': 'refresh_token',
+        },
+      ),
+      'Gemini OAuth token refresh',
     );
     if (response.statusCode >= 400) {
       throw decodeGeminiGatewayError(response.statusCode, response.body);
@@ -711,17 +719,20 @@ class GeminiCodeAssistClient {
     required String promptSeed,
     required Map<String, Object?> requestBody,
   }) async {
-    final response = await _http.post(
-      _methodUri('generateContent'),
-      headers: _headers(accessToken, model: model),
-      body: jsonEncode(
-        _buildRequestEnvelope(
-          model: model,
-          projectId: projectId,
-          promptSeed: promptSeed,
-          requestBody: requestBody,
+    final response = await _runWithRequestTimeout(
+      () => _http.post(
+        _methodUri('generateContent'),
+        headers: _headers(accessToken, model: model),
+        body: jsonEncode(
+          _buildRequestEnvelope(
+            model: model,
+            projectId: projectId,
+            promptSeed: promptSeed,
+            requestBody: requestBody,
+          ),
         ),
       ),
+      'Gemini request',
     );
     return _decodeResponse(response);
   }
@@ -747,7 +758,10 @@ class GeminiCodeAssistClient {
               requestBody: requestBody,
             ),
           );
-    final response = await _http.send(httpRequest);
+    final response = await _runWithRequestTimeout(
+      () => _http.send(httpRequest),
+      'Gemini streaming request',
+    );
     if (response.statusCode >= 400) {
       final body = await response.stream.bytesToString();
       throw decodeGeminiGatewayError(response.statusCode, body);
@@ -918,6 +932,17 @@ class GeminiCodeAssistClient {
       return error;
     }
 
+    if (error is TimeoutException) {
+      final message = (error.message?.toString().trim().isNotEmpty == true)
+          ? error.message!.toString().trim()
+          : 'Timed out while contacting Gemini Code Assist.';
+      return GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.capacity,
+        message: message,
+        statusCode: 503,
+      );
+    }
+
     if (error is SocketException) {
       return GeminiGatewayException(
         kind: GeminiGatewayFailureKind.capacity,
@@ -946,6 +971,14 @@ class GeminiCodeAssistClient {
       kind: GeminiGatewayFailureKind.unknown,
       message: error.toString(),
       statusCode: 500,
+    );
+  }
+
+  Future<T> _runWithRequestTimeout<T>(Future<T> Function() operation, String label) {
+    return operation().timeout(
+      _requestTimeout,
+      onTimeout: () =>
+          throw TimeoutException('$label timed out while contacting Gemini Code Assist.'),
     );
   }
 

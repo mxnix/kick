@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kick/data/app_database.dart';
+import 'package:path/path.dart' as p;
+import 'package:sqlite3/sqlite3.dart' as sqlite3;
 
 void main() {
   test('close releases drift tracking for subsequent database instances', () async {
@@ -32,4 +36,100 @@ void main() {
       isEmpty,
     );
   });
+
+  test('repairs legacy databases with missing additive columns', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick-app-db-test-');
+    addTearDown(() async {
+      if (await tempDirectory.exists()) {
+        await tempDirectory.delete(recursive: true);
+      }
+    });
+
+    final databasePath = p.join(tempDirectory.path, 'kick.sqlite');
+    final legacyDatabase = sqlite3.sqlite3.open(databasePath);
+    try {
+      legacyDatabase.execute('''
+        CREATE TABLE settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      ''');
+      legacyDatabase.execute('''
+        CREATE TABLE accounts (
+          id TEXT PRIMARY KEY,
+          label TEXT NOT NULL,
+          email TEXT NOT NULL,
+          project_id TEXT NOT NULL
+        )
+      ''');
+      legacyDatabase.execute('''
+        CREATE TABLE logs (
+          id TEXT PRIMARY KEY,
+          timestamp TEXT NOT NULL,
+          level TEXT NOT NULL,
+          category TEXT NOT NULL,
+          message TEXT NOT NULL
+        )
+      ''');
+      legacyDatabase.execute("""
+        INSERT INTO accounts (id, label, email, project_id)
+        VALUES ('account-1', 'Primary', 'user@example.com', 'project-1')
+      """);
+      legacyDatabase.execute("""
+        INSERT INTO logs (id, timestamp, level, category, message)
+        VALUES ('log-1', '2026-03-17T00:00:00.000', 'info', 'proxy', 'Ready')
+      """);
+    } finally {
+      legacyDatabase.close();
+    }
+
+    final database = AppDatabase(NativeDatabase(File(databasePath)));
+    addTearDown(database.close);
+
+    final accountColumns = await _tableColumns(database, 'accounts');
+    final logColumns = await _tableColumns(database, 'logs');
+    final accountRow = await database
+        .customSelect(
+          '''
+          SELECT
+            enabled,
+            priority,
+            not_supported_models,
+            usage_count,
+            error_count,
+            token_ref
+          FROM accounts
+          WHERE id = ?1
+        ''',
+          variables: [Variable<String>('account-1')],
+        )
+        .getSingle();
+
+    expect(
+      accountColumns,
+      containsAll(<String>{
+        'enabled',
+        'priority',
+        'not_supported_models',
+        'last_used_at',
+        'usage_count',
+        'error_count',
+        'cooldown_until',
+        'last_quota_snapshot',
+        'token_ref',
+      }),
+    );
+    expect(logColumns, containsAll(<String>{'route', 'masked_payload', 'raw_payload'}));
+    expect(accountRow.read<int>('enabled'), 1);
+    expect(accountRow.read<int>('priority'), 0);
+    expect(accountRow.read<String>('not_supported_models'), '');
+    expect(accountRow.read<int>('usage_count'), 0);
+    expect(accountRow.read<int>('error_count'), 0);
+    expect(accountRow.read<String>('token_ref'), 'kick.oauth.account-1');
+  });
+}
+
+Future<Set<String>> _tableColumns(AppDatabase database, String tableName) async {
+  final rows = await database.customSelect('PRAGMA table_info($tableName)').get();
+  return rows.map((row) => row.read<String>('name')).toSet();
 }

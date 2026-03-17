@@ -45,6 +45,7 @@ class GeminiOAuthService {
     CodeExchangeHandler? exchangeCodeForTokens,
     ProfileFetcher? fetchProfile,
     Duration authorizationTimeout = const Duration(minutes: 5),
+    Duration requestTimeout = const Duration(seconds: 15),
   }) : _secretStore = secretStore,
        _http = httpClient ?? http.Client(),
        _launchUrl = launchUrlDelegate ?? ((url, {required mode}) => launchUrl(url, mode: mode)),
@@ -52,7 +53,10 @@ class GeminiOAuthService {
        _isAndroid = isAndroid ?? _defaultIsAndroid,
        _exchangeCodeForTokensDelegate = exchangeCodeForTokens,
        _fetchProfileDelegate = fetchProfile,
-       _authorizationTimeout = authorizationTimeout;
+       _authorizationTimeout = authorizationTimeout,
+       _requestTimeout = requestTimeout > Duration.zero
+           ? requestTimeout
+           : const Duration(seconds: 15);
 
   final SecretStore _secretStore;
   final http.Client _http;
@@ -62,6 +66,7 @@ class GeminiOAuthService {
   final CodeExchangeHandler? _exchangeCodeForTokensDelegate;
   final ProfileFetcher? _fetchProfileDelegate;
   final Duration _authorizationTimeout;
+  final Duration _requestTimeout;
 
   Future<AuthenticatedGoogleAccount> authenticate() async {
     final callbackServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -171,12 +176,18 @@ class GeminiOAuthService {
 
       final exchangeCodeForTokens = _exchangeCodeForTokensDelegate ?? _exchangeCodeForTokens;
       final fetchProfile = _fetchProfileDelegate ?? _fetchProfile;
-      final tokens = await exchangeCodeForTokens(
-        code: callback['code']!,
-        redirectUri: callback['redirect_uri']!,
-        codeVerifier: codeVerifier,
+      final tokens = await _runWithRequestTimeout(
+        () => exchangeCodeForTokens(
+          code: callback['code']!,
+          redirectUri: callback['redirect_uri']!,
+          codeVerifier: codeVerifier,
+        ),
+        'Google OAuth token exchange',
       );
-      final profile = await fetchProfile(tokens.accessToken);
+      final profile = await _runWithRequestTimeout(
+        () => fetchProfile(tokens.accessToken),
+        'Google profile lookup',
+      );
       return AuthenticatedGoogleAccount(
         email: profile['email'] ?? '',
         displayName: profile['name'] ?? profile['email'] ?? 'Google account',
@@ -188,15 +199,18 @@ class GeminiOAuthService {
   }
 
   Future<OAuthTokens> refreshTokens(OAuthTokens tokens) async {
-    final response = await _http.post(
-      Uri.https('oauth2.googleapis.com', '/token'),
-      headers: {HttpHeaders.contentTypeHeader: 'application/x-www-form-urlencoded'},
-      body: {
-        'client_id': geminiOAuthClientId,
-        'client_secret': geminiOAuthClientSecret,
-        'refresh_token': tokens.refreshToken,
-        'grant_type': 'refresh_token',
-      },
+    final response = await _runWithRequestTimeout(
+      () => _http.post(
+        Uri.https('oauth2.googleapis.com', '/token'),
+        headers: {HttpHeaders.contentTypeHeader: 'application/x-www-form-urlencoded'},
+        body: {
+          'client_id': geminiOAuthClientId,
+          'client_secret': geminiOAuthClientSecret,
+          'refresh_token': tokens.refreshToken,
+          'grant_type': 'refresh_token',
+        },
+      ),
+      'Google OAuth token refresh',
     );
 
     if (response.statusCode >= 400) {
@@ -228,17 +242,20 @@ class GeminiOAuthService {
     required String redirectUri,
     required String codeVerifier,
   }) async {
-    final response = await _http.post(
-      Uri.https('oauth2.googleapis.com', '/token'),
-      headers: {HttpHeaders.contentTypeHeader: 'application/x-www-form-urlencoded'},
-      body: {
-        'code': code,
-        'client_id': geminiOAuthClientId,
-        'client_secret': geminiOAuthClientSecret,
-        'code_verifier': codeVerifier,
-        'redirect_uri': redirectUri,
-        'grant_type': 'authorization_code',
-      },
+    final response = await _runWithRequestTimeout(
+      () => _http.post(
+        Uri.https('oauth2.googleapis.com', '/token'),
+        headers: {HttpHeaders.contentTypeHeader: 'application/x-www-form-urlencoded'},
+        body: {
+          'code': code,
+          'client_id': geminiOAuthClientId,
+          'client_secret': geminiOAuthClientSecret,
+          'code_verifier': codeVerifier,
+          'redirect_uri': redirectUri,
+          'grant_type': 'authorization_code',
+        },
+      ),
+      'Google OAuth token exchange',
     );
 
     if (response.statusCode >= 400) {
@@ -258,9 +275,12 @@ class GeminiOAuthService {
   }
 
   Future<Map<String, String>> _fetchProfile(String accessToken) async {
-    final response = await _http.get(
-      Uri.https('www.googleapis.com', '/oauth2/v2/userinfo'),
-      headers: {HttpHeaders.authorizationHeader: 'Bearer $accessToken'},
+    final response = await _runWithRequestTimeout(
+      () => _http.get(
+        Uri.https('www.googleapis.com', '/oauth2/v2/userinfo'),
+        headers: {HttpHeaders.authorizationHeader: 'Bearer $accessToken'},
+      ),
+      'Google profile lookup',
     );
     if (response.statusCode >= 400) {
       throw StateError(
@@ -289,6 +309,13 @@ class GeminiOAuthService {
     }
 
     return LaunchMode.externalApplication;
+  }
+
+  Future<T> _runWithRequestTimeout<T>(Future<T> Function() operation, String label) {
+    return operation().timeout(
+      _requestTimeout,
+      onTimeout: () => throw TimeoutException('$label timed out.'),
+    );
   }
 
   Future<void> _respondHtml(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +59,30 @@ void main() {
     final result = await checker.checkForUpdates(currentVersion: '0.2.0');
 
     expect(result.hasUpdate, isFalse);
+  });
+
+  test('times out when the update endpoint stalls', () async {
+    final checker = AppUpdateChecker(
+      apiUrl: 'https://example.com/releases/latest',
+      requestTimeout: const Duration(milliseconds: 10),
+      httpClient: QueueHttpClient([
+        (_) async {
+          await Future<void>.delayed(const Duration(milliseconds: 40));
+          return http.Response('{}', 200);
+        },
+      ]),
+    );
+
+    await expectLater(
+      checker.checkForUpdates(currentVersion: '0.2.0'),
+      throwsA(
+        isA<TimeoutException>().having(
+          (error) => error.message,
+          'message',
+          'Checking for updates timed out.',
+        ),
+      ),
+    );
   });
 }
 

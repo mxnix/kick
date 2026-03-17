@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/data/repositories/secret_store.dart';
 import 'package:kick/proxy/gemini/gemini_oauth_service.dart';
@@ -109,6 +110,30 @@ void main() {
       await request.close();
     }(), throwsA(isA<SocketException>()));
   });
+
+  test('times out stalled token refresh requests', () async {
+    final service = GeminiOAuthService(
+      secretStore: const SecretStore(),
+      requestTimeout: const Duration(milliseconds: 10),
+      httpClient: QueueHttpClient([
+        (_) async {
+          await Future<void>.delayed(const Duration(milliseconds: 40));
+          return http.Response('{}', 200);
+        },
+      ]),
+    );
+
+    await expectLater(
+      service.refreshTokens(sampleTokens()),
+      throwsA(
+        isA<TimeoutException>().having(
+          (error) => error.message,
+          'message',
+          'Google OAuth token refresh timed out.',
+        ),
+      ),
+    );
+  });
 }
 
 Future<void> _simulateBrowserFlow({required Uri redirectUri, required String state}) async {
@@ -157,4 +182,32 @@ class _ResponseSnapshot {
   final int statusCode;
   final String body;
   final String? location;
+}
+
+class QueueHttpClient extends http.BaseClient {
+  QueueHttpClient(this._handlers);
+
+  final List<Future<http.BaseResponse> Function(http.BaseRequest request)> _handlers;
+  var _index = 0;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (_index >= _handlers.length) {
+      throw StateError('No queued HTTP response for ${request.method} ${request.url}.');
+    }
+
+    final response = await _handlers[_index++](request);
+    if (response is http.StreamedResponse) {
+      return response;
+    }
+    if (response is http.Response) {
+      return http.StreamedResponse(
+        Stream.value(response.bodyBytes),
+        response.statusCode,
+        headers: response.headers,
+        reasonPhrase: response.reasonPhrase,
+      );
+    }
+    throw StateError('Unsupported HTTP response type: ${response.runtimeType}.');
+  }
 }

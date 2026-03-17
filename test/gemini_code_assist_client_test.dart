@@ -114,6 +114,34 @@ void main() {
     );
   });
 
+  test('fails fast when the Gemini request times out', () async {
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      requestTimeout: const Duration(milliseconds: 10),
+      retryPolicy: const GeminiRetryPolicy(maxRetries: 0),
+      httpClient: QueueHttpClient([
+        (_) async {
+          await Future<void>.delayed(const Duration(milliseconds: 40));
+          return http.Response('{}', 200);
+        },
+      ]),
+    );
+
+    await expectLater(
+      client.generateContent(account: sampleAccount(), request: sampleRequest()),
+      throwsA(
+        isA<GeminiGatewayException>()
+            .having((error) => error.kind, 'kind', GeminiGatewayFailureKind.capacity)
+            .having((error) => error.statusCode, 'statusCode', 503)
+            .having(
+              (error) => error.message,
+              'message',
+              'Gemini request timed out while contacting Gemini Code Assist.',
+            ),
+      ),
+    );
+  });
+
   test('retries quota failures using retry hint before succeeding', () async {
     final waits = <Duration>[];
     var attempts = 0;
