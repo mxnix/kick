@@ -123,7 +123,8 @@ Future<void> _simulateBrowserFlow({required Uri redirectUri, required String sta
     redirectUri.replace(queryParameters: {'state': state, 'code': 'oauth-code'}),
   );
   expect(callbackResponse.statusCode, HttpStatus.ok);
-  expect(callbackResponse.body, contains('Authorization complete'));
+  expect(callbackResponse.body, contains('Успешная авторизация'));
+  expect(callbackResponse.body, contains('Вы можете закрыть вкладку.'));
 }
 
 Future<void> _simulateCallback({required Uri redirectUri, required String state}) async {
