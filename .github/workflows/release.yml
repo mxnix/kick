@@ -66,7 +66,7 @@ jobs:
           echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ steps.ref.outputs.source_ref }}
@@ -126,7 +126,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.metadata.outputs.ref }}
 
@@ -172,7 +172,7 @@ jobs:
             -SkipBuild
 
       - name: Upload Windows release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kick-windows-release
           path: build/dist/*
@@ -185,18 +185,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.metadata.outputs.ref }}
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
       - name: Set up Gradle cache
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -291,7 +291,7 @@ jobs:
           echo "artifact_dir=$artifact_dir" >> "$GITHUB_OUTPUT"
 
       - name: Upload Android release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kick-android-release
           path: ${{ steps.android_artifacts.outputs.artifact_dir }}/*
@@ -307,7 +307,7 @@ jobs:
 
     steps:
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-artifacts
           merge-multiple: true
