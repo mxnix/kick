@@ -10,6 +10,7 @@ class AppDatabase extends DatabaseConnectionUser {
     _attachedDatabase = _AttachedDatabase(this, executor);
   }
 
+  bool _closed = false;
   late final GeneratedDatabase _attachedDatabase;
 
   @override
@@ -75,9 +76,14 @@ class AppDatabase extends DatabaseConnectionUser {
       ON logs (timestamp)
     ''');
   }
+
   @override
   Future<void> close() async {
-    await executor.close();
+    if (_closed) {
+      return;
+    }
+    _closed = true;
+    await _attachedDatabase.close();
   }
 }
 

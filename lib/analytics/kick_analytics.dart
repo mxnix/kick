@@ -11,11 +11,7 @@ bool analyticsTrackingAllowed(AppSettings settings) {
 }
 
 class AnalyticsBuildConfig {
-  const AnalyticsBuildConfig({
-    required this.buildChannel,
-    required this.appKey,
-    this.host,
-  });
+  const AnalyticsBuildConfig({required this.buildChannel, required this.appKey, this.host});
 
   final String buildChannel;
   final String appKey;
@@ -126,15 +122,11 @@ class KickAnalytics {
   }
 
   Future<void> trackDisclaimerAccepted({required bool analyticsEnabled}) {
-    return _track('disclaimer_accepted', {
-      'analytics_enabled': _flag(analyticsEnabled),
-    });
+    return _track('disclaimer_accepted', {'analytics_enabled': _flag(analyticsEnabled)});
   }
 
   Future<void> trackAccountConnectStarted({required bool reauthorization}) {
-    return _track('account_connect_started', {
-      'reauthorization': _flag(reauthorization),
-    });
+    return _track('account_connect_started', {'reauthorization': _flag(reauthorization)});
   }
 
   Future<void> trackAccountConnectSucceeded({
@@ -157,10 +149,7 @@ class KickAnalytics {
     });
   }
 
-  Future<void> trackProxyStarted({
-    required bool allowLan,
-    required int activeAccounts,
-  }) {
+  Future<void> trackProxyStarted({required bool allowLan, required int activeAccounts}) {
     return _track('proxy_started', {
       'allow_lan': _flag(allowLan),
       'active_accounts': activeAccounts,
@@ -206,12 +195,102 @@ class KickAnalytics {
     return _track('proxy_request_failed', properties);
   }
 
-  Future<void> trackLogsExported({required int entryCount}) {
-    return _track('logs_exported', {'entry_count': entryCount});
+  Future<void> trackProxyRequestRetried({
+    required String route,
+    required String model,
+    required bool stream,
+    required String outcome,
+    required int retryCount,
+    required int upstreamRetryCount,
+    required int accountFailoverCount,
+    String? retryKinds,
+    int? retryDelayMs,
+    int? statusCode,
+  }) {
+    final properties = <String, Object?>{
+      'route': route,
+      'model_family': modelFamily(model),
+      'stream': _flag(stream),
+      'outcome': outcome,
+      'retry_count': retryCount,
+      'upstream_retry_count': upstreamRetryCount,
+      'account_failover_count': accountFailoverCount,
+    };
+    if (retryKinds != null && retryKinds.trim().isNotEmpty) {
+      properties['retry_kinds'] = retryKinds;
+    }
+    if (retryDelayMs != null && retryDelayMs > 0) {
+      properties['retry_delay_ms'] = retryDelayMs;
+    }
+    if (statusCode != null) {
+      properties['status_code'] = statusCode;
+    }
+    return _track('proxy_request_retried', properties);
   }
 
-  Future<void> trackLogsShared({required int entryCount}) {
-    return _track('logs_shared', {'entry_count': entryCount});
+  Future<void> trackProxySessionSummary({
+    required int uptimeSec,
+    required int requestCount,
+    required int successCount,
+    required int failedCount,
+    required int retriedCount,
+    required int activeAccounts,
+    required int healthyAccounts,
+    required int requestMaxRetries,
+    required bool mark429AsUnhealthy,
+    required bool androidBackgroundRuntime,
+    String? stopReason,
+  }) {
+    return _track('proxy_session_summary', {
+      'uptime_sec': uptimeSec,
+      'request_count': requestCount,
+      'success_count': successCount,
+      'failed_count': failedCount,
+      'retried_count': retriedCount,
+      'active_accounts': activeAccounts,
+      'healthy_accounts': healthyAccounts,
+      'request_max_retries': requestMaxRetries,
+      'mark_429_as_unhealthy': _flag(mark429AsUnhealthy),
+      'android_background_runtime': _flag(androidBackgroundRuntime),
+      'stop_reason': stopReason,
+    });
+  }
+
+  Future<void> trackUpstreamCompatibilityIssue({
+    required String issueKind,
+    required String route,
+    required String model,
+    required bool stream,
+    String? errorKind,
+    int? statusCode,
+  }) {
+    final properties = <String, Object?>{
+      'issue_kind': issueKind,
+      'route': route,
+      'model_family': modelFamily(model),
+      'stream': _flag(stream),
+    };
+    if (errorKind != null && errorKind.trim().isNotEmpty) {
+      properties['error_kind'] = errorKind;
+    }
+    if (statusCode != null) {
+      properties['status_code'] = statusCode;
+    }
+    return _track('upstream_compatibility_issue', properties);
+  }
+
+  Future<void> trackAndroidBackgroundSession({
+    required int durationSec,
+    required bool killedInBackground,
+    required bool androidBackgroundRuntimeEnabled,
+    required bool proxyWasRunning,
+  }) {
+    return _track('android_background_session', {
+      'duration_sec': durationSec,
+      'killed_in_background': _flag(killedInBackground),
+      'android_background_runtime_enabled': _flag(androidBackgroundRuntimeEnabled),
+      'proxy_was_running': _flag(proxyWasRunning),
+    });
   }
 
   Future<void> _track(String eventName, [Map<String, Object?> properties = const {}]) async {

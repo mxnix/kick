@@ -20,6 +20,9 @@ class LogsRepository {
   }
 
   Future<void> insert(AppLogEntry entry) async {
+    final sanitizedMessage = LogSanitizer.sanitizeText(entry.message);
+    final sanitizedMaskedPayload = LogSanitizer.sanitizeSerializedPayload(entry.maskedPayload);
+
     await _database.customInsert(
       '''
       INSERT INTO logs (
@@ -32,8 +35,8 @@ class LogsRepository {
         Variable<String>(entry.level.name),
         Variable<String>(entry.category),
         Variable<String>(entry.route ?? ''),
-        Variable<String>(entry.message),
-        Variable<String>(entry.maskedPayload ?? ''),
+        Variable<String>(sanitizedMessage),
+        Variable<String>(sanitizedMaskedPayload ?? ''),
         Variable<String>(entry.rawPayload ?? ''),
       ],
     );
@@ -58,19 +61,22 @@ class LogsRepository {
 
     await _database.transaction(() async {
       for (final entry in entries) {
+        final sanitizedMessage = LogSanitizer.sanitizeText(entry.message);
         final sanitizedMaskedPayload = LogSanitizer.sanitizeSerializedPayload(entry.maskedPayload);
         final nextRawPayload = clearRawPayload ? '' : (entry.rawPayload ?? '');
         final currentRawPayload = entry.rawPayload ?? '';
         final nextMaskedPayload = sanitizedMaskedPayload ?? '';
         final currentMaskedPayload = entry.maskedPayload ?? '';
 
-        if (nextMaskedPayload == currentMaskedPayload && nextRawPayload == currentRawPayload) {
+        if (sanitizedMessage == entry.message &&
+            nextMaskedPayload == currentMaskedPayload &&
+            nextRawPayload == currentRawPayload) {
           continue;
         }
 
         await _database.customStatement(
-          'UPDATE logs SET masked_payload = ?1, raw_payload = ?2 WHERE id = ?3',
-          [nextMaskedPayload, nextRawPayload, entry.id],
+          'UPDATE logs SET message = ?1, masked_payload = ?2, raw_payload = ?3 WHERE id = ?4',
+          [sanitizedMessage, nextMaskedPayload, nextRawPayload, entry.id],
         );
       }
     });

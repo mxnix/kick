@@ -37,4 +37,13 @@ void main() {
     expect(sanitized, contains('[REDACTED preview chars=23]'));
     expect(sanitized, isNot(contains('generated answer')));
   });
+
+  test('masks emails in loose log strings while keeping domain visible', () {
+    final sanitized = LogSanitizer.sanitizeText(
+      'Using account `qwerty123@gmail.com` (Primary) for `gemini-3.1-pro-preview`',
+    );
+
+    expect(sanitized, 'Using account `q*******3@gmail.com` (Primary) for `gemini-3.1-pro-preview`');
+    expect(sanitized, isNot(contains('qwerty123@gmail.com')));
+  });
 }

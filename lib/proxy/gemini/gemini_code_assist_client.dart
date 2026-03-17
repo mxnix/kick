@@ -64,6 +64,20 @@ class GeminiRetryPolicy {
   }
 }
 
+class GeminiRetryEvent {
+  const GeminiRetryEvent({
+    required this.attempt,
+    required this.maxRetries,
+    required this.delay,
+    required this.error,
+  });
+
+  final int attempt;
+  final int maxRetries;
+  final Duration delay;
+  final GeminiGatewayException error;
+}
+
 const _cloudCodeDomains = <String>{
   'cloudcode-pa.googleapis.com',
   'staging-cloudcode-pa.googleapis.com',
@@ -278,6 +292,7 @@ class GeminiCodeAssistClient {
   Future<Map<String, Object?>> generateContent({
     required ProxyRuntimeAccount account,
     required UnifiedPromptRequest request,
+    void Function(GeminiRetryEvent event)? onRetry,
   }) async {
     await _ensureFreshTokens(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
@@ -288,12 +303,14 @@ class GeminiCodeAssistClient {
       projectId: account.projectId,
       requestId: request.requestId,
       baseRequestBody: baseRequestBody,
+      onRetry: onRetry,
     );
   }
 
   Future<Stream<Map<String, Object?>>> generateContentStream({
     required ProxyRuntimeAccount account,
     required UnifiedPromptRequest request,
+    void Function(GeminiRetryEvent event)? onRetry,
   }) async {
     await _ensureFreshTokens(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
@@ -328,6 +345,7 @@ class GeminiCodeAssistClient {
                 promptSeed: request.requestId,
                 requestBody: currentRequestBody,
               ),
+              onRetry: onRetry,
             );
 
             Map<String, Object?>? lastPayload;
@@ -401,6 +419,7 @@ class GeminiCodeAssistClient {
     required String projectId,
     required String requestId,
     required Map<String, Object?> baseRequestBody,
+    void Function(GeminiRetryEvent event)? onRetry,
   }) async {
     var currentRequestBody = baseRequestBody;
     var accumulatedText = '';
@@ -417,6 +436,7 @@ class GeminiCodeAssistClient {
           promptSeed: requestId,
           requestBody: currentRequestBody,
         ),
+        onRetry: onRetry,
       );
       lastPayload = payload;
 
@@ -788,7 +808,10 @@ class GeminiCodeAssistClient {
     }
   }
 
-  Future<T> _executeWithRetry<T>(Future<T> Function() operation) async {
+  Future<T> _executeWithRetry<T>(
+    Future<T> Function() operation, {
+    void Function(GeminiRetryEvent event)? onRetry,
+  }) async {
     GeminiGatewayException? lastError;
     for (var attempt = 0; attempt <= _retryPolicy.maxRetries; attempt++) {
       try {
@@ -799,7 +822,16 @@ class GeminiCodeAssistClient {
         if (!_shouldRetryRequest(gatewayError, attempt)) {
           throw gatewayError;
         }
-        await _wait(_retryDelayFor(gatewayError, attempt));
+        final delay = _retryDelayFor(gatewayError, attempt);
+        onRetry?.call(
+          GeminiRetryEvent(
+            attempt: attempt + 1,
+            maxRetries: _retryLimitFor(gatewayError),
+            delay: delay,
+            error: gatewayError,
+          ),
+        );
+        await _wait(delay);
       }
     }
 

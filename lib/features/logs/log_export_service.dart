@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../analytics/android_background_session_tracker.dart';
 import '../../core/logging/log_sanitizer.dart';
 import '../../data/models/app_log_entry.dart';
 
@@ -64,6 +66,8 @@ class LogExportService {
       ..writeln('KiCk log export')
       ..writeln('Generated at: ${DateTime.now().toIso8601String()}')
       ..writeln('Entries: ${entries.length}')
+      ..writeln()
+      ..writeln(_formatDiagnosticsSummary(entries))
       ..writeln();
 
     for (final entry in entries) {
@@ -77,9 +81,9 @@ class LogExportService {
       if (entry.route?.isNotEmpty == true) {
         buffer.writeln('Route: ${entry.route}');
       }
-      buffer.writeln('Message: ${entry.message}');
+      buffer.writeln('Message: ${LogSanitizer.sanitizeText(entry.message)}');
       if (entry.maskedPayload?.isNotEmpty == true) {
-        final sanitizedMaskedPayload = LogSanitizer.sanitizeSerializedPayload(entry.maskedPayload);
+        final sanitizedMaskedPayload = LogSanitizer.formatPayloadForDisplay(entry.maskedPayload);
         buffer
           ..writeln()
           ..writeln('Masked payload:')
@@ -121,5 +125,87 @@ class LogExportService {
 
   static Future<ShareResult> _defaultShare(ShareParams params) {
     return SharePlus.instance.share(params);
+  }
+
+  String _formatDiagnosticsSummary(List<AppLogEntry> entries) {
+    final sorted = entries.toList(growable: false)
+      ..sort((left, right) => left.timestamp.compareTo(right.timestamp));
+    final first = sorted.first;
+    final last = sorted.last;
+    final levelCounts = <String, int>{};
+    final categoryCounts = <String, int>{};
+    final routeCounts = <String, int>{};
+    final backgroundDurations = <int>[];
+    var recoveredBackgroundSessions = 0;
+
+    for (final entry in sorted) {
+      levelCounts.update(entry.level.name, (value) => value + 1, ifAbsent: () => 1);
+      categoryCounts.update(entry.category, (value) => value + 1, ifAbsent: () => 1);
+      if (entry.route?.isNotEmpty == true) {
+        routeCounts.update(entry.route!, (value) => value + 1, ifAbsent: () => 1);
+      }
+      if (entry.category == androidBackgroundSessionCategory &&
+          (entry.message == androidBackgroundSessionEndedMessage ||
+              entry.message == androidBackgroundSessionRecoveredMessage)) {
+        final payload = _decodePayload(entry.maskedPayload);
+        final durationSec = payload['duration_sec'] as int?;
+        if (durationSec != null && durationSec >= 0) {
+          backgroundDurations.add(durationSec);
+        }
+        if (entry.message == androidBackgroundSessionRecoveredMessage) {
+          recoveredBackgroundSessions += 1;
+        }
+      }
+    }
+
+    final diagnostics = StringBuffer()
+      ..writeln('Diagnostics summary')
+      ..writeln(
+        'Time range: ${first.timestamp.toIso8601String()} -> ${last.timestamp.toIso8601String()}',
+      )
+      ..writeln('Levels: ${_formatCountMap(levelCounts)}')
+      ..writeln('Categories: ${_formatCountMap(categoryCounts)}')
+      ..writeln(routeCounts.isEmpty ? 'Routes: none' : 'Routes: ${_formatCountMap(routeCounts)}');
+
+    if (backgroundDurations.isEmpty) {
+      diagnostics.writeln('Android background sessions: none detected');
+    } else {
+      final totalDuration = backgroundDurations.fold<int>(0, (sum, value) => sum + value);
+      final maxDuration = backgroundDurations.reduce((left, right) => left > right ? left : right);
+      diagnostics.writeln(
+        'Android background sessions: total=${backgroundDurations.length}, '
+        'recovered_after_restart=$recoveredBackgroundSessions, '
+        'avg_duration_sec=${(totalDuration / backgroundDurations.length).round()}, '
+        'max_duration_sec=$maxDuration',
+      );
+    }
+
+    return diagnostics.toString().trimRight();
+  }
+
+  String _formatCountMap(Map<String, int> counts) {
+    final entries = counts.entries.toList(growable: false)
+      ..sort((left, right) {
+        final countComparison = right.value.compareTo(left.value);
+        if (countComparison != 0) {
+          return countComparison;
+        }
+        return left.key.compareTo(right.key);
+      });
+    return entries.map((entry) => '${entry.key}=${entry.value}').join(', ');
+  }
+
+  Map<String, Object?> _decodePayload(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return const <String, Object?>{};
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return decoded.cast<String, Object?>();
+      }
+    } catch (_) {}
+    return const <String, Object?>{};
   }
 }

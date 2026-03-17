@@ -37,9 +37,10 @@ class _LogsPageState extends ConsumerState<LogsPage> {
               if (query.isEmpty) {
                 return true;
               }
+              final sanitizedMessage = LogSanitizer.sanitizeText(entry.message);
               final sanitizedPayload =
                   LogSanitizer.sanitizeSerializedPayload(entry.maskedPayload) ?? '';
-              return entry.message.toLowerCase().contains(query) ||
+              return sanitizedMessage.toLowerCase().contains(query) ||
                   (entry.route ?? '').toLowerCase().contains(query) ||
                   sanitizedPayload.toLowerCase().contains(query);
             })
@@ -149,7 +150,6 @@ class _LogsPageState extends ConsumerState<LogsPage> {
     setState(() => _isExporting = true);
     try {
       final result = await ref.read(logExportServiceProvider).export(entries);
-      unawaited(ref.read(analyticsProvider).trackLogsExported(entryCount: entries.length));
       if (!mounted) {
         return;
       }
@@ -176,7 +176,6 @@ class _LogsPageState extends ConsumerState<LogsPage> {
     setState(() => _isSharing = true);
     try {
       await ref.read(logExportServiceProvider).share(entries);
-      unawaited(ref.read(analyticsProvider).trackLogsShared(entryCount: entries.length));
     } catch (error) {
       if (!mounted) {
         return;
@@ -206,7 +205,8 @@ class _LogCard extends StatelessWidget {
     final formatter = DateFormat('dd.MM.yyyy HH:mm:ss', context.l10n.localeName);
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final sanitizedPayload = LogSanitizer.sanitizeSerializedPayload(entry.maskedPayload);
+    final sanitizedMessage = LogSanitizer.sanitizeText(entry.message);
+    final sanitizedPayload = LogSanitizer.formatPayloadForDisplay(entry.maskedPayload);
     final levelColor = switch (entry.level) {
       AppLogLevel.warning => scheme.tertiary,
       AppLogLevel.error => scheme.error,
@@ -248,7 +248,7 @@ class _LogCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                Text(entry.message, style: textTheme.bodyLarge),
+                Text(sanitizedMessage, style: textTheme.bodyLarge),
                 if (entry.route != null) ...[
                   const SizedBox(height: 10),
                   Text(

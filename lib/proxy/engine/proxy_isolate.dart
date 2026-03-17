@@ -162,6 +162,7 @@ class _ProxyIsolateHost {
         'ok': true,
         'running': _server != null,
         'active_accounts': _pool.accounts.where((item) => item.enabled).length,
+        'healthy_accounts': _healthyAccountCount(),
       });
     });
     router.get('/v1/models', (Request request) {
@@ -182,18 +183,21 @@ class _ProxyIsolateHost {
       return authResult;
     }
 
+    final route = request.requestedUri.path;
     final body = await _readJson(request);
     if (body == null) {
       return _errorResponse(400, 'invalid_request_error', 'Request body must be valid JSON.');
     }
     final requestId = _uuid.v4().replaceAll('-', '');
     UnifiedPromptRequest? prompt;
+    _RequestRetryTracker? retryTracker;
 
     try {
       final resolvedPrompt = prompt = OpenAiRequestParser.parseChatRequest(
         body,
         requestId: requestId,
       );
+      retryTracker = _RequestRetryTracker.fromRequest(resolvedPrompt);
       if (!_catalog.contains(resolvedPrompt.model)) {
         return _errorResponse(
           400,
@@ -203,19 +207,21 @@ class _ProxyIsolateHost {
       }
 
       await _logRequest('chat.completions', request, body);
-      await _logPromptSummary(resolvedPrompt, route: request.requestedUri.path);
+      await _logPromptSummary(resolvedPrompt, route: route);
       if (resolvedPrompt.stream) {
         await _logTrace(
           category: 'chat.completions',
-          route: request.requestedUri.path,
+          route: route,
           message: 'Dispatching streaming request to Gemini gateway',
+          details: _requestContextPayload(prompt: resolvedPrompt),
         );
         var previousText = '';
         var previousReasoningText = '';
         var previousToolCallCount = 0;
         final stream = await _executeStreamRequest(
           resolvedPrompt,
-          route: '/v1/chat/completions',
+          route: route,
+          retryTracker: retryTracker,
           mapper: (payload, includePrelude) {
             final events = OpenAiResponseMapper.toChatStreamDeltas(
               requestId: resolvedPrompt.requestId,
@@ -238,14 +244,16 @@ class _ProxyIsolateHost {
 
       await _logTrace(
         category: 'chat.completions',
-        route: request.requestedUri.path,
+        route: route,
         message: 'Dispatching request to Gemini gateway',
+        details: _requestContextPayload(prompt: resolvedPrompt),
       );
-      final payload = await _executeNonStreamRequest(resolvedPrompt);
+      final payload = await _executeNonStreamRequest(resolvedPrompt, retryTracker: retryTracker);
       await _logTrace(
         category: 'chat.completions',
-        route: request.requestedUri.path,
+        route: route,
         message: 'Gemini gateway returned a payload',
+        details: _requestContextPayload(prompt: resolvedPrompt),
       );
       final responseBody = OpenAiResponseMapper.toChatCompletion(
         requestId: resolvedPrompt.requestId,
@@ -254,19 +262,34 @@ class _ProxyIsolateHost {
       );
       await _logTrace(
         category: 'chat.completions',
-        route: request.requestedUri.path,
+        route: route,
         message: 'Mapped Gemini payload to OpenAI chat completion',
+        details: _requestContextPayload(prompt: resolvedPrompt),
       );
       await _logResponsePreview(
         category: 'chat.completions',
-        route: request.requestedUri.path,
+        route: route,
         payload: payload,
+        details: _requestContextPayload(prompt: resolvedPrompt),
+      );
+      await _logRetryOutcome(
+        category: 'chat.completions',
+        route: route,
+        request: resolvedPrompt,
+        tracker: retryTracker,
+        succeeded: true,
+      );
+      _emitRequestRetriedAnalytics(
+        request: resolvedPrompt,
+        route: route,
+        tracker: retryTracker,
+        succeeded: true,
       );
       return _jsonResponse(responseBody);
     } on _RequestBodyTooLargeException catch (error, stackTrace) {
       await _logFailure(
         category: 'chat.completions',
-        route: request.requestedUri.path,
+        route: route,
         message: error.message,
         stackTrace: stackTrace,
       );
@@ -274,43 +297,72 @@ class _ProxyIsolateHost {
     } on FormatException catch (error, stackTrace) {
       await _logFailure(
         category: 'chat.completions',
-        route: request.requestedUri.path,
+        route: route,
         message: error.message,
         stackTrace: stackTrace,
       );
       return _errorResponse(400, 'invalid_request_error', error.message);
     } on GeminiGatewayException catch (error, stackTrace) {
       if (prompt != null) {
-        _emitRequestFailedAnalytics(
+        _emitRequestFailedAnalytics(request: prompt, route: route, error: error);
+        _emitRequestRetriedAnalytics(
           request: prompt,
-          route: request.requestedUri.path,
+          route: route,
+          tracker: retryTracker,
+          succeeded: false,
+          error: error,
+        );
+        await _logRetryOutcome(
+          category: 'chat.completions',
+          route: route,
+          request: prompt,
+          tracker: retryTracker,
+          succeeded: false,
           error: error,
         );
       }
       await _logFailure(
         category: 'chat.completions',
-        route: request.requestedUri.path,
+        route: route,
         message: error.message,
         stackTrace: stackTrace,
+        details: prompt == null
+            ? const <String, Object?>{}
+            : _requestContextPayload(prompt: prompt),
       );
       return _gatewayErrorResponse(error);
     } catch (error, stackTrace) {
+      final gatewayError = GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.unknown,
+        message: error.toString(),
+        statusCode: 500,
+      );
       if (prompt != null) {
-        _emitRequestFailedAnalytics(
+        _emitRequestFailedAnalytics(request: prompt, route: route, error: gatewayError);
+        _emitRequestRetriedAnalytics(
           request: prompt,
-          route: request.requestedUri.path,
-          error: GeminiGatewayException(
-            kind: GeminiGatewayFailureKind.unknown,
-            message: error.toString(),
-            statusCode: 500,
-          ),
+          route: route,
+          tracker: retryTracker,
+          succeeded: false,
+          error: gatewayError,
+        );
+        await _logRetryOutcome(
+          category: 'chat.completions',
+          route: route,
+          request: prompt,
+          tracker: retryTracker,
+          succeeded: false,
+          error: gatewayError,
         );
       }
       await _logFailure(
         category: 'chat.completions',
-        route: request.requestedUri.path,
+        route: route,
         message: error.toString(),
         stackTrace: stackTrace,
+        details: prompt == null
+            ? const <String, Object?>{}
+            : _requestContextPayload(prompt: prompt),
       );
       return _errorResponse(500, 'proxy_error', error.toString());
     }
@@ -322,18 +374,21 @@ class _ProxyIsolateHost {
       return authResult;
     }
 
+    final route = request.requestedUri.path;
     final body = await _readJson(request);
     if (body == null) {
       return _errorResponse(400, 'invalid_request_error', 'Request body must be valid JSON.');
     }
     final requestId = _uuid.v4().replaceAll('-', '');
     UnifiedPromptRequest? prompt;
+    _RequestRetryTracker? retryTracker;
 
     try {
       final resolvedPrompt = prompt = OpenAiRequestParser.parseResponsesRequest(
         body,
         requestId: requestId,
       );
+      retryTracker = _RequestRetryTracker.fromRequest(resolvedPrompt);
       if (!_catalog.contains(resolvedPrompt.model)) {
         return _errorResponse(
           400,
@@ -343,12 +398,13 @@ class _ProxyIsolateHost {
       }
 
       await _logRequest('responses', request, body);
-      await _logPromptSummary(resolvedPrompt, route: request.requestedUri.path);
+      await _logPromptSummary(resolvedPrompt, route: route);
       if (resolvedPrompt.stream) {
         await _logTrace(
           category: 'responses',
-          route: request.requestedUri.path,
+          route: route,
           message: 'Dispatching streaming request to Gemini gateway',
+          details: _requestContextPayload(prompt: resolvedPrompt),
         );
         var previousText = '';
         var previousReasoningText = '';
@@ -356,7 +412,8 @@ class _ProxyIsolateHost {
         var previousToolCallArguments = const <String>[];
         final stream = await _executeStreamRequest(
           resolvedPrompt,
-          route: '/v1/responses',
+          route: route,
+          retryTracker: retryTracker,
           mapper: (payload, includePrelude) {
             final events = OpenAiResponseMapper.toResponsesStreamEvents(
               requestId: resolvedPrompt.requestId,
@@ -379,11 +436,25 @@ class _ProxyIsolateHost {
         return Response.ok(stream, headers: _sseHeaders());
       }
 
-      final payload = await _executeNonStreamRequest(resolvedPrompt);
+      final payload = await _executeNonStreamRequest(resolvedPrompt, retryTracker: retryTracker);
       await _logResponsePreview(
         category: 'responses',
-        route: request.requestedUri.path,
+        route: route,
         payload: payload,
+        details: _requestContextPayload(prompt: resolvedPrompt),
+      );
+      await _logRetryOutcome(
+        category: 'responses',
+        route: route,
+        request: resolvedPrompt,
+        tracker: retryTracker,
+        succeeded: true,
+      );
+      _emitRequestRetriedAnalytics(
+        request: resolvedPrompt,
+        route: route,
+        tracker: retryTracker,
+        succeeded: true,
       );
       return _jsonResponse(
         OpenAiResponseMapper.toResponsesObject(
@@ -395,7 +466,7 @@ class _ProxyIsolateHost {
     } on _RequestBodyTooLargeException catch (error, stackTrace) {
       await _logFailure(
         category: 'responses',
-        route: request.requestedUri.path,
+        route: route,
         message: error.message,
         stackTrace: stackTrace,
       );
@@ -403,49 +474,82 @@ class _ProxyIsolateHost {
     } on FormatException catch (error, stackTrace) {
       await _logFailure(
         category: 'responses',
-        route: request.requestedUri.path,
+        route: route,
         message: error.message,
         stackTrace: stackTrace,
       );
       return _errorResponse(400, 'invalid_request_error', error.message);
     } on GeminiGatewayException catch (error, stackTrace) {
       if (prompt != null) {
-        _emitRequestFailedAnalytics(
+        _emitRequestFailedAnalytics(request: prompt, route: route, error: error);
+        _emitRequestRetriedAnalytics(
           request: prompt,
-          route: request.requestedUri.path,
+          route: route,
+          tracker: retryTracker,
+          succeeded: false,
+          error: error,
+        );
+        await _logRetryOutcome(
+          category: 'responses',
+          route: route,
+          request: prompt,
+          tracker: retryTracker,
+          succeeded: false,
           error: error,
         );
       }
       await _logFailure(
         category: 'responses',
-        route: request.requestedUri.path,
+        route: route,
         message: error.message,
         stackTrace: stackTrace,
+        details: prompt == null
+            ? const <String, Object?>{}
+            : _requestContextPayload(prompt: prompt),
       );
       return _gatewayErrorResponse(error);
     } catch (error, stackTrace) {
+      final gatewayError = GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.unknown,
+        message: error.toString(),
+        statusCode: 500,
+      );
       if (prompt != null) {
-        _emitRequestFailedAnalytics(
+        _emitRequestFailedAnalytics(request: prompt, route: route, error: gatewayError);
+        _emitRequestRetriedAnalytics(
           request: prompt,
-          route: request.requestedUri.path,
-          error: GeminiGatewayException(
-            kind: GeminiGatewayFailureKind.unknown,
-            message: error.toString(),
-            statusCode: 500,
-          ),
+          route: route,
+          tracker: retryTracker,
+          succeeded: false,
+          error: gatewayError,
+        );
+        await _logRetryOutcome(
+          category: 'responses',
+          route: route,
+          request: prompt,
+          tracker: retryTracker,
+          succeeded: false,
+          error: gatewayError,
         );
       }
       await _logFailure(
         category: 'responses',
-        route: request.requestedUri.path,
+        route: route,
         message: error.toString(),
         stackTrace: stackTrace,
+        details: prompt == null
+            ? const <String, Object?>{}
+            : _requestContextPayload(prompt: prompt),
       );
       return _errorResponse(500, 'proxy_error', error.toString());
     }
   }
 
-  Future<Map<String, Object?>> _executeNonStreamRequest(UnifiedPromptRequest request) async {
+  Future<Map<String, Object?>> _executeNonStreamRequest(
+    UnifiedPromptRequest request, {
+    _RequestRetryTracker? retryTracker,
+  }) async {
+    final route = _routeForSource(request.source);
     final triedIds = <String>{};
     GeminiGatewayException? lastError;
     while (true) {
@@ -464,13 +568,33 @@ class _ProxyIsolateHost {
       await _publishAccounts();
 
       try {
-        final route = _routeForSource(request.source);
+        final maskedAccountEmail = LogSanitizer.maskEmail(account.email);
+        final accountLabel = LogSanitizer.sanitizeText(account.label).trim();
+        final accountLabelSuffix = accountLabel.isNotEmpty && accountLabel != maskedAccountEmail
+            ? ' ($accountLabel)'
+            : '';
         await _logTrace(
           category: request.source,
           route: route,
-          message: 'Using account `${account.email}` for `${request.model}`',
+          message: 'Using account `$maskedAccountEmail`$accountLabelSuffix for `${request.model}`',
+          details: _requestContextPayload(prompt: request),
         );
-        final payload = await _client.generateContent(account: account, request: request);
+        final payload = await _client.generateContent(
+          account: account,
+          request: request,
+          onRetry: (event) {
+            retryTracker?.recordUpstreamRetry(event);
+            unawaited(
+              _logRetryAttempt(
+                category: request.source,
+                route: route,
+                request: request,
+                tracker: retryTracker,
+                event: event,
+              ),
+            );
+          },
+        );
         _requestCount += 1;
         _publishStatus();
         _emitRequestSucceededAnalytics(request: request, route: route);
@@ -481,12 +605,21 @@ class _ProxyIsolateHost {
         if (!_shouldRetry(error.kind)) {
           rethrow;
         }
+        retryTracker?.recordAccountFailover(error);
+        await _logAccountFailover(
+          category: request.source,
+          route: route,
+          request: request,
+          tracker: retryTracker,
+          error: error,
+        );
       } catch (error, stackTrace) {
         await _logFailure(
           category: request.source,
           route: _routeForSource(request.source),
           message: error.toString(),
           stackTrace: stackTrace,
+          details: _requestContextPayload(prompt: request),
         );
         rethrow;
       }
@@ -496,6 +629,7 @@ class _ProxyIsolateHost {
   Future<Stream<List<int>>> _executeStreamRequest(
     UnifiedPromptRequest request, {
     required String route,
+    _RequestRetryTracker? retryTracker,
     required List<Map<String, Object?>> Function(Map<String, Object?> payload, bool includePrelude)
     mapper,
     required String Function() doneEvent,
@@ -517,7 +651,22 @@ class _ProxyIsolateHost {
       await _publishAccounts();
 
       try {
-        final upstream = await _client.generateContentStream(account: account, request: request);
+        final upstream = await _client.generateContentStream(
+          account: account,
+          request: request,
+          onRetry: (event) {
+            retryTracker?.recordUpstreamRetry(event);
+            unawaited(
+              _logRetryAttempt(
+                category: request.source,
+                route: route,
+                request: request,
+                tracker: retryTracker,
+                event: event,
+              ),
+            );
+          },
+        );
         final stream = () async* {
           var includePrelude = true;
           Map<String, Object?> lastPayload = const <String, Object?>{};
@@ -546,15 +695,44 @@ class _ProxyIsolateHost {
             _requestCount += 1;
             _publishStatus();
             _emitRequestSucceededAnalytics(request: request, route: route);
+            await _logRetryOutcome(
+              category: request.source,
+              route: route,
+              request: request,
+              tracker: retryTracker,
+              succeeded: true,
+            );
+            _emitRequestRetriedAnalytics(
+              request: request,
+              route: route,
+              tracker: retryTracker,
+              succeeded: true,
+            );
           } on GeminiGatewayException catch (error, stackTrace) {
             failed = true;
             _registerFailure(account, request.model, error);
             _emitRequestFailedAnalytics(request: request, route: route, error: error);
+            _emitRequestRetriedAnalytics(
+              request: request,
+              route: route,
+              tracker: retryTracker,
+              succeeded: false,
+              error: error,
+            );
+            await _logRetryOutcome(
+              category: request.source,
+              route: route,
+              request: request,
+              tracker: retryTracker,
+              succeeded: false,
+              error: error,
+            );
             await _logFailure(
               category: request.source,
               route: route,
               message: error.message,
               stackTrace: stackTrace,
+              details: _requestContextPayload(prompt: request),
             );
             for (final event in _streamErrorEvents(route: route, request: request, error: error)) {
               yield utf8.encode(event);
@@ -568,11 +746,27 @@ class _ProxyIsolateHost {
             );
             _registerFailure(account, request.model, gatewayError);
             _emitRequestFailedAnalytics(request: request, route: route, error: gatewayError);
+            _emitRequestRetriedAnalytics(
+              request: request,
+              route: route,
+              tracker: retryTracker,
+              succeeded: false,
+              error: gatewayError,
+            );
+            await _logRetryOutcome(
+              category: request.source,
+              route: route,
+              request: request,
+              tracker: retryTracker,
+              succeeded: false,
+              error: gatewayError,
+            );
             await _logFailure(
               category: request.source,
               route: route,
               message: gatewayError.message,
               stackTrace: stackTrace,
+              details: _requestContextPayload(prompt: request),
             );
             for (final event in _streamErrorEvents(
               route: route,
@@ -589,6 +783,7 @@ class _ProxyIsolateHost {
                 model: request.model,
                 emittedEventCount: emittedEventCount,
                 payload: lastPayload,
+                details: _requestContextPayload(prompt: request),
               );
             }
             if ((completed || failed) && lastPayload.isNotEmpty) {
@@ -596,6 +791,7 @@ class _ProxyIsolateHost {
                 category: request.source,
                 route: route,
                 payload: lastPayload,
+                details: _requestContextPayload(prompt: request),
               );
             }
           }
@@ -607,6 +803,14 @@ class _ProxyIsolateHost {
         if (!_shouldRetry(error.kind)) {
           rethrow;
         }
+        retryTracker?.recordAccountFailover(error);
+        await _logAccountFailover(
+          category: request.source,
+          route: route,
+          request: request,
+          tracker: retryTracker,
+          error: error,
+        );
       }
     }
   }
@@ -714,7 +918,7 @@ class _ProxyIsolateHost {
         'level': 'info',
         'category': category,
         'route': request.requestedUri.path,
-        'message': 'Request received',
+        'message': LogSanitizer.sanitizeText('Request received'),
         'masked_payload': masked,
         'raw_payload': verbosity == 'verbose' && _unsafeRawLoggingEnabled ? jsonEncode(body) : null,
       },
@@ -726,6 +930,7 @@ class _ProxyIsolateHost {
     required String route,
     required String message,
     required StackTrace stackTrace,
+    Map<String, Object?> details = const <String, Object?>{},
   }) async {
     final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
     _sendPort.send({
@@ -736,8 +941,8 @@ class _ProxyIsolateHost {
         'level': 'error',
         'category': category,
         'route': route,
-        'message': message,
-        'masked_payload': null,
+        'message': LogSanitizer.sanitizeText(message),
+        'masked_payload': details.isEmpty ? null : jsonEncode(details),
         'raw_payload': verbosity == 'verbose' && _unsafeRawLoggingEnabled
             ? stackTrace.toString()
             : null,
@@ -749,6 +954,7 @@ class _ProxyIsolateHost {
     required String category,
     required String route,
     required String message,
+    Map<String, Object?> details = const <String, Object?>{},
   }) async {
     final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
     if (verbosity == 'quiet') {
@@ -762,8 +968,8 @@ class _ProxyIsolateHost {
         'level': 'info',
         'category': category,
         'route': route,
-        'message': message,
-        'masked_payload': null,
+        'message': LogSanitizer.sanitizeText(message),
+        'masked_payload': details.isEmpty ? null : jsonEncode(details),
         'raw_payload': null,
       },
     });
@@ -785,8 +991,7 @@ class _ProxyIsolateHost {
         'route': route,
         'message': 'Parsed request',
         'masked_payload': jsonEncode({
-          'model': prompt.model,
-          'stream': prompt.stream,
+          ..._requestContextPayload(prompt: prompt),
           'turns': prompt.turns.length,
           'tools': prompt.tools.length,
           'has_system_instruction': prompt.systemInstruction != null,
@@ -804,13 +1009,15 @@ class _ProxyIsolateHost {
     required String category,
     required String route,
     required Map<String, Object?> payload,
+    Map<String, Object?> details = const <String, Object?>{},
   }) async {
     final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
     if (verbosity == 'quiet') {
       return;
     }
 
-    final maskedPayload = jsonEncode(_responseSummaryPayload(payload));
+    final maskedSummary = <String, Object?>{...details, ..._responseSummaryPayload(payload)};
+    final maskedPayload = maskedSummary.isEmpty ? null : jsonEncode(maskedSummary);
 
     _sendPort.send({
       'type': 'log',
@@ -835,9 +1042,11 @@ class _ProxyIsolateHost {
     required String model,
     required int emittedEventCount,
     required Map<String, Object?> payload,
+    Map<String, Object?> details = const <String, Object?>{},
   }) async {
     final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
     final maskedPayload = jsonEncode({
+      ...details,
       'model': model,
       'stream_started': payload.isNotEmpty,
       'events_emitted': emittedEventCount,
@@ -859,6 +1068,103 @@ class _ProxyIsolateHost {
         'raw_payload': rawPayload,
       },
     });
+  }
+
+  Future<void> _logRetryAttempt({
+    required String category,
+    required String route,
+    required UnifiedPromptRequest request,
+    required GeminiRetryEvent event,
+    _RequestRetryTracker? tracker,
+  }) async {
+    final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
+    if (verbosity != 'verbose' || tracker == null) {
+      return;
+    }
+
+    _sendPort.send({
+      'type': 'log',
+      'payload': {
+        'id': _uuid.v4(),
+        'timestamp': DateTime.now().toIso8601String(),
+        'level': 'info',
+        'category': category,
+        'route': route,
+        'message': 'Retry scheduled',
+        'masked_payload': jsonEncode(tracker.toAttemptPayload(request: request, event: event)),
+        'raw_payload': null,
+      },
+    });
+  }
+
+  Future<void> _logAccountFailover({
+    required String category,
+    required String route,
+    required UnifiedPromptRequest request,
+    required GeminiGatewayException error,
+    _RequestRetryTracker? tracker,
+  }) async {
+    final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
+    if (verbosity != 'verbose' || tracker == null) {
+      return;
+    }
+
+    _sendPort.send({
+      'type': 'log',
+      'payload': {
+        'id': _uuid.v4(),
+        'timestamp': DateTime.now().toIso8601String(),
+        'level': 'info',
+        'category': category,
+        'route': route,
+        'message': 'Retrying with another account',
+        'masked_payload': jsonEncode(
+          tracker.toAccountFailoverPayload(request: request, error: error),
+        ),
+        'raw_payload': null,
+      },
+    });
+  }
+
+  Future<void> _logRetryOutcome({
+    required String category,
+    required String route,
+    required UnifiedPromptRequest request,
+    required bool succeeded,
+    GeminiGatewayException? error,
+    _RequestRetryTracker? tracker,
+  }) async {
+    if (tracker == null || !tracker.hasRetries) {
+      return;
+    }
+
+    _sendPort.send({
+      'type': 'log',
+      'payload': {
+        'id': _uuid.v4(),
+        'timestamp': DateTime.now().toIso8601String(),
+        'level': 'warning',
+        'category': category,
+        'route': route,
+        'message': succeeded ? 'Request succeeded after retries' : 'Request failed after retries',
+        'masked_payload': jsonEncode(
+          tracker.toOutcomePayload(
+            request: request,
+            outcome: succeeded ? 'succeeded' : 'failed',
+            error: error,
+          ),
+        ),
+        'raw_payload': null,
+      },
+    });
+  }
+
+  Map<String, Object?> _requestContextPayload({UnifiedPromptRequest? prompt}) {
+    if (prompt == null) {
+      return const <String, Object?>{};
+    }
+
+    return {'request_id': prompt.requestId, 'model': prompt.model, 'stream': prompt.stream};
   }
 
   Map<String, Object?> _responseSummaryPayload(Map<String, Object?> payload) {
@@ -1013,10 +1319,92 @@ class _ProxyIsolateHost {
         'status_code': error.statusCode,
       },
     });
+    _emitCompatibilityIssueAnalytics(request: request, route: route, error: error);
+  }
+
+  void _emitRequestRetriedAnalytics({
+    required UnifiedPromptRequest request,
+    required String route,
+    required bool succeeded,
+    GeminiGatewayException? error,
+    _RequestRetryTracker? tracker,
+  }) {
+    if (tracker == null || !tracker.hasRetries) {
+      return;
+    }
+
+    _sendPort.send({
+      'type': 'analytics',
+      'payload': {
+        'kind': 'proxy_request_retried',
+        'route': route,
+        'model': request.model,
+        'stream': request.stream,
+        ...tracker.toAnalyticsPayload(outcome: succeeded ? 'succeeded' : 'failed', error: error),
+      },
+    });
+  }
+
+  void _emitCompatibilityIssueAnalytics({
+    required UnifiedPromptRequest request,
+    required String route,
+    required GeminiGatewayException error,
+  }) {
+    final issueKind = _compatibilityIssueKind(error);
+    if (issueKind == null) {
+      return;
+    }
+
+    _sendPort.send({
+      'type': 'analytics',
+      'payload': {
+        'kind': 'upstream_compatibility_issue',
+        'issue_kind': issueKind,
+        'route': route,
+        'model': request.model,
+        'stream': request.stream,
+        'error_kind': error.kind.name,
+        'status_code': error.statusCode,
+      },
+    });
+  }
+
+  String? _compatibilityIssueKind(GeminiGatewayException error) {
+    if (error.kind == GeminiGatewayFailureKind.unsupportedModel) {
+      return 'unsupported_model';
+    }
+
+    if (error.kind == GeminiGatewayFailureKind.invalidRequest) {
+      return switch (error.detail) {
+        GeminiGatewayFailureDetail.projectIdMissing => 'project_id_missing',
+        GeminiGatewayFailureDetail.projectConfiguration => 'project_configuration',
+        GeminiGatewayFailureDetail.reasoningConfigUnsupported => 'reasoning_config_unsupported',
+        _ => null,
+      };
+    }
+
+    if (error.kind == GeminiGatewayFailureKind.auth) {
+      return switch (error.detail) {
+        GeminiGatewayFailureDetail.accountVerificationRequired => 'account_verification_required',
+        GeminiGatewayFailureDetail.projectIdMissing => 'project_id_missing',
+        GeminiGatewayFailureDetail.projectConfiguration => 'project_configuration',
+        _ => null,
+      };
+    }
+
+    if (error.message.toLowerCase().contains('no healthy account is available')) {
+      return 'no_healthy_account_available';
+    }
+
+    return null;
   }
 
   String _routeForSource(String source) {
     return source == 'responses' ? '/v1/responses' : '/v1/chat/completions';
+  }
+
+  int _healthyAccountCount() {
+    return _pool.accounts.where((account) => account.enabled && !account.isCoolingDown).length;
   }
 
   bool _shouldRestartServerForConfigurationChange(
@@ -1089,6 +1477,7 @@ class _ProxyIsolateHost {
         'started_at': _startedAt?.toIso8601String(),
         'request_count': _requestCount,
         'active_accounts': _pool.accounts.where((account) => account.enabled).length,
+        'healthy_accounts': _healthyAccountCount(),
         'last_error': _lastRuntimeError,
       },
     });
@@ -1159,6 +1548,109 @@ Middleware _corsMiddleware(_ProxyIsolateHost host) {
       );
     };
   };
+}
+
+class _RequestRetryTracker {
+  _RequestRetryTracker({required this.requestId, required this.model, required this.stream});
+
+  factory _RequestRetryTracker.fromRequest(UnifiedPromptRequest request) {
+    return _RequestRetryTracker(
+      requestId: request.requestId,
+      model: request.model,
+      stream: request.stream,
+    );
+  }
+
+  final String requestId;
+  final String model;
+  final bool stream;
+
+  int upstreamRetryCount = 0;
+  int accountFailoverCount = 0;
+  Duration totalRetryDelay = Duration.zero;
+  final Set<String> _retryKinds = <String>{};
+
+  bool get hasRetries => retryCount > 0;
+  int get retryCount => upstreamRetryCount + accountFailoverCount;
+
+  void recordUpstreamRetry(GeminiRetryEvent event) {
+    upstreamRetryCount += 1;
+    totalRetryDelay += event.delay;
+    _retryKinds.add(event.error.kind.name);
+  }
+
+  void recordAccountFailover(GeminiGatewayException error) {
+    accountFailoverCount += 1;
+    _retryKinds.add(error.kind.name);
+  }
+
+  Map<String, Object?> toAttemptPayload({
+    required UnifiedPromptRequest request,
+    required GeminiRetryEvent event,
+  }) {
+    return {
+      'request_id': requestId,
+      'model': request.model,
+      'stream': request.stream,
+      'retry_source': 'upstream',
+      'retry_attempt': event.attempt,
+      'max_retries': event.maxRetries,
+      'delay_ms': event.delay.inMilliseconds,
+      'error_kind': event.error.kind.name,
+      'status_code': event.error.statusCode,
+    };
+  }
+
+  Map<String, Object?> toAccountFailoverPayload({
+    required UnifiedPromptRequest request,
+    required GeminiGatewayException error,
+  }) {
+    return {
+      'request_id': requestId,
+      'model': request.model,
+      'stream': request.stream,
+      'retry_source': 'account_failover',
+      'account_failover_count': accountFailoverCount,
+      'error_kind': error.kind.name,
+      'status_code': error.statusCode,
+      if (error.retryAfter != null) 'retry_after_ms': error.retryAfter!.inMilliseconds,
+    };
+  }
+
+  Map<String, Object?> toOutcomePayload({
+    required UnifiedPromptRequest request,
+    required String outcome,
+    GeminiGatewayException? error,
+  }) {
+    return {
+      'request_id': requestId,
+      'model': request.model,
+      'stream': request.stream,
+      'outcome': outcome,
+      'retry_count': retryCount,
+      'upstream_retry_count': upstreamRetryCount,
+      'account_failover_count': accountFailoverCount,
+      if (_retryKinds.isNotEmpty) 'retry_kinds': _retryKinds.toList(growable: false),
+      if (totalRetryDelay > Duration.zero) 'retry_delay_ms': totalRetryDelay.inMilliseconds,
+      if (error != null) 'final_error_kind': error.kind.name,
+      if (error != null) 'final_status_code': error.statusCode,
+    };
+  }
+
+  Map<String, Object?> toAnalyticsPayload({
+    required String outcome,
+    GeminiGatewayException? error,
+  }) {
+    return {
+      'outcome': outcome,
+      'retry_count': retryCount,
+      'upstream_retry_count': upstreamRetryCount,
+      'account_failover_count': accountFailoverCount,
+      if (_retryKinds.isNotEmpty) 'retry_kinds': _retryKinds.join(','),
+      if (totalRetryDelay > Duration.zero) 'retry_delay_ms': totalRetryDelay.inMilliseconds,
+      if (error != null) 'status_code': error.statusCode,
+    };
+  }
 }
 
 class _RequestBodyTooLargeException implements Exception {

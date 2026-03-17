@@ -26,6 +26,7 @@ class ProxyRuntimeState {
     required this.startedAt,
     required this.requestCount,
     required this.activeAccounts,
+    required this.healthyAccounts,
     required this.lastError,
   });
 
@@ -38,6 +39,7 @@ class ProxyRuntimeState {
       startedAt: null,
       requestCount: 0,
       activeAccounts: 0,
+      healthyAccounts: 0,
       lastError: null,
     );
   }
@@ -49,6 +51,7 @@ class ProxyRuntimeState {
   final DateTime? startedAt;
   final int requestCount;
   final int activeAccounts;
+  final int healthyAccounts;
   final String? lastError;
 
   Duration? get uptime => startedAt == null ? null : DateTime.now().difference(startedAt!);
@@ -62,6 +65,7 @@ class ProxyRuntimeState {
     bool clearStartedAt = false,
     int? requestCount,
     int? activeAccounts,
+    int? healthyAccounts,
     String? lastError,
     bool clearLastError = false,
   }) {
@@ -73,6 +77,7 @@ class ProxyRuntimeState {
       startedAt: clearStartedAt ? null : (startedAt ?? this.startedAt),
       requestCount: requestCount ?? this.requestCount,
       activeAccounts: activeAccounts ?? this.activeAccounts,
+      healthyAccounts: healthyAccounts ?? this.healthyAccounts,
       lastError: clearLastError ? null : (lastError ?? this.lastError),
     );
   }
@@ -86,8 +91,30 @@ class ProxyRuntimeState {
       startedAt: DateTime.tryParse(json['started_at'] as String? ?? ''),
       requestCount: json['request_count'] as int? ?? 0,
       activeAccounts: json['active_accounts'] as int? ?? 0,
+      healthyAccounts: json['healthy_accounts'] as int? ?? 0,
       lastError: json['last_error'] as String?,
     );
+  }
+}
+
+class _ProxySessionMetrics {
+  int successCount = 0;
+  int failedCount = 0;
+  int retriedCount = 0;
+  bool active = false;
+  bool summaryEmitted = false;
+
+  void begin() {
+    successCount = 0;
+    failedCount = 0;
+    retriedCount = 0;
+    active = true;
+    summaryEmitted = false;
+  }
+
+  void end() {
+    active = false;
+    summaryEmitted = true;
   }
 }
 
@@ -99,10 +126,10 @@ class KickProxyController {
     required SecretStore secretStore,
     ProxyIsolateSpawner? spawnIsolate,
   }) : _accountsRepository = accountsRepository,
-        _analytics = analytics,
-        _logsRepository = logsRepository,
-        _secretStore = secretStore,
-        _spawnIsolate = spawnIsolate ?? _defaultSpawnIsolate;
+       _analytics = analytics,
+       _logsRepository = logsRepository,
+       _secretStore = secretStore,
+       _spawnIsolate = spawnIsolate ?? _defaultSpawnIsolate;
 
   final AccountsRepository _accountsRepository;
   final KickAnalytics _analytics;
@@ -113,6 +140,7 @@ class KickProxyController {
   final _states = StreamController<ProxyRuntimeState>.broadcast();
   final _activity = StreamController<String>.broadcast();
   ProxyRuntimeState _currentState = ProxyRuntimeState.initial();
+  final _sessionMetrics = _ProxySessionMetrics();
   ProxyRuntimeState get currentState => _currentState;
   Stream<ProxyRuntimeState> get states => _states.stream;
   Stream<String> get activity => _activity.stream;
@@ -256,6 +284,7 @@ class KickProxyController {
     }
     _disposing = true;
     _awaitingStartResult = false;
+    await _emitProxySessionSummaryIfNeeded(stopReason: 'shutdown');
     _completeInitializationError(
       StateError('Proxy controller was disposed during initialization.'),
       StackTrace.current,
@@ -366,6 +395,7 @@ class KickProxyController {
         _pendingIsolateFailure ??
         (_disposing ? null : 'Proxy runtime stopped unexpectedly. Restart the proxy.');
     _pendingIsolateFailure = null;
+    await _emitProxySessionSummaryIfNeeded(stopReason: _disposing ? 'shutdown' : 'runtime_error');
     await _resetIsolateConnection();
     _completeInitializationError(
       StateError(failureMessage ?? 'Proxy isolate exited before initialization completed.'),
@@ -383,6 +413,7 @@ class KickProxyController {
       ready: false,
       running: false,
       clearStartedAt: true,
+      requestCount: 0,
       lastError: failureMessage,
     );
     _emitState(_currentState);
@@ -404,8 +435,10 @@ class KickProxyController {
       boundHost: settings.allowLan ? '0.0.0.0' : settings.host,
       port: settings.port,
       activeAccounts: payload['active_accounts'] as int? ?? 0,
+      healthyAccounts: payload['healthy_accounts'] as int? ?? 0,
       clearLastError: true,
     );
+    _sessionMetrics.begin();
     _emitState(_currentState);
     return true;
   }
@@ -437,11 +470,17 @@ class KickProxyController {
 
   void _handleStatusTransition(ProxyRuntimeState previous, ProxyRuntimeState next) {
     if (!_awaitingStartResult) {
+      if (!previous.running && next.running) {
+        _sessionMetrics.begin();
+      } else if (previous.running && !next.running) {
+        unawaited(_emitProxySessionSummaryIfNeeded(stopReason: _stopReasonForState(next)));
+      }
       return;
     }
 
     if (!previous.running && next.running) {
       _awaitingStartResult = false;
+      _sessionMetrics.begin();
       unawaited(
         _analytics.trackProxyStarted(
           allowLan: _lastSettings?.allowLan ?? false,
@@ -454,6 +493,12 @@ class KickProxyController {
     if (!next.running && next.lastError != null) {
       _awaitingStartResult = false;
       unawaited(_analytics.trackProxyStartFailed(errorKind: _classifyRuntimeError(next.lastError)));
+      unawaited(_emitProxySessionSummaryIfNeeded(stopReason: _stopReasonForState(next)));
+      return;
+    }
+
+    if (previous.running && !next.running) {
+      unawaited(_emitProxySessionSummaryIfNeeded(stopReason: _stopReasonForState(next)));
     }
   }
 
@@ -461,6 +506,9 @@ class KickProxyController {
     final kind = payload['kind'] as String? ?? '';
     switch (kind) {
       case 'proxy_request_succeeded':
+        if (_sessionMetrics.active) {
+          _sessionMetrics.successCount += 1;
+        }
         await _analytics.trackFirstSuccessfulRequest(
           route: payload['route'] as String? ?? '',
           model: payload['model'] as String? ?? '',
@@ -468,11 +516,41 @@ class KickProxyController {
         );
         break;
       case 'proxy_request_failed':
+        if (_sessionMetrics.active) {
+          _sessionMetrics.failedCount += 1;
+        }
         await _analytics.trackProxyRequestFailed(
           route: payload['route'] as String? ?? '',
           model: payload['model'] as String? ?? '',
           stream: payload['stream'] == true,
           errorKind: payload['error_kind'] as String? ?? 'unknown',
+          statusCode: payload['status_code'] as int?,
+        );
+        break;
+      case 'proxy_request_retried':
+        if (_sessionMetrics.active) {
+          _sessionMetrics.retriedCount += 1;
+        }
+        await _analytics.trackProxyRequestRetried(
+          route: payload['route'] as String? ?? '',
+          model: payload['model'] as String? ?? '',
+          stream: payload['stream'] == true,
+          outcome: payload['outcome'] as String? ?? 'unknown',
+          retryCount: payload['retry_count'] as int? ?? 0,
+          upstreamRetryCount: payload['upstream_retry_count'] as int? ?? 0,
+          accountFailoverCount: payload['account_failover_count'] as int? ?? 0,
+          retryKinds: payload['retry_kinds'] as String?,
+          retryDelayMs: payload['retry_delay_ms'] as int?,
+          statusCode: payload['status_code'] as int?,
+        );
+        break;
+      case 'upstream_compatibility_issue':
+        await _analytics.trackUpstreamCompatibilityIssue(
+          issueKind: payload['issue_kind'] as String? ?? 'unknown',
+          route: payload['route'] as String? ?? '',
+          model: payload['model'] as String? ?? '',
+          stream: payload['stream'] == true,
+          errorKind: payload['error_kind'] as String?,
           statusCode: payload['status_code'] as int?,
         );
         break;
@@ -491,6 +569,66 @@ class KickProxyController {
       return 'permission_denied';
     }
     return 'runtime_error';
+  }
+
+  Future<void> _emitProxySessionSummaryIfNeeded({required String stopReason}) async {
+    if (!_sessionMetrics.active || _sessionMetrics.summaryEmitted) {
+      return;
+    }
+
+    final currentSettings = _lastSettings;
+    final currentState = _currentState;
+    final uptimeSec = currentState.startedAt == null
+        ? 0
+        : DateTime.now().difference(currentState.startedAt!).inSeconds;
+    final payload = <String, Object?>{
+      'stop_reason': stopReason,
+      'uptime_sec': uptimeSec < 0 ? 0 : uptimeSec,
+      'request_count': currentState.requestCount,
+      'success_count': _sessionMetrics.successCount,
+      'failed_count': _sessionMetrics.failedCount,
+      'retried_count': _sessionMetrics.retriedCount,
+      'active_accounts': currentState.activeAccounts,
+      'healthy_accounts': currentState.healthyAccounts,
+      if (currentSettings != null) 'request_max_retries': currentSettings.requestMaxRetries,
+      if (currentSettings != null) 'mark_429_as_unhealthy': currentSettings.mark429AsUnhealthy,
+      if (currentSettings != null)
+        'android_background_runtime': currentSettings.androidBackgroundRuntime,
+    };
+
+    await _logsRepository.insert(
+      AppLogEntry(
+        id: 'proxy-session-${DateTime.now().microsecondsSinceEpoch}',
+        timestamp: DateTime.now(),
+        level: AppLogLevel.info,
+        category: 'proxy.session',
+        route: '/runtime/session',
+        message: 'Proxy session summary',
+        maskedPayload: jsonEncode(payload),
+      ),
+    );
+
+    await _analytics.trackProxySessionSummary(
+      uptimeSec: payload['uptime_sec'] as int? ?? 0,
+      requestCount: payload['request_count'] as int? ?? 0,
+      successCount: payload['success_count'] as int? ?? 0,
+      failedCount: payload['failed_count'] as int? ?? 0,
+      retriedCount: payload['retried_count'] as int? ?? 0,
+      activeAccounts: payload['active_accounts'] as int? ?? 0,
+      healthyAccounts: payload['healthy_accounts'] as int? ?? 0,
+      requestMaxRetries: payload['request_max_retries'] as int? ?? 0,
+      mark429AsUnhealthy: payload['mark_429_as_unhealthy'] as bool? ?? false,
+      androidBackgroundRuntime: payload['android_background_runtime'] as bool? ?? false,
+      stopReason: stopReason,
+    );
+    _sessionMetrics.end();
+  }
+
+  String _stopReasonForState(ProxyRuntimeState state) {
+    if (state.lastError != null && state.lastError!.trim().isNotEmpty) {
+      return _classifyRuntimeError(state.lastError);
+    }
+    return 'stopped';
   }
 
   void _emitState(ProxyRuntimeState state) {
@@ -559,12 +697,7 @@ class KickProxyController {
     SendPort errorPort,
     SendPort exitPort,
   ) {
-    return Isolate.spawn(
-      proxyIsolateMain,
-      messagePort,
-      onError: errorPort,
-      onExit: exitPort,
-    );
+    return Isolate.spawn(proxyIsolateMain, messagePort, onError: errorPort, onExit: exitPort);
   }
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../analytics/android_background_session_tracker.dart';
 import '../core/platform/android_foreground_runtime.dart';
 import '../core/theme/kick_theme.dart';
 import '../features/app_state/providers.dart';
@@ -50,6 +51,8 @@ class KickApp extends ConsumerWidget {
       },
     );
 
-    return ProxyConfigurationSync(child: AndroidForegroundRuntimeScope(child: app));
+    return ProxyConfigurationSync(
+      child: AndroidBackgroundSessionScope(child: AndroidForegroundRuntimeScope(child: app)),
+    );
   }
 }

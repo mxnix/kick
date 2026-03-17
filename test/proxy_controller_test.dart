@@ -27,12 +27,7 @@ void main() {
             onExit: exitPort,
           );
         }
-        return Isolate.spawn(
-          _readyOnlyIsolate,
-          messagePort,
-          onError: errorPort,
-          onExit: exitPort,
-        );
+        return Isolate.spawn(_readyOnlyIsolate, messagePort, onError: errorPort, onExit: exitPort);
       },
     );
     addTearDown(harness.dispose);
@@ -70,10 +65,9 @@ void main() {
   test('unauthorized client errors do not overwrite the runtime error state', () async {
     final harness = await _ControllerHarness.create();
     addTearDown(harness.dispose);
-    final settings = AppSettings.defaults(apiKey: 'expected-key').copyWith(
-      port: 0,
-      androidBackgroundRuntime: false,
-    );
+    final settings = AppSettings.defaults(
+      apiKey: 'expected-key',
+    ).copyWith(port: 0, androidBackgroundRuntime: false);
 
     await harness.controller.configure(settings: settings, accounts: const <AccountProfile>[]);
     final runningState = harness.controller.states.firstWhere((state) => state.running);
@@ -91,6 +85,54 @@ void main() {
     expect(response.statusCode, HttpStatus.unauthorized);
     await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(harness.controller.currentState.lastError, isNull);
+  });
+
+  test('emits compatibility issues and proxy session summaries from isolate analytics', () async {
+    final transport = _RecordingAnalyticsTransport();
+    final analytics = KickAnalytics(
+      config: const AnalyticsBuildConfig(buildChannel: 'test', appKey: 'A-EU-test'),
+      transport: transport,
+      trackingAllowed: true,
+    );
+    final harness = await _ControllerHarness.create(
+      analytics: analytics,
+      spawnIsolate: (messagePort, errorPort, exitPort) {
+        return Isolate.spawn(
+          _analyticsSessionIsolate,
+          messagePort,
+          onError: errorPort,
+          onExit: exitPort,
+        );
+      },
+    );
+    addTearDown(harness.dispose);
+    final settings = AppSettings.defaults(
+      apiKey: 'expected-key',
+    ).copyWith(port: 0, androidBackgroundRuntime: false, requestMaxRetries: 7);
+
+    await harness.controller.configure(settings: settings, accounts: const <AccountProfile>[]);
+    await harness.controller.start();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await harness.controller.stop();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(
+      transport.events.any(
+        (event) =>
+            event.name == 'upstream_compatibility_issue' &&
+            event.properties['issue_kind'] == 'unsupported_model',
+      ),
+      isTrue,
+    );
+    expect(
+      transport.events.any(
+        (event) =>
+            event.name == 'proxy_session_summary' &&
+            event.properties['request_count'] == 3 &&
+            event.properties['healthy_accounts'] == 1,
+      ),
+      isTrue,
+    );
   });
 }
 
@@ -132,6 +174,100 @@ Future<void> _flushTokenOnShutdownIsolate(SendPort sendPort) async {
   }
 }
 
+@pragma('vm:entry-point')
+Future<void> _analyticsSessionIsolate(SendPort sendPort) async {
+  final commands = ReceivePort();
+  sendPort.send({'type': 'ready', 'port': commands.sendPort});
+  await for (final message in commands) {
+    if (message is! Map) {
+      continue;
+    }
+    switch (message['type']) {
+      case 'start':
+        final startedAt = DateTime.now().subtract(const Duration(seconds: 3)).toIso8601String();
+        sendPort.send({
+          'type': 'status',
+          'payload': {
+            'ready': true,
+            'running': true,
+            'bound_host': '127.0.0.1',
+            'port': 3000,
+            'started_at': startedAt,
+            'request_count': 0,
+            'active_accounts': 2,
+            'healthy_accounts': 1,
+            'last_error': null,
+          },
+        });
+        sendPort.send({
+          'type': 'analytics',
+          'payload': {
+            'kind': 'proxy_request_succeeded',
+            'route': '/v1/responses',
+            'model': 'gemini-3-flash',
+            'stream': false,
+          },
+        });
+        sendPort.send({
+          'type': 'analytics',
+          'payload': {
+            'kind': 'proxy_request_failed',
+            'route': '/v1/responses',
+            'model': 'my-private-model-id',
+            'stream': true,
+            'error_kind': 'unsupportedModel',
+            'status_code': 400,
+          },
+        });
+        sendPort.send({
+          'type': 'analytics',
+          'payload': {
+            'kind': 'upstream_compatibility_issue',
+            'issue_kind': 'unsupported_model',
+            'route': '/v1/responses',
+            'model': 'my-private-model-id',
+            'stream': true,
+            'error_kind': 'unsupportedModel',
+            'status_code': 400,
+          },
+        });
+        sendPort.send({
+          'type': 'analytics',
+          'payload': {
+            'kind': 'proxy_request_retried',
+            'route': '/v1/responses',
+            'model': 'gemini-3-flash',
+            'stream': false,
+            'outcome': 'succeeded',
+            'retry_count': 2,
+            'upstream_retry_count': 1,
+            'account_failover_count': 1,
+          },
+        });
+        break;
+      case 'stop':
+        sendPort.send({
+          'type': 'status',
+          'payload': {
+            'ready': true,
+            'running': false,
+            'bound_host': '127.0.0.1',
+            'port': 3000,
+            'started_at': DateTime.now().subtract(const Duration(seconds: 3)).toIso8601String(),
+            'request_count': 3,
+            'active_accounts': 2,
+            'healthy_accounts': 1,
+            'last_error': null,
+          },
+        });
+        break;
+      case 'shutdown':
+        commands.close();
+        break;
+    }
+  }
+}
+
 OAuthTokens _sampleTokens(String accessToken) {
   return OAuthTokens(
     accessToken: accessToken,
@@ -143,11 +279,7 @@ OAuthTokens _sampleTokens(String accessToken) {
 }
 
 class _ControllerHarness {
-  _ControllerHarness({
-    required this.database,
-    required this.secretStore,
-    required this.controller,
-  });
+  _ControllerHarness({required this.database, required this.secretStore, required this.controller});
 
   final AppDatabase database;
   final SecretStore secretStore;
@@ -155,25 +287,24 @@ class _ControllerHarness {
 
   static Future<_ControllerHarness> create({
     ProxyIsolateSpawner? spawnIsolate,
+    KickAnalytics? analytics,
   }) async {
     final database = AppDatabase(NativeDatabase.memory());
     await database.ensureSchema();
     final secretStore = SecretStore(backend: _MemorySecretStoreBackend());
     final controller = KickProxyController(
       accountsRepository: AccountsRepository(database),
-      analytics: KickAnalytics(
-        config: const AnalyticsBuildConfig(buildChannel: 'test', appKey: ''),
-        transport: const NoOpAnalyticsTransport(),
-      ),
+      analytics:
+          analytics ??
+          KickAnalytics(
+            config: const AnalyticsBuildConfig(buildChannel: 'test', appKey: ''),
+            transport: const NoOpAnalyticsTransport(),
+          ),
       logsRepository: LogsRepository(database),
       secretStore: secretStore,
       spawnIsolate: spawnIsolate,
     );
-    return _ControllerHarness(
-      database: database,
-      secretStore: secretStore,
-      controller: controller,
-    );
+    return _ControllerHarness(database: database, secretStore: secretStore, controller: controller);
   }
 
   Future<void> dispose() async {
@@ -199,4 +330,23 @@ class _MemorySecretStoreBackend implements SecretStoreBackend {
   Future<void> write(String key, String value) async {
     values[key] = value;
   }
+}
+
+class _RecordingAnalyticsTransport implements AnalyticsTransport {
+  final List<_RecordedAnalyticsEvent> events = <_RecordedAnalyticsEvent>[];
+
+  @override
+  Future<void> ensureInitialized(AnalyticsBuildConfig config) async {}
+
+  @override
+  Future<void> track(String eventName, Map<String, Object?> properties) async {
+    events.add(_RecordedAnalyticsEvent(name: eventName, properties: properties));
+  }
+}
+
+class _RecordedAnalyticsEvent {
+  const _RecordedAnalyticsEvent({required this.name, required this.properties});
+
+  final String name;
+  final Map<String, Object?> properties;
 }

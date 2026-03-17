@@ -2,6 +2,11 @@ import 'dart:convert';
 
 class LogSanitizer {
   static const removedFromExportNotice = '[Removed from export for safety]';
+  static const _prettyJsonEncoder = JsonEncoder.withIndent('  ');
+  static final _emailPattern = RegExp(
+    r'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}',
+    caseSensitive: false,
+  );
 
   static const _secretKeys = <String>{
     'authorization',
@@ -15,6 +20,21 @@ class LogSanitizer {
 
   static Object? sanitizeJsonValue(Object? value) {
     return _sanitizeValue(value);
+  }
+
+  static String sanitizeText(String value) {
+    return _sanitizeLooseString(value);
+  }
+
+  static String maskEmail(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+    if (!_looksLikeEmail(trimmed)) {
+      return sanitizeText(trimmed);
+    }
+    return _maskEmailAddress(trimmed);
   }
 
   static String? sanitizeSerializedPayload(String? payload) {
@@ -32,6 +52,20 @@ class LogSanitizer {
       return jsonEncode(sanitizeJsonValue(decoded));
     } catch (_) {
       return _sanitizeLooseString(trimmed);
+    }
+  }
+
+  static String? formatPayloadForDisplay(String? payload) {
+    final sanitized = sanitizeSerializedPayload(payload);
+    if (sanitized == null) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(sanitized);
+      return _prettyJsonEncoder.convert(decoded);
+    } catch (_) {
+      return sanitized;
     }
   }
 
@@ -307,7 +341,30 @@ class LogSanitizer {
     if (_looksLikeBase64(trimmed)) {
       return '[REDACTED blob chars=${trimmed.length}]';
     }
-    return value;
+    return _maskEmails(value);
+  }
+
+  static String _maskEmails(String value) {
+    return value.replaceAllMapped(
+      _emailPattern,
+      (match) => _maskEmailAddress(match.group(0) ?? ''),
+    );
+  }
+
+  static String _maskEmailAddress(String value) {
+    final atIndex = value.indexOf('@');
+    if (atIndex <= 0 || atIndex >= value.length - 1) {
+      return value;
+    }
+
+    final localPart = value.substring(0, atIndex);
+    final domain = value.substring(atIndex + 1);
+    if (localPart.length <= 1) {
+      return '$localPart@$domain';
+    }
+
+    final middleMask = List.filled(localPart.length - 2, '*').join();
+    return '${localPart[0]}$middleMask${localPart[localPart.length - 1]}@$domain';
   }
 
   static bool _containsMedia(Object? value) {
@@ -341,6 +398,11 @@ class LogSanitizer {
       return false;
     }
     return RegExp(r'^[A-Za-z0-9+/]+={0,2}$').hasMatch(value);
+  }
+
+  static bool _looksLikeEmail(String value) {
+    final match = _emailPattern.firstMatch(value);
+    return match != null && match.start == 0 && match.end == value.length;
   }
 
   static String _normalizeKey(String key) {

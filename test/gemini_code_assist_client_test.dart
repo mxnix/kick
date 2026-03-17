@@ -168,6 +168,59 @@ void main() {
     expect((response['response'] as Map)['candidates'], isNotEmpty);
   });
 
+  test('reports retry metadata through the retry callback', () async {
+    final events = <GeminiRetryEvent>[];
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      wait: (_) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          return http.Response(
+            jsonEncode({
+              'error': {
+                'message':
+                    'You have exhausted your capacity on this model. Your quota will reset after 12s.',
+              },
+            }),
+            429,
+          );
+        },
+        (request) async {
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'Recovered'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(),
+      onRetry: events.add,
+    );
+
+    expect(events, hasLength(1));
+    expect(events.single.attempt, 1);
+    expect(events.single.maxRetries, defaultGeminiRequestMaxRetries);
+    expect(events.single.delay, const Duration(seconds: 12));
+    expect(events.single.error.kind, GeminiGatewayFailureKind.quota);
+    expect(events.single.error.statusCode, 429);
+  });
+
   test('honors configured retry limit for quota failures', () async {
     final waits = <Duration>[];
     var attempts = 0;
