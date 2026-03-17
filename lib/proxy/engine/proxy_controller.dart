@@ -12,6 +12,7 @@ import '../../data/models/oauth_tokens.dart';
 import '../../data/repositories/accounts_repository.dart';
 import '../../data/repositories/logs_repository.dart';
 import '../../data/repositories/secret_store.dart';
+import '../../observability/glitchtip.dart';
 import '../engine/proxy_isolate.dart';
 
 typedef ProxyIsolateSpawner =
@@ -339,21 +340,21 @@ class KickProxyController {
         break;
       case 'log':
         final payload = (message['payload'] as Map).cast<String, Object?>();
-        await _logsRepository.insert(
-          AppLogEntry(
-            id: payload['id'] as String,
-            timestamp: DateTime.tryParse(payload['timestamp'] as String? ?? '') ?? DateTime.now(),
-            level: AppLogLevel.values.firstWhere(
-              (value) => value.name == payload['level'],
-              orElse: () => AppLogLevel.info,
-            ),
-            category: payload['category'] as String? ?? 'proxy',
-            route: payload['route'] as String?,
-            message: payload['message'] as String? ?? '',
-            maskedPayload: payload['masked_payload'] as String?,
-            rawPayload: payload['raw_payload'] as String?,
+        final entry = AppLogEntry(
+          id: payload['id'] as String,
+          timestamp: DateTime.tryParse(payload['timestamp'] as String? ?? '') ?? DateTime.now(),
+          level: AppLogLevel.values.firstWhere(
+            (value) => value.name == payload['level'],
+            orElse: () => AppLogLevel.info,
           ),
+          category: payload['category'] as String? ?? 'proxy',
+          route: payload['route'] as String?,
+          message: payload['message'] as String? ?? '',
+          maskedPayload: payload['masked_payload'] as String?,
+          rawPayload: payload['raw_payload'] as String?,
         );
+        await _logsRepository.insert(entry);
+        unawaited(recordGlitchTipProxyLog(entry));
         _emitActivity('logs');
         break;
       case 'accounts_runtime_updated':
@@ -394,6 +395,25 @@ class KickProxyController {
     final failureMessage =
         _pendingIsolateFailure ??
         (_disposing ? null : 'Proxy runtime stopped unexpectedly. Restart the proxy.');
+    if (!_disposing && failureMessage != null && failureMessage.trim().isNotEmpty) {
+      unawaited(
+        captureGlitchTipMessage(
+          message: 'Proxy isolate exited unexpectedly',
+          template: 'Proxy isolate exited unexpectedly',
+          source: 'proxy_isolate',
+          tags: const <String, String>{'state': 'unexpected_exit'},
+          data: <String, Object?>{
+            'failure': failureMessage,
+            'ready': _currentState.ready,
+            'running': _currentState.running,
+            'request_count': _currentState.requestCount,
+            'active_accounts': _currentState.activeAccounts,
+            'healthy_accounts': _currentState.healthyAccounts,
+          },
+          fingerprint: const <String>['kick-proxy', 'isolate_exit'],
+        ),
+      );
+    }
     _pendingIsolateFailure = null;
     await _emitProxySessionSummaryIfNeeded(stopReason: _disposing ? 'shutdown' : 'runtime_error');
     await _resetIsolateConnection();

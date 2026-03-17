@@ -30,7 +30,23 @@ if (-not $OutputDir) {
 }
 
 if (-not $SkipBuild) {
-  & (Join-Path $repoRoot 'scripts\flutterw.ps1') build windows --release
+  $flutterArgs = @('build', 'windows', '--release')
+
+  if (-not [string]::IsNullOrWhiteSpace($env:KICK_APTABASE_APP_KEY_RELEASE)) {
+    $flutterArgs += "--dart-define=KICK_APTABASE_APP_KEY_RELEASE=$($env:KICK_APTABASE_APP_KEY_RELEASE)"
+  }
+  if (-not [string]::IsNullOrWhiteSpace($env:KICK_APTABASE_HOST_RELEASE)) {
+    $flutterArgs += "--dart-define=KICK_APTABASE_HOST_RELEASE=$($env:KICK_APTABASE_HOST_RELEASE)"
+  }
+  if (-not [string]::IsNullOrWhiteSpace($env:SENTRY_DSN)) {
+    $flutterArgs += "--dart-define=SENTRY_DSN=$($env:SENTRY_DSN)"
+  }
+  $flutterArgs += '--dart-define=SENTRY_ENVIRONMENT=production'
+  if (-not [string]::IsNullOrWhiteSpace($env:KICK_GLITCHTIP_TRACES_SAMPLE_RATE)) {
+    $flutterArgs += "--dart-define=KICK_GLITCHTIP_TRACES_SAMPLE_RATE=$($env:KICK_GLITCHTIP_TRACES_SAMPLE_RATE)"
+  }
+
+  & (Join-Path $repoRoot 'scripts\flutterw.ps1') @flutterArgs
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
   }

@@ -17,6 +17,7 @@ import '../data/repositories/accounts_repository.dart';
 import '../data/repositories/logs_repository.dart';
 import '../data/repositories/secret_store.dart';
 import '../data/repositories/settings_repository.dart';
+import '../observability/glitchtip.dart';
 import '../proxy/engine/proxy_controller.dart';
 import '../proxy/gemini/gemini_oauth_service.dart';
 
@@ -58,78 +59,92 @@ class AppBootstrap {
 
 Future<AppBootstrap> initializeAppBootstrap() async {
   final timings = _BootstrapTimings()..mark('initialize:start');
-  await WindowBootstrap.configure();
-  timings.mark('window_bootstrap_ready');
-  await AndroidForegroundRuntime.configure();
-  timings.mark('android_runtime_ready');
+  try {
+    await WindowBootstrap.configure();
+    timings.mark('window_bootstrap_ready');
+    await AndroidForegroundRuntime.configure();
+    timings.mark('android_runtime_ready');
 
-  final supportDirectory = await getApplicationSupportDirectory();
-  timings.mark('support_directory_ready');
-  final databasePath = p.join(supportDirectory.path, 'kick.sqlite');
-  final database = await AppDatabase.open(databasePath);
-  timings.mark('database_ready');
-  final secretStore = const SecretStore();
-  final settingsRepository = SettingsRepository(database);
-  final accountsRepository = AccountsRepository(database);
-  final logsRepository = LogsRepository(database);
-  final oauthService = GeminiOAuthService(secretStore: secretStore);
+    final supportDirectory = await getApplicationSupportDirectory();
+    timings.mark('support_directory_ready');
+    final databasePath = p.join(supportDirectory.path, 'kick.sqlite');
+    final database = await AppDatabase.open(databasePath);
+    timings.mark('database_ready');
+    final secretStore = const SecretStore();
+    final settingsRepository = SettingsRepository(database);
+    final accountsRepository = AccountsRepository(database);
+    final logsRepository = LogsRepository(database);
+    final oauthService = GeminiOAuthService(secretStore: secretStore);
 
-  var apiKey = await secretStore.readProxyApiKey();
-  apiKey ??= await settingsRepository.readLegacyApiKey();
-  apiKey ??= generateProxyApiKey();
-  await secretStore.writeProxyApiKey(apiKey);
-  await settingsRepository.deleteLegacyApiKey();
-  timings.mark('api_key_ready');
+    var apiKey = await secretStore.readProxyApiKey();
+    apiKey ??= await settingsRepository.readLegacyApiKey();
+    apiKey ??= generateProxyApiKey();
+    await secretStore.writeProxyApiKey(apiKey);
+    await settingsRepository.deleteLegacyApiKey();
+    timings.mark('api_key_ready');
 
-  final currentSettings = await settingsRepository.readSettings(apiKey: apiKey);
-  if (currentSettings == null) {
-    await settingsRepository.writeSettings(AppSettings.defaults(apiKey: apiKey));
-  }
-  timings.mark('settings_ready');
-  final effectiveSettings =
-      currentSettings?.copyWith(apiKey: apiKey) ?? AppSettings.defaults(apiKey: apiKey);
-  await WindowsDesktopRuntime.configure(
-    settings: effectiveSettings,
-    readTrayNotificationShown: () =>
-        settingsRepository.readBooleanFlag(WindowsDesktopRuntime.trayNotificationShownKey),
-    writeTrayNotificationShown: (value) =>
-        settingsRepository.writeBooleanFlag(WindowsDesktopRuntime.trayNotificationShownKey, value),
-  );
-  timings.mark('windows_runtime_ready');
-  final initialAccounts = await accountsRepository.readAll();
-  timings.mark('accounts_ready');
-  final analytics = KickAnalytics(trackingAllowed: analyticsTrackingAllowed(effectiveSettings));
+    final currentSettings = await settingsRepository.readSettings(apiKey: apiKey);
+    if (currentSettings == null) {
+      await settingsRepository.writeSettings(AppSettings.defaults(apiKey: apiKey));
+    }
+    timings.mark('settings_ready');
+    final effectiveSettings =
+        currentSettings?.copyWith(apiKey: apiKey) ?? AppSettings.defaults(apiKey: apiKey);
+    await WindowsDesktopRuntime.configure(
+      settings: effectiveSettings,
+      readTrayNotificationShown: () =>
+          settingsRepository.readBooleanFlag(WindowsDesktopRuntime.trayNotificationShownKey),
+      writeTrayNotificationShown: (value) => settingsRepository.writeBooleanFlag(
+        WindowsDesktopRuntime.trayNotificationShownKey,
+        value,
+      ),
+    );
+    timings.mark('windows_runtime_ready');
+    final initialAccounts = await accountsRepository.readAll();
+    timings.mark('accounts_ready');
+    final analytics = KickAnalytics(trackingAllowed: analyticsTrackingAllowed(effectiveSettings));
 
-  final proxyController = KickProxyController(
-    accountsRepository: accountsRepository,
-    analytics: analytics,
-    logsRepository: logsRepository,
-    secretStore: secretStore,
-  );
-  timings.mark('bootstrap_ready');
-
-  unawaited(
-    _warmBootstrapServices(
+    final proxyController = KickProxyController(
+      accountsRepository: accountsRepository,
       analytics: analytics,
       logsRepository: logsRepository,
-      proxyController: proxyController,
-      clearRawPayload: !effectiveSettings.unsafeRawLoggingEnabled,
-      timings: timings,
-    ),
-  );
+      secretStore: secretStore,
+    );
+    timings.mark('bootstrap_ready');
 
-  return AppBootstrap(
-    database: database,
-    secretStore: secretStore,
-    settingsRepository: settingsRepository,
-    accountsRepository: accountsRepository,
-    logsRepository: logsRepository,
-    oauthService: oauthService,
-    analytics: analytics,
-    proxyController: proxyController,
-    initialSettings: effectiveSettings,
-    initialAccounts: initialAccounts,
-  );
+    unawaited(
+      _warmBootstrapServices(
+        analytics: analytics,
+        logsRepository: logsRepository,
+        proxyController: proxyController,
+        clearRawPayload: !effectiveSettings.unsafeRawLoggingEnabled,
+        timings: timings,
+      ),
+    );
+
+    return AppBootstrap(
+      database: database,
+      secretStore: secretStore,
+      settingsRepository: settingsRepository,
+      accountsRepository: accountsRepository,
+      logsRepository: logsRepository,
+      oauthService: oauthService,
+      analytics: analytics,
+      proxyController: proxyController,
+      initialSettings: effectiveSettings,
+      initialAccounts: initialAccounts,
+    );
+  } catch (error, stackTrace) {
+    unawaited(
+      captureGlitchTipException(
+        error: error,
+        stackTrace: stackTrace,
+        source: 'app_bootstrap',
+        message: 'Application bootstrap failed',
+      ),
+    );
+    rethrow;
+  }
 }
 
 Future<void> _warmBootstrapServices({
@@ -145,6 +160,15 @@ Future<void> _warmBootstrapServices({
     timings.mark('logs_scrubbed');
   } catch (error, stackTrace) {
     _debugBootstrapFailure('logs_scrubbed', error, stackTrace);
+    unawaited(
+      captureGlitchTipException(
+        error: error,
+        stackTrace: stackTrace,
+        source: 'bootstrap_warmup',
+        message: 'Bootstrap warmup stage failed',
+        tags: const <String, String>{'stage': 'logs_scrubbed'},
+      ),
+    );
   }
 
   try {
@@ -152,6 +176,15 @@ Future<void> _warmBootstrapServices({
     timings.mark('proxy_controller_initialized');
   } catch (error, stackTrace) {
     _debugBootstrapFailure('proxy_controller_initialized', error, stackTrace);
+    unawaited(
+      captureGlitchTipException(
+        error: error,
+        stackTrace: stackTrace,
+        source: 'bootstrap_warmup',
+        message: 'Bootstrap warmup stage failed',
+        tags: const <String, String>{'stage': 'proxy_controller_initialized'},
+      ),
+    );
   }
 
   try {
@@ -159,6 +192,15 @@ Future<void> _warmBootstrapServices({
     timings.mark('analytics_tracked');
   } catch (error, stackTrace) {
     _debugBootstrapFailure('analytics_tracked', error, stackTrace);
+    unawaited(
+      captureGlitchTipException(
+        error: error,
+        stackTrace: stackTrace,
+        source: 'bootstrap_warmup',
+        message: 'Bootstrap warmup stage failed',
+        tags: const <String, String>{'stage': 'analytics_tracked'},
+      ),
+    );
   }
 }
 

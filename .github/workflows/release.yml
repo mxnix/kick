@@ -150,6 +150,8 @@ jobs:
         env:
           KICK_APTABASE_APP_KEY_RELEASE: ${{ secrets.KICK_APTABASE_APP_KEY_RELEASE }}
           KICK_APTABASE_HOST_RELEASE: ${{ secrets.KICK_APTABASE_HOST_RELEASE }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          KICK_GLITCHTIP_TRACES_SAMPLE_RATE: ${{ secrets.KICK_GLITCHTIP_TRACES_SAMPLE_RATE }}
         run: |
           $flutterArgs = @('build', 'windows', '--release')
           if (-not [string]::IsNullOrWhiteSpace($env:KICK_APTABASE_APP_KEY_RELEASE)) {
@@ -157,6 +159,13 @@ jobs:
           }
           if (-not [string]::IsNullOrWhiteSpace($env:KICK_APTABASE_HOST_RELEASE)) {
             $flutterArgs += "--dart-define=KICK_APTABASE_HOST_RELEASE=$($env:KICK_APTABASE_HOST_RELEASE)"
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:SENTRY_DSN)) {
+            $flutterArgs += "--dart-define=SENTRY_DSN=$($env:SENTRY_DSN)"
+          }
+          $flutterArgs += "--dart-define=SENTRY_ENVIRONMENT=production"
+          if (-not [string]::IsNullOrWhiteSpace($env:KICK_GLITCHTIP_TRACES_SAMPLE_RATE)) {
+            $flutterArgs += "--dart-define=KICK_GLITCHTIP_TRACES_SAMPLE_RATE=$($env:KICK_GLITCHTIP_TRACES_SAMPLE_RATE)"
           }
           flutter @flutterArgs
 
@@ -254,6 +263,8 @@ jobs:
         env:
           KICK_APTABASE_APP_KEY_RELEASE: ${{ secrets.KICK_APTABASE_APP_KEY_RELEASE }}
           KICK_APTABASE_HOST_RELEASE: ${{ secrets.KICK_APTABASE_HOST_RELEASE }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          KICK_GLITCHTIP_TRACES_SAMPLE_RATE: ${{ secrets.KICK_GLITCHTIP_TRACES_SAMPLE_RATE }}
         shell: bash
         run: |
           flutter_args=(build apk --release)
@@ -263,12 +274,21 @@ jobs:
           if [ -n "${KICK_APTABASE_HOST_RELEASE:-}" ]; then
             flutter_args+=("--dart-define=KICK_APTABASE_HOST_RELEASE=$KICK_APTABASE_HOST_RELEASE")
           fi
+          if [ -n "${SENTRY_DSN:-}" ]; then
+            flutter_args+=("--dart-define=SENTRY_DSN=$SENTRY_DSN")
+          fi
+          flutter_args+=("--dart-define=SENTRY_ENVIRONMENT=production")
+          if [ -n "${KICK_GLITCHTIP_TRACES_SAMPLE_RATE:-}" ]; then
+            flutter_args+=("--dart-define=KICK_GLITCHTIP_TRACES_SAMPLE_RATE=$KICK_GLITCHTIP_TRACES_SAMPLE_RATE")
+          fi
           flutter "${flutter_args[@]}"
 
       - name: Build Android release App Bundle
         env:
           KICK_APTABASE_APP_KEY_RELEASE: ${{ secrets.KICK_APTABASE_APP_KEY_RELEASE }}
           KICK_APTABASE_HOST_RELEASE: ${{ secrets.KICK_APTABASE_HOST_RELEASE }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          KICK_GLITCHTIP_TRACES_SAMPLE_RATE: ${{ secrets.KICK_GLITCHTIP_TRACES_SAMPLE_RATE }}
         shell: bash
         run: |
           flutter_args=(build appbundle --release)
@@ -277,6 +297,13 @@ jobs:
           fi
           if [ -n "${KICK_APTABASE_HOST_RELEASE:-}" ]; then
             flutter_args+=("--dart-define=KICK_APTABASE_HOST_RELEASE=$KICK_APTABASE_HOST_RELEASE")
+          fi
+          if [ -n "${SENTRY_DSN:-}" ]; then
+            flutter_args+=("--dart-define=SENTRY_DSN=$SENTRY_DSN")
+          fi
+          flutter_args+=("--dart-define=SENTRY_ENVIRONMENT=production")
+          if [ -n "${KICK_GLITCHTIP_TRACES_SAMPLE_RATE:-}" ]; then
+            flutter_args+=("--dart-define=KICK_GLITCHTIP_TRACES_SAMPLE_RATE=$KICK_GLITCHTIP_TRACES_SAMPLE_RATE")
           fi
           flutter "${flutter_args[@]}"
 

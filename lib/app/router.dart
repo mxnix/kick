@@ -8,10 +8,12 @@ import '../features/home/home_page.dart';
 import '../features/logs/logs_page.dart';
 import '../features/settings/about_page.dart';
 import '../features/settings/settings_page.dart';
+import '../observability/glitchtip.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/home',
+    observers: glitchTipNavigatorObservers(),
     routes: [
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
