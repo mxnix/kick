@@ -9,6 +9,8 @@ class ProxyRuntimeAccount {
     required this.label,
     required this.email,
     required this.projectId,
+    this.googleSubjectId,
+    this.avatarUrl,
     required this.enabled,
     required this.priority,
     required this.notSupportedModels,
@@ -25,6 +27,8 @@ class ProxyRuntimeAccount {
   final String label;
   final String email;
   final String projectId;
+  final String? googleSubjectId;
+  final String? avatarUrl;
   bool enabled;
   int priority;
   final List<String> notSupportedModels;
@@ -44,6 +48,8 @@ class ProxyRuntimeAccount {
       label: label,
       email: email,
       projectId: projectId,
+      googleSubjectId: googleSubjectId,
+      avatarUrl: avatarUrl,
       enabled: enabled,
       priority: priority,
       notSupportedModels: List<String>.from(notSupportedModels),
@@ -62,6 +68,8 @@ class ProxyRuntimeAccount {
       'label': label,
       'email': email,
       'project_id': projectId,
+      'google_subject_id': googleSubjectId,
+      'avatar_url': avatarUrl,
       'enabled': enabled,
       'priority': priority,
       'not_supported_models': List<String>.from(notSupportedModels),
@@ -81,6 +89,8 @@ class ProxyRuntimeAccount {
       label: json['label'] as String? ?? '',
       email: json['email'] as String? ?? '',
       projectId: json['project_id'] as String? ?? '',
+      googleSubjectId: json['google_subject_id'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
       enabled: json['enabled'] as bool? ?? true,
       priority: json['priority'] as int? ?? 0,
       notSupportedModels:
@@ -130,6 +140,11 @@ class GeminiAccountPool {
         .where((account) => normalizeAccountPriority(account.priority) == highestPriority)
         .toList();
     tier.sort((left, right) {
+      final leftQuotaPenalty = _quotaPenalty(left);
+      final rightQuotaPenalty = _quotaPenalty(right);
+      if (leftQuotaPenalty != rightQuotaPenalty) {
+        return leftQuotaPenalty.compareTo(rightQuotaPenalty);
+      }
       final leftUsed = left.lastUsedAt?.millisecondsSinceEpoch ?? 0;
       final rightUsed = right.lastUsedAt?.millisecondsSinceEpoch ?? 0;
       if (leftUsed != rightUsed) {
@@ -146,6 +161,15 @@ class GeminiAccountPool {
   void markUsed(ProxyRuntimeAccount account) {
     account.lastUsedAt = DateTime.now();
     account.usageCount += 1;
+  }
+
+  bool markSuccess(ProxyRuntimeAccount account) {
+    if (account.lastQuotaSnapshot?.trim().isNotEmpty != true) {
+      return false;
+    }
+
+    account.lastQuotaSnapshot = null;
+    return true;
   }
 
   void markQuotaFailure(ProxyRuntimeAccount account, {String? quotaSnapshot, Duration? cooldown}) {
@@ -183,5 +207,9 @@ class GeminiAccountPool {
 
   String _normalizeModel(String value) {
     return ModelCatalog.normalizeModel(value);
+  }
+
+  int _quotaPenalty(ProxyRuntimeAccount account) {
+    return account.lastQuotaSnapshot?.trim().isNotEmpty == true ? 1 : 0;
   }
 }

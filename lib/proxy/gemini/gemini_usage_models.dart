@@ -1,19 +1,40 @@
 import '../model_catalog.dart';
 
+enum GeminiUsageBucketHealth { healthy, low, critical }
+
 class GeminiUsageBucket {
-  const GeminiUsageBucket({required this.modelId, required this.remainingFraction, this.resetAt});
+  const GeminiUsageBucket({
+    required this.modelId,
+    required this.remainingFraction,
+    this.resetAt,
+    this.tokenType = '',
+  });
 
   final String modelId;
   final double remainingFraction;
   final DateTime? resetAt;
+  final String tokenType;
 
   double get usedPercent => (1 - remainingFraction).clamp(0, 1) * 100;
+
+  double get remainingPercent => remainingFraction * 100;
+
+  GeminiUsageBucketHealth get health {
+    if (remainingFraction <= 0.10) {
+      return GeminiUsageBucketHealth.critical;
+    }
+    if (remainingFraction <= 0.25) {
+      return GeminiUsageBucketHealth.low;
+    }
+    return GeminiUsageBucketHealth.healthy;
+  }
 
   static GeminiUsageBucket fromApi(Map<String, Object?> json) {
     return GeminiUsageBucket(
       modelId: ModelCatalog.normalizeModel(_readString(json['modelId'])),
       remainingFraction: _readFraction(json['remainingFraction']),
       resetAt: _readDateTime(json['resetTime']),
+      tokenType: _readString(json['tokenType']).toUpperCase(),
     );
   }
 
@@ -59,6 +80,14 @@ class GeminiUsageSnapshot {
 
   double get totalPercent => totalLimit == 0 ? 0 : (totalUsed / totalLimit) * 100;
 
+  int get lowQuotaBucketCount =>
+      buckets.where((bucket) => bucket.health != GeminiUsageBucketHealth.healthy).length;
+
+  int get criticalBucketCount =>
+      buckets.where((bucket) => bucket.health == GeminiUsageBucketHealth.critical).length;
+
+  int get healthyBucketCount => buckets.length - lowQuotaBucketCount;
+
   DateTime? get nextResetAt {
     for (final bucket in buckets) {
       if (bucket.resetAt != null) {
@@ -66,6 +95,27 @@ class GeminiUsageSnapshot {
       }
     }
     return null;
+  }
+
+  GeminiUsageBucket? get mostConstrainedBucket {
+    if (buckets.isEmpty) {
+      return null;
+    }
+
+    GeminiUsageBucket current = buckets.first;
+    for (final bucket in buckets.skip(1)) {
+      if (bucket.remainingFraction < current.remainingFraction) {
+        current = bucket;
+        continue;
+      }
+      if (bucket.remainingFraction == current.remainingFraction &&
+          bucket.resetAt != null &&
+          current.resetAt != null &&
+          bucket.resetAt!.isBefore(current.resetAt!)) {
+        current = bucket;
+      }
+    }
+    return current;
   }
 
   static GeminiUsageSnapshot fromApi(Map<String, Object?> json, {DateTime? fetchedAt}) {

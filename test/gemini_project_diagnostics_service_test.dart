@@ -6,8 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/gemini/gemini_code_assist_client.dart';
-import 'package:kick/proxy/gemini/gemini_usage_models.dart';
-import 'package:kick/proxy/gemini/gemini_usage_service.dart';
+import 'package:kick/proxy/gemini/gemini_project_diagnostics_service.dart';
 
 void main() {
   AccountProfile sampleAccount() => const AccountProfile(
@@ -42,74 +41,14 @@ void main() {
     scope: null,
   );
 
-  test('parses buckets in bundled model order and computes total usage', () {
-    final snapshot = GeminiUsageSnapshot.fromApi({
-      'buckets': [
-        {
-          'modelId': 'gemini-3.1-pro-preview',
-          'remainingFraction': 0.95,
-          'resetTime': '2026-03-16T15:21:00Z',
-        },
-        {
-          'modelId': 'gemini-2.5-flash-preview',
-          'remainingFraction': 0.97,
-          'resetTime': '2026-03-16T13:56:00Z',
-        },
-      ],
-    }, fetchedAt: DateTime.parse('2026-03-15T12:00:00Z'));
-
-    expect(snapshot.buckets.map((bucket) => bucket.modelId), [
-      'gemini-2.5-flash',
-      'gemini-3.1-pro-preview',
-    ]);
-    expect(snapshot.totalUsed, closeTo(8, 0.001));
-    expect(snapshot.totalLimit, 200);
-    expect(snapshot.totalPercent, closeTo(4, 0.001));
-    expect(snapshot.nextResetAt, DateTime.parse('2026-03-16T13:56:00Z').toLocal());
-  });
-
-  test('derives bucket health, remaining percentages, and token types', () {
-    final snapshot = GeminiUsageSnapshot.fromApi({
-      'buckets': [
-        {
-          'modelId': 'gemini-2.5-flash',
-          'remainingFraction': 0.72,
-          'resetTime': '2026-03-16T13:56:00Z',
-          'tokenType': 'REQUESTS',
-        },
-        {
-          'modelId': 'gemini-3.1-pro-preview',
-          'remainingFraction': 0.18,
-          'resetTime': '2026-03-16T15:21:00Z',
-          'tokenType': 'REQUESTS',
-        },
-        {
-          'modelId': 'gemini-2.5-pro',
-          'remainingFraction': 0.05,
-          'resetTime': '2026-03-16T14:00:00Z',
-          'tokenType': 'REQUESTS',
-        },
-      ],
-    });
-
-    expect(snapshot.buckets.first.tokenType, 'REQUESTS');
-    expect(snapshot.buckets.first.remainingPercent, closeTo(72, 0.001));
-    expect(snapshot.lowQuotaBucketCount, 2);
-    expect(snapshot.criticalBucketCount, 1);
-    expect(snapshot.healthyBucketCount, 1);
-    expect(snapshot.mostConstrainedBucket?.modelId, 'gemini-2.5-pro');
-    expect(snapshot.mostConstrainedBucket?.health, GeminiUsageBucketHealth.critical);
-  });
-
-  test('refreshes expired tokens before retrieveUserQuota request', () async {
-    final persisted = <OAuthTokens>[];
+  test('sends a cheap generateContent probe for project diagnostics', () async {
     Map<String, Object?>? requestBody;
     Map<String, String>? requestHeaders;
 
-    final service = GeminiUsageService(
-      readTokens: (_) async => expiredTokens(),
-      refreshTokens: (tokens) async => activeTokens(accessToken: 'fresh-token'),
-      persistTokens: (_, tokens) async => persisted.add(tokens),
+    final service = GeminiProjectDiagnosticsService(
+      readTokens: (_) async => activeTokens(),
+      refreshTokens: (tokens) async => tokens,
+      persistTokens: (_, tokens) async {},
       httpClient: QueueHttpClient([
         (request) async {
           requestHeaders = request.headers;
@@ -117,13 +56,21 @@ void main() {
               jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
           return http.Response(
             jsonEncode({
-              'buckets': [
-                {
-                  'modelId': 'gemini-2.5-flash',
-                  'remainingFraction': 0.97,
-                  'resetTime': '2026-03-16T13:56:00Z',
-                },
-              ],
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                    'finishReason': 'STOP',
+                  },
+                ],
+                'modelVersion': 'gemini-2.5-flash',
+                'responseId': 'response-1',
+              },
+              'traceId': 'trace-1',
             }),
             200,
           );
@@ -131,21 +78,66 @@ void main() {
       ]),
     );
 
-    final snapshot = await service.fetchUsage(sampleAccount());
+    final snapshot = await service.diagnose(sampleAccount());
 
-    expect(snapshot.buckets, hasLength(1));
-    expect(requestBody, {'project': 'project-1'});
-    expect(requestHeaders?[HttpHeaders.authorizationHeader], 'Bearer fresh-token');
+    expect(snapshot.modelId, GeminiProjectDiagnosticsService.probeModelId);
+    expect(snapshot.modelVersion, 'gemini-2.5-flash');
+    expect(snapshot.responseId, 'response-1');
+    expect(snapshot.traceId, 'trace-1');
+    expect(snapshot.probeText, 'ok');
+    expect(requestHeaders?[HttpHeaders.authorizationHeader], 'Bearer access-token');
+    expect(requestBody?['project'], 'project-1');
+    expect(requestBody?['model'], GeminiProjectDiagnosticsService.probeModelId);
+    expect(
+      (((requestBody?['request'] as Map?)?['generationConfig'] as Map?)?['responseModalities']),
+      ['TEXT'],
+    );
+  });
+
+  test('refreshes expired tokens before project diagnostics request', () async {
+    final persisted = <OAuthTokens>[];
+    final seenTokens = <String>[];
+
+    final service = GeminiProjectDiagnosticsService(
+      readTokens: (_) async => expiredTokens(),
+      refreshTokens: (tokens) async => activeTokens(accessToken: 'fresh-token'),
+      persistTokens: (_, tokens) async => persisted.add(tokens),
+      httpClient: QueueHttpClient([
+        (request) async {
+          seenTokens.add(request.headers[HttpHeaders.authorizationHeader] ?? '');
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await service.diagnose(sampleAccount());
+
+    expect(seenTokens, ['Bearer fresh-token']);
     expect(persisted, hasLength(1));
     expect(persisted.single.accessToken, 'fresh-token');
   });
 
-  test('retries usage request after auth failure with refreshed token', () async {
+  test('retries project diagnostics after auth failure with refreshed token', () async {
     var refreshCalls = 0;
     final persisted = <OAuthTokens>[];
     final seenTokens = <String>[];
 
-    final service = GeminiUsageService(
+    final service = GeminiProjectDiagnosticsService(
       readTokens: (_) async => activeTokens(accessToken: 'stale-token'),
       refreshTokens: (tokens) async {
         refreshCalls += 1;
@@ -166,13 +158,17 @@ void main() {
           seenTokens.add(request.headers[HttpHeaders.authorizationHeader] ?? '');
           return http.Response(
             jsonEncode({
-              'buckets': [
-                {
-                  'modelId': 'gemini-2.5-pro',
-                  'remainingFraction': 1,
-                  'resetTime': '2026-03-16T15:21:00Z',
-                },
-              ],
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
             }),
             200,
           );
@@ -180,40 +176,35 @@ void main() {
       ]),
     );
 
-    final snapshot = await service.fetchUsage(sampleAccount());
+    await service.diagnose(sampleAccount());
 
-    expect(snapshot.buckets.single.modelId, 'gemini-2.5-pro');
     expect(refreshCalls, 1);
     expect(persisted, hasLength(1));
     expect(seenTokens, ['Bearer stale-token', 'Bearer renewed-token']);
   });
 
-  test('does not refresh tokens when quota lookup requires account verification', () async {
-    var refreshCalls = 0;
-    final seenTokens = <String>[];
-
-    final service = GeminiUsageService(
+  test('surfaces project configuration failures from the probe', () async {
+    final service = GeminiProjectDiagnosticsService(
       readTokens: (_) async => activeTokens(accessToken: 'active-token'),
-      refreshTokens: (tokens) async {
-        refreshCalls += 1;
-        return activeTokens(accessToken: 'unexpected-refresh');
-      },
+      refreshTokens: (tokens) async => activeTokens(accessToken: 'unexpected-refresh'),
       persistTokens: (_, tokens) async {},
       httpClient: QueueHttpClient([
         (request) async {
-          seenTokens.add(request.headers[HttpHeaders.authorizationHeader] ?? '');
           return http.Response(
             jsonEncode({
               'error': {
                 'code': 403,
-                'message': 'Verify your account to continue.',
+                'message': 'Gemini for Google Cloud API has not been used in project xz before.',
                 'status': 'PERMISSION_DENIED',
                 'details': [
                   {
                     '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
-                    'reason': 'VALIDATION_REQUIRED',
-                    'domain': 'cloudcode-pa.googleapis.com',
-                    'metadata': {'validation_error_message': 'Verify your account to continue.'},
+                    'reason': 'SERVICE_DISABLED',
+                    'domain': 'googleapis.com',
+                    'metadata': {
+                      'activationUrl':
+                          'https://console.developers.google.com/apis/api/cloudaicompanion.googleapis.com/overview?project=xz',
+                    },
                   },
                 ],
               },
@@ -225,20 +216,22 @@ void main() {
     );
 
     await expectLater(
-      service.fetchUsage(sampleAccount()),
+      service.diagnose(sampleAccount().copyWith(projectId: 'xz')),
       throwsA(
         isA<GeminiGatewayException>()
-            .having((error) => error.kind, 'kind', GeminiGatewayFailureKind.auth)
             .having(
               (error) => error.detail,
               'detail',
-              GeminiGatewayFailureDetail.accountVerificationRequired,
+              GeminiGatewayFailureDetail.projectConfiguration,
+            )
+            .having((error) => error.upstreamReason, 'upstreamReason', 'SERVICE_DISABLED')
+            .having(
+              (error) => error.actionUrl,
+              'actionUrl',
+              'https://console.developers.google.com/apis/api/cloudaicompanion.googleapis.com/overview?project=xz',
             ),
       ),
     );
-
-    expect(refreshCalls, 0);
-    expect(seenTokens, ['Bearer active-token']);
   });
 }
 

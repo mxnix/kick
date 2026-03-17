@@ -41,7 +41,12 @@ void main() {
       },
       fetchProfile: (accessToken) async {
         expect(accessToken, 'access-token');
-        return {'email': 'user@example.com', 'name': 'Test User'};
+        return const GoogleAccountProfile(
+          email: 'user@example.com',
+          displayName: 'Test User',
+          googleSubjectId: 'google-subject-1',
+          avatarUrl: 'https://example.com/avatar.png',
+        );
       },
     );
 
@@ -51,6 +56,8 @@ void main() {
     expect(launchedModes, [LaunchMode.inAppBrowserView]);
     expect(result.email, 'user@example.com');
     expect(result.displayName, 'Test User');
+    expect(result.googleSubjectId, 'google-subject-1');
+    expect(result.avatarUrl, 'https://example.com/avatar.png');
   });
 
   test('falls back to external browser when custom tabs are unavailable', () async {
@@ -73,7 +80,11 @@ void main() {
       },
       fetchProfile: (accessToken) async {
         expect(accessToken, 'fallback-token');
-        return {'email': 'fallback@example.com', 'name': 'Fallback User'};
+        return const GoogleAccountProfile(
+          email: 'fallback@example.com',
+          displayName: 'Fallback User',
+          googleSubjectId: 'fallback-subject',
+        );
       },
     );
 
@@ -82,6 +93,7 @@ void main() {
 
     expect(launchedModes, [LaunchMode.externalApplication]);
     expect(result.email, 'fallback@example.com');
+    expect(result.googleSubjectId, 'fallback-subject');
   });
 
   test('closes the loopback server when OAuth times out', () async {

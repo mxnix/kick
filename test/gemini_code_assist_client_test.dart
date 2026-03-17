@@ -39,6 +39,7 @@ void main() {
     String model = 'gemini-2.5-pro',
     bool stream = false,
     int? maxOutputTokens = 256,
+    List<UnifiedTurn>? turns,
     List<UnifiedToolDeclaration> tools = const [],
     List<String>? stopSequences,
     String? reasoningEffort,
@@ -50,9 +51,11 @@ void main() {
       model: model,
       stream: stream,
       source: 'chat.completions',
-      turns: const [
-        UnifiedTurn(role: 'user', parts: [UnifiedPart.text('Hello')]),
-      ],
+      turns:
+          turns ??
+          const [
+            UnifiedTurn(role: 'user', parts: [UnifiedPart.text('Hello')]),
+          ],
       tools: tools,
       systemInstruction: 'You are helpful.',
       toolChoice: null,
@@ -692,6 +695,136 @@ void main() {
     expect(requestMap['safetySettings'], isNotEmpty);
   });
 
+  test('maps Gemini 3 flash reasoning effort none to minimal thinking', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'gemini-3-flash', reasoningEffort: 'none'),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
+      'thinkingLevel': 'MINIMAL',
+    });
+  });
+
+  test('maps Gemini 3 pro reasoning effort medium to low thinking', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'gemini-3.1-pro-preview', reasoningEffort: 'medium'),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
+      'thinkingLevel': 'LOW',
+    });
+  });
+
+  test('uses explicit Google thinking config for Gemini 3', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        model: 'gemini-3-flash',
+        googleThinkingConfig: const {'thinking_level': 'minimal', 'include_thoughts': false},
+      ),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
+      'thinkingLevel': 'MINIMAL',
+      'includeThoughts': false,
+    });
+  });
+
   test('uses google thinking config and text response modality for Gemini 2.5', () async {
     Map<String, Object?>? capturedBody;
 
@@ -736,6 +869,134 @@ void main() {
     expect(generationConfig['responseModalities'], ['TEXT']);
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingBudget': 2048,
+      'includeThoughts': true,
+    });
+  });
+
+  test('defaults Gemini 2.5 text-only requests to thinkingBudget 0', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'gemini-2.5-flash'),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect(generationConfig['responseModalities'], ['TEXT']);
+    expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
+      'thinkingBudget': 0,
+      'includeThoughts': false,
+    });
+  });
+
+  test('does not disable thinking by default for Gemini 2.5 Pro text-only requests', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'gemini-2.5-pro'),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect(generationConfig['responseModalities'], ['TEXT']);
+    expect(generationConfig.containsKey('thinkingConfig'), isFalse);
+  });
+
+  test('respects explicit reasoning effort on Gemini 2.5', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'gemini-2.5-flash', reasoningEffort: 'high'),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
+      'thinkingBudget': 24576,
       'includeThoughts': true,
     });
   });
@@ -787,6 +1048,250 @@ void main() {
     final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
 
     expect(generationConfig.containsKey('responseModalities'), isFalse);
+    expect(generationConfig.containsKey('thinkingConfig'), isFalse);
+  });
+
+  test('does not disable thinking by default for multimodal Gemini 2.5 requests', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        model: 'gemini-2.5-flash',
+        turns: const [
+          UnifiedTurn(
+            role: 'user',
+            parts: [
+              UnifiedPart.text('Describe this image'),
+              UnifiedPart.fileData(
+                mimeType: 'image/png',
+                fileUri: 'https://example.com/example.png',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect(generationConfig['responseModalities'], ['TEXT']);
+    expect(generationConfig.containsKey('thinkingConfig'), isFalse);
+  });
+
+  test('passes assistant thought signatures through to Gemini request parts', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        model: 'gemini-3-flash',
+        turns: const [
+          UnifiedTurn(
+            role: 'assistant',
+            parts: [
+              UnifiedPart.thought(text: 'Need weather lookup.', thoughtSignature: 'sig_weather'),
+              UnifiedPart.functionCall(
+                callId: 'call_weather',
+                name: 'lookupWeather',
+                arguments: {'city': 'Moscow'},
+              ),
+            ],
+          ),
+          UnifiedTurn(role: 'user', parts: [UnifiedPart.text('Continue')]),
+        ],
+      ),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final contents = (requestMap['contents'] as List).cast<Map>();
+    final assistantTurn = contents.first.cast<String, Object?>();
+    final assistantParts = (assistantTurn['parts'] as List).cast<Map>();
+
+    expect(assistantTurn['role'], 'model');
+    expect(assistantParts.first, {
+      'thought': true,
+      'text': 'Need weather lookup.',
+      'thoughtSignature': 'sig_weather',
+    });
+    expect((assistantParts[1]['functionCall'] as Map)['name'], 'lookupWeather');
+  });
+
+  test('defaults short Gemini 3 flash text-only requests to minimal thinking', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'gemini-3-flash', maxOutputTokens: 64),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
+      'thinkingLevel': 'MINIMAL',
+    });
+  });
+
+  test('defaults short Gemini 3 pro text-only requests to low thinking', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'gemini-3.1-pro-preview', maxOutputTokens: 64),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
+      'thinkingLevel': 'LOW',
+    });
+  });
+
+  test('does not constrain Gemini 3 defaults when max output tokens is large', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'gemini-3-flash', maxOutputTokens: 512),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+
+    expect(generationConfig.containsKey('thinkingConfig'), isFalse);
   });
 
   test('uses a sane default max output token budget when client omits it', () async {

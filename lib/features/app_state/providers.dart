@@ -16,6 +16,7 @@ import '../../data/models/app_log_entry.dart';
 import '../../data/models/app_settings.dart';
 import '../../proxy/engine/proxy_controller.dart';
 import '../../proxy/gemini/gemini_oauth_service.dart';
+import '../../proxy/gemini/gemini_project_diagnostics_service.dart';
 import '../../proxy/gemini/gemini_usage_models.dart';
 import '../../proxy/gemini/gemini_usage_service.dart';
 import '../logs/log_export_service.dart';
@@ -48,6 +49,17 @@ final oauthServiceProvider = Provider<GeminiOAuthService>(
 final geminiUsageServiceProvider = Provider<GeminiUsageService>((ref) {
   final oauthService = ref.watch(oauthServiceProvider);
   final service = GeminiUsageService(
+    readTokens: oauthService.readTokens,
+    refreshTokens: oauthService.refreshTokens,
+    persistTokens: oauthService.persistTokens,
+  );
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final geminiProjectDiagnosticsServiceProvider = Provider<GeminiProjectDiagnosticsService>((ref) {
+  final oauthService = ref.watch(oauthServiceProvider);
+  final service = GeminiProjectDiagnosticsService(
     readTokens: oauthService.readTokens,
     refreshTokens: oauthService.refreshTokens,
     persistTokens: oauthService.persistTokens,
@@ -141,6 +153,8 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
             .trim(),
         email: authResult.email,
         projectId: projectId.trim(),
+        googleSubjectId: authResult.googleSubjectId ?? existing?.googleSubjectId,
+        avatarUrl: authResult.avatarUrl,
         enabled: true,
         priority: normalizeAccountPriority(priority),
         notSupportedModels: notSupportedModels,

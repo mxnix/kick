@@ -326,9 +326,7 @@ class _ProxyIsolateHost {
         route: route,
         message: error.message,
         stackTrace: stackTrace,
-        details: prompt == null
-            ? const <String, Object?>{}
-            : _requestContextPayload(prompt: prompt),
+        details: _failureContextPayload(prompt: prompt, error: error),
       );
       return _gatewayErrorResponse(error);
     } catch (error, stackTrace) {
@@ -360,9 +358,7 @@ class _ProxyIsolateHost {
         route: route,
         message: error.toString(),
         stackTrace: stackTrace,
-        details: prompt == null
-            ? const <String, Object?>{}
-            : _requestContextPayload(prompt: prompt),
+        details: _failureContextPayload(prompt: prompt, error: gatewayError),
       );
       return _errorResponse(500, 'proxy_error', error.toString());
     }
@@ -503,9 +499,7 @@ class _ProxyIsolateHost {
         route: route,
         message: error.message,
         stackTrace: stackTrace,
-        details: prompt == null
-            ? const <String, Object?>{}
-            : _requestContextPayload(prompt: prompt),
+        details: _failureContextPayload(prompt: prompt, error: error),
       );
       return _gatewayErrorResponse(error);
     } catch (error, stackTrace) {
@@ -537,9 +531,7 @@ class _ProxyIsolateHost {
         route: route,
         message: error.toString(),
         stackTrace: stackTrace,
-        details: prompt == null
-            ? const <String, Object?>{}
-            : _requestContextPayload(prompt: prompt),
+        details: _failureContextPayload(prompt: prompt, error: gatewayError),
       );
       return _errorResponse(500, 'proxy_error', error.toString());
     }
@@ -596,6 +588,9 @@ class _ProxyIsolateHost {
           },
         );
         _requestCount += 1;
+        if (_pool.markSuccess(account)) {
+          await _publishAccounts();
+        }
         _publishStatus();
         _emitRequestSucceededAnalytics(request: request, route: route);
         return payload;
@@ -619,7 +614,7 @@ class _ProxyIsolateHost {
           route: _routeForSource(request.source),
           message: error.toString(),
           stackTrace: stackTrace,
-          details: _requestContextPayload(prompt: request),
+          details: _failureContextPayload(prompt: request),
         );
         rethrow;
       }
@@ -693,6 +688,9 @@ class _ProxyIsolateHost {
             }
             completed = true;
             _requestCount += 1;
+            if (_pool.markSuccess(account)) {
+              await _publishAccounts();
+            }
             _publishStatus();
             _emitRequestSucceededAnalytics(request: request, route: route);
             await _logRetryOutcome(
@@ -732,7 +730,7 @@ class _ProxyIsolateHost {
               route: route,
               message: error.message,
               stackTrace: stackTrace,
-              details: _requestContextPayload(prompt: request),
+              details: _failureContextPayload(prompt: request, error: error),
             );
             for (final event in _streamErrorEvents(route: route, request: request, error: error)) {
               yield utf8.encode(event);
@@ -766,7 +764,7 @@ class _ProxyIsolateHost {
               route: route,
               message: gatewayError.message,
               stackTrace: stackTrace,
-              details: _requestContextPayload(prompt: request),
+              details: _failureContextPayload(prompt: request, error: gatewayError),
             );
             for (final event in _streamErrorEvents(
               route: route,
@@ -1167,17 +1165,63 @@ class _ProxyIsolateHost {
     return {'request_id': prompt.requestId, 'model': prompt.model, 'stream': prompt.stream};
   }
 
+  Map<String, Object?> _failureContextPayload({
+    UnifiedPromptRequest? prompt,
+    GeminiGatewayException? error,
+  }) {
+    return {
+      ..._requestContextPayload(prompt: prompt),
+      if (error != null) ..._gatewayErrorContext(error),
+    };
+  }
+
+  Map<String, Object?> _gatewayErrorContext(GeminiGatewayException error) {
+    return {
+      'error_kind': error.kind.name,
+      'status_code': error.statusCode,
+      if (error.detail != null) 'error_detail': error.detail!.name,
+      if (error.upstreamReason?.trim().isNotEmpty == true)
+        'upstream_reason': error.upstreamReason!.trim(),
+      if (error.retryAfter != null) 'retry_after_ms': error.retryAfter!.inMilliseconds,
+      if (error.actionUrl?.trim().isNotEmpty == true) 'has_action_url': true,
+      if (error.quotaSnapshot?.trim().isNotEmpty == true) 'has_quota_snapshot': true,
+    };
+  }
+
   Map<String, Object?> _responseSummaryPayload(Map<String, Object?> payload) {
     final preview = OpenAiResponseMapper.currentText(payload);
     final reasoningText = OpenAiResponseMapper.currentReasoningText(payload);
     final finishReason = OpenAiResponseMapper.currentFinishReason(payload);
     final toolCallCount = OpenAiResponseMapper.currentToolCallCount(payload);
+    final traceId = OpenAiResponseMapper.currentTraceId(payload);
+    final upstreamResponseId = OpenAiResponseMapper.currentUpstreamResponseId(payload);
+    final modelVersion = OpenAiResponseMapper.currentModelVersion(payload);
+    final promptTokens = OpenAiResponseMapper.currentPromptTokenCount(payload);
+    final completionTokens = OpenAiResponseMapper.currentCompletionTokenCount(payload);
+    final totalTokens = OpenAiResponseMapper.currentTotalTokenCount(payload);
+    final cachedTokens = OpenAiResponseMapper.currentCachedTokenCount(payload);
+    final reasoningTokens = OpenAiResponseMapper.currentReasoningTokenCount(payload);
     return {
       'finish_reason': finishReason,
+      ...?_optionalMapEntry('trace_id', traceId),
+      ...?_optionalMapEntry('upstream_response_id', upstreamResponseId),
+      ...?_optionalMapEntry('upstream_model_version', modelVersion),
+      ...?_optionalMapEntry('prompt_tokens', promptTokens),
+      ...?_optionalMapEntry('completion_tokens', completionTokens),
+      ...?_optionalMapEntry('total_tokens', totalTokens),
+      ...?_optionalMapEntry('cached_tokens', cachedTokens),
+      ...?_optionalMapEntry('reasoning_tokens', reasoningTokens),
       if (preview.isNotEmpty) 'output_text_chars': preview.length,
       if (reasoningText.isNotEmpty) 'reasoning_text_chars': reasoningText.length,
       if (toolCallCount > 0) 'tool_call_count': toolCallCount,
     };
+  }
+
+  Map<String, Object?>? _optionalMapEntry(String key, Object? value) {
+    if (value == null) {
+      return null;
+    }
+    return {key: value};
   }
 
   bool get _unsafeRawLoggingEnabled => _settings?['unsafe_raw_logging_enabled'] == true;
@@ -1314,6 +1358,7 @@ class _ProxyIsolateHost {
         'stream': request.stream,
         'error_kind': error.kind.name,
         'status_code': error.statusCode,
+        ..._gatewayErrorContext(error),
       },
     });
     _emitCompatibilityIssueAnalytics(request: request, route: route, error: error);
@@ -1338,6 +1383,7 @@ class _ProxyIsolateHost {
         'model': request.model,
         'stream': request.stream,
         ...tracker.toAnalyticsPayload(outcome: succeeded ? 'succeeded' : 'failed', error: error),
+        if (error != null) ..._gatewayErrorContext(error),
       },
     });
   }
@@ -1362,6 +1408,7 @@ class _ProxyIsolateHost {
         'stream': request.stream,
         'error_kind': error.kind.name,
         'status_code': error.statusCode,
+        ..._gatewayErrorContext(error),
       },
     });
   }
@@ -1579,6 +1626,7 @@ class _RequestRetryTracker {
       'delay_ms': event.delay.inMilliseconds,
       'error_kind': event.error.kind.name,
       'status_code': event.error.statusCode,
+      ..._errorContext(event.error),
     };
   }
 
@@ -1594,7 +1642,7 @@ class _RequestRetryTracker {
       'account_failover_count': accountFailoverCount,
       'error_kind': error.kind.name,
       'status_code': error.statusCode,
-      if (error.retryAfter != null) 'retry_after_ms': error.retryAfter!.inMilliseconds,
+      ..._errorContext(error),
     };
   }
 
@@ -1615,6 +1663,7 @@ class _RequestRetryTracker {
       if (totalRetryDelay > Duration.zero) 'retry_delay_ms': totalRetryDelay.inMilliseconds,
       if (error != null) 'final_error_kind': error.kind.name,
       if (error != null) 'final_status_code': error.statusCode,
+      if (error != null) ..._prefixedErrorContext('final_', error),
     };
   }
 
@@ -1630,6 +1679,27 @@ class _RequestRetryTracker {
       if (_retryKinds.isNotEmpty) 'retry_kinds': _retryKinds.join(','),
       if (totalRetryDelay > Duration.zero) 'retry_delay_ms': totalRetryDelay.inMilliseconds,
       if (error != null) 'status_code': error.statusCode,
+      if (error != null) ..._errorContext(error),
+    };
+  }
+
+  static Map<String, Object?> _errorContext(GeminiGatewayException error) {
+    return {
+      if (error.detail != null) 'error_detail': error.detail!.name,
+      if (error.upstreamReason?.trim().isNotEmpty == true)
+        'upstream_reason': error.upstreamReason!.trim(),
+      if (error.retryAfter != null) 'retry_after_ms': error.retryAfter!.inMilliseconds,
+      if (error.actionUrl?.trim().isNotEmpty == true) 'has_action_url': true,
+    };
+  }
+
+  static Map<String, Object?> _prefixedErrorContext(String prefix, GeminiGatewayException error) {
+    return {
+      if (error.detail != null) '${prefix}error_detail': error.detail!.name,
+      if (error.upstreamReason?.trim().isNotEmpty == true)
+        '${prefix}upstream_reason': error.upstreamReason!.trim(),
+      if (error.retryAfter != null) '${prefix}retry_after_ms': error.retryAfter!.inMilliseconds,
+      if (error.actionUrl?.trim().isNotEmpty == true) '${prefix}has_action_url': true,
     };
   }
 }

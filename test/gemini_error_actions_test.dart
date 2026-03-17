@@ -17,6 +17,24 @@ void main() {
     expect(actionUrl, 'https://accounts.google.com/verify');
   });
 
+  test('extracts project configuration action details from gateway error', () {
+    final action = primaryActionForError(
+      GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.auth,
+        detail: GeminiGatewayFailureDetail.projectConfiguration,
+        message: 'API disabled.',
+        statusCode: 403,
+        actionUrl: 'https://console.developers.google.com/apis/api/cloudaicompanion.googleapis.com',
+      ),
+    );
+
+    expect(action?.kind, GeminiErrorActionKind.projectConfiguration);
+    expect(
+      action?.url,
+      'https://console.developers.google.com/apis/api/cloudaicompanion.googleapis.com',
+    );
+  });
+
   test('ignores non verification errors', () {
     final actionUrl = accountVerificationUrlForError(
       GeminiGatewayException(

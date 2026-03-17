@@ -101,13 +101,13 @@ abstract class AppLocalizations {
   /// No description provided for @shellSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Локальный прокси Gemini CLI'**
+  /// **'Локальный прокси для Gemini CLI'**
   String get shellSubtitle;
 
   /// No description provided for @connectGoogleAccountTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Подключить Google аккаунт'**
+  /// **'Подключить Google-аккаунт'**
   String get connectGoogleAccountTitle;
 
   /// No description provided for @homeTitle.
@@ -119,19 +119,19 @@ abstract class AppLocalizations {
   /// No description provided for @proxyRunningStatus.
   ///
   /// In ru, this message translates to:
-  /// **'Активно'**
+  /// **'Запущен'**
   String get proxyRunningStatus;
 
   /// No description provided for @proxyStoppedStatus.
   ///
   /// In ru, this message translates to:
-  /// **'Остановлено'**
+  /// **'Остановлен'**
   String get proxyStoppedStatus;
 
   /// No description provided for @embeddedProxyTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Прокси'**
+  /// **'Прокси-сервер'**
   String get embeddedProxyTitle;
 
   /// No description provided for @proxyAddress.
@@ -143,7 +143,7 @@ abstract class AppLocalizations {
   /// No description provided for @proxyEndpointTitle.
   ///
   /// In ru, this message translates to:
-  /// **'URL прокси'**
+  /// **'Адрес прокси'**
   String get proxyEndpointTitle;
 
   /// No description provided for @activeAccounts.
@@ -173,7 +173,7 @@ abstract class AppLocalizations {
   /// No description provided for @uptimeNotStarted.
   ///
   /// In ru, this message translates to:
-  /// **'Пока не запущен'**
+  /// **'Еще не запущен'**
   String get uptimeNotStarted;
 
   /// No description provided for @uptimeValue.
@@ -197,19 +197,19 @@ abstract class AppLocalizations {
   /// No description provided for @apiKeyDisabledValue.
   ///
   /// In ru, this message translates to:
-  /// **'Отключен'**
+  /// **'Не требуется'**
   String get apiKeyDisabledValue;
 
   /// No description provided for @changeApiKeyLinkLabel.
   ///
   /// In ru, this message translates to:
-  /// **'Изменить ключ'**
+  /// **'Изменить API-ключ'**
   String get changeApiKeyLinkLabel;
 
   /// No description provided for @loadingValue.
   ///
   /// In ru, this message translates to:
-  /// **'Загружается...'**
+  /// **'Загрузка...'**
   String get loadingValue;
 
   /// No description provided for @lastErrorTitle.
@@ -227,13 +227,13 @@ abstract class AppLocalizations {
   /// No description provided for @accountsTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Список аккаунтов'**
+  /// **'Аккаунты'**
   String get accountsTitle;
 
   /// No description provided for @accountsSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Добавляйте Google аккаунты и управляйте ими'**
+  /// **'Подключайте Google-аккаунты и управляйте ими'**
   String get accountsSubtitle;
 
   /// No description provided for @addButton.
@@ -245,19 +245,19 @@ abstract class AppLocalizations {
   /// No description provided for @accountsEmptyTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Пока пусто'**
+  /// **'Аккаунтов пока нет'**
   String get accountsEmptyTitle;
 
   /// No description provided for @accountsEmptyMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Подключите хотя бы один Google аккаунт'**
+  /// **'Подключите хотя бы один Google-аккаунт'**
   String get accountsEmptyMessage;
 
   /// No description provided for @connectAccountButton.
   ///
   /// In ru, this message translates to:
-  /// **'Подключить аккаунт'**
+  /// **'Подключить Google-аккаунт'**
   String get connectAccountButton;
 
   /// No description provided for @accountsLoadErrorTitle.
@@ -275,67 +275,97 @@ abstract class AppLocalizations {
   /// No description provided for @priorityChip.
   ///
   /// In ru, this message translates to:
-  /// **'Роль: {priorityLabel}'**
+  /// **'Приоритет: {priorityLabel}'**
   String priorityChip(String priorityLabel);
 
   /// No description provided for @accountCoolingDownStatus.
   ///
   /// In ru, this message translates to:
-  /// **'Таймаут'**
+  /// **'На паузе'**
   String get accountCoolingDownStatus;
 
   /// No description provided for @accountReadyStatus.
   ///
   /// In ru, this message translates to:
-  /// **'Готов'**
+  /// **'Готов к работе'**
   String get accountReadyStatus;
 
   /// No description provided for @accountDisabledStatus.
   ///
   /// In ru, this message translates to:
-  /// **'Отключен'**
+  /// **'Выключен'**
   String get accountDisabledStatus;
 
   /// No description provided for @unsupportedModelsList.
   ///
   /// In ru, this message translates to:
-  /// **'Не использовать для: {models}'**
+  /// **'Не использовать для моделей: {models}'**
   String unsupportedModelsList(String models);
 
   /// No description provided for @editAccountTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Редактировать аккаунт'**
+  /// **'Редактирование аккаунта'**
   String get editAccountTitle;
 
   /// No description provided for @editButton.
   ///
   /// In ru, this message translates to:
-  /// **'Изменить'**
+  /// **'Редактировать'**
   String get editButton;
 
   /// No description provided for @reauthorizeAccountTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Переавторизовать аккаунт'**
+  /// **'Переподключить аккаунт'**
   String get reauthorizeAccountTitle;
 
   /// No description provided for @reauthorizeButton.
   ///
   /// In ru, this message translates to:
-  /// **'Переавторизовать'**
+  /// **'Переподключить'**
   String get reauthorizeButton;
+
+  /// No description provided for @accountProjectCheckButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверить доступ к проекту'**
+  String get accountProjectCheckButton;
+
+  /// No description provided for @accountProjectCheckInProgressMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверка...'**
+  String get accountProjectCheckInProgressMessage;
+
+  /// No description provided for @accountProjectCheckSuccessTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Доступ к проекту подтвержден'**
+  String get accountProjectCheckSuccessTitle;
+
+  /// No description provided for @accountProjectCheckSuccessMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'KiCk смог выполнить тестовый запрос к Google для этого аккаунта и проекта'**
+  String get accountProjectCheckSuccessMessage;
+
+  /// No description provided for @accountProjectCheckFailureTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось проверить'**
+  String get accountProjectCheckFailureTitle;
 
   /// No description provided for @resetCooldownTooltip.
   ///
   /// In ru, this message translates to:
-  /// **'Сбросить статус'**
+  /// **'Сбросить состояние'**
   String get resetCooldownTooltip;
 
   /// No description provided for @clearCooldownAction.
   ///
   /// In ru, this message translates to:
-  /// **'Снять блокировку'**
+  /// **'Снять паузу'**
   String get clearCooldownAction;
 
   /// No description provided for @deleteTooltip.
@@ -353,13 +383,13 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Лимиты'**
+  /// **'Лимиты аккаунта'**
   String get accountUsageTitle;
 
   /// No description provided for @accountUsageProviderLabel.
   ///
   /// In ru, this message translates to:
-  /// **'Gemini CLI OAuth'**
+  /// **'Авторизация Gemini CLI (OAuth)'**
   String get accountUsageProviderLabel;
 
   /// No description provided for @accountUsageRefreshTooltip.
@@ -371,13 +401,13 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageStatusHealthy.
   ///
   /// In ru, this message translates to:
-  /// **'В норме'**
+  /// **'Доступен'**
   String get accountUsageStatusHealthy;
 
   /// No description provided for @accountUsageStatusCoolingDown.
   ///
   /// In ru, this message translates to:
-  /// **'Лимит'**
+  /// **'Ограничен'**
   String get accountUsageStatusCoolingDown;
 
   /// No description provided for @accountUsageStatusDisabled.
@@ -386,10 +416,16 @@ abstract class AppLocalizations {
   /// **'Выключен'**
   String get accountUsageStatusDisabled;
 
+  /// No description provided for @accountQuotaWarningStatus.
+  ///
+  /// In ru, this message translates to:
+  /// **'Лимит заканчивается'**
+  String get accountQuotaWarningStatus;
+
   /// No description provided for @accountUsageLoadErrorTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Не удалось загрузить текущие лимиты'**
+  /// **'Не удалось загрузить данные по лимитам'**
   String get accountUsageLoadErrorTitle;
 
   /// No description provided for @accountUsageRetryButton.
@@ -401,25 +437,37 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageVerifyAccountButton.
   ///
   /// In ru, this message translates to:
-  /// **'Подтвердить аккаунт'**
+  /// **'Подтвердить в Google'**
   String get accountUsageVerifyAccountButton;
+
+  /// No description provided for @openGoogleCloudButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть Google Cloud'**
+  String get openGoogleCloudButton;
 
   /// No description provided for @accountUsageVerificationOpenFailedMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Не удалось открыть страницу подтверждения аккаунта'**
+  /// **'Не удалось открыть страницу подтверждения в Google'**
   String get accountUsageVerificationOpenFailedMessage;
+
+  /// No description provided for @accountErrorActionOpenFailedMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось открыть страницу Google'**
+  String get accountErrorActionOpenFailedMessage;
 
   /// No description provided for @accountUsageEmptyTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Лимиты недоступны'**
+  /// **'Данные по лимитам недоступны'**
   String get accountUsageEmptyTitle;
 
   /// No description provided for @accountUsageEmptyMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Google не вернул информацию по лимитам для этого аккаунта'**
+  /// **'Google не прислал данные по лимитам для этого аккаунта'**
   String get accountUsageEmptyMessage;
 
   /// No description provided for @accountUsageMissingTitle.
@@ -431,32 +479,92 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageMissingSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Экран лимитов'**
+  /// **'Информация по лимитам'**
   String get accountUsageMissingSubtitle;
 
   /// No description provided for @accountUsageMissingMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Возможно, аккаунт был удалён или список ещё не успел обновиться'**
+  /// **'Возможно, аккаунт уже удален или список еще не успел обновиться'**
   String get accountUsageMissingMessage;
 
   /// No description provided for @accountUsageResetsAt.
   ///
   /// In ru, this message translates to:
-  /// **'Будет сброшено {time}'**
+  /// **'Сбросится {time}'**
   String accountUsageResetsAt(String time);
 
   /// No description provided for @accountUsageResetUnknown.
   ///
   /// In ru, this message translates to:
-  /// **'Время сброса не получено'**
+  /// **'Время следующего сброса неизвестно'**
   String get accountUsageResetUnknown;
 
   /// No description provided for @accountUsageLastUpdated.
   ///
   /// In ru, this message translates to:
-  /// **'Обновлено: {time}'**
+  /// **'Данные обновлены: {time}'**
   String accountUsageLastUpdated(String time);
+
+  /// No description provided for @accountUsageModelCount.
+  ///
+  /// In ru, this message translates to:
+  /// **'Моделей: {count}'**
+  String accountUsageModelCount(int count);
+
+  /// No description provided for @accountUsageAttentionCount.
+  ///
+  /// In ru, this message translates to:
+  /// **'Низкий остаток: {count}'**
+  String accountUsageAttentionCount(int count);
+
+  /// No description provided for @accountUsageCriticalCount.
+  ///
+  /// In ru, this message translates to:
+  /// **'Почти исчерпано: {count}'**
+  String accountUsageCriticalCount(int count);
+
+  /// No description provided for @accountUsageHealthyCount.
+  ///
+  /// In ru, this message translates to:
+  /// **'В норме: {count}'**
+  String accountUsageHealthyCount(int count);
+
+  /// No description provided for @accountUsageTokenType.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тип лимита: {value}'**
+  String accountUsageTokenType(String value);
+
+  /// No description provided for @accountUsageRemainingPercent.
+  ///
+  /// In ru, this message translates to:
+  /// **'Осталось {value}%'**
+  String accountUsageRemainingPercent(String value);
+
+  /// No description provided for @accountUsageUsedPercent.
+  ///
+  /// In ru, this message translates to:
+  /// **'Израсходовано {value}%'**
+  String accountUsageUsedPercent(String value);
+
+  /// No description provided for @accountUsageBucketHealthy.
+  ///
+  /// In ru, this message translates to:
+  /// **'Достаточно'**
+  String get accountUsageBucketHealthy;
+
+  /// No description provided for @accountUsageBucketLow.
+  ///
+  /// In ru, this message translates to:
+  /// **'Заканчивается'**
+  String get accountUsageBucketLow;
+
+  /// No description provided for @accountUsageBucketCritical.
+  ///
+  /// In ru, this message translates to:
+  /// **'Почти исчерпано'**
+  String get accountUsageBucketCritical;
 
   /// No description provided for @settingsTitle.
   ///
@@ -467,7 +575,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Сеть, тема, API-ключ и поведение прокси'**
+  /// **'Сеть, оформление, API-ключ и работа прокси'**
   String get settingsSubtitle;
 
   /// No description provided for @themeLabel.
@@ -503,19 +611,19 @@ abstract class AppLocalizations {
   /// No description provided for @dynamicThemeSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Использовать системные динамические цвета'**
+  /// **'Использовать динамические цвета системы'**
   String get dynamicThemeSubtitle;
 
   /// No description provided for @settingsAppearanceSectionTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Внешний вид и поведение'**
+  /// **'Оформление и поведение'**
   String get settingsAppearanceSectionTitle;
 
   /// No description provided for @settingsAppearanceSectionSummary.
   ///
   /// In ru, this message translates to:
-  /// **'Тема, логи и поведение программы'**
+  /// **'Тема, логи и работа приложения'**
   String get settingsAppearanceSectionSummary;
 
   /// No description provided for @settingsNetworkSectionTitle.
@@ -533,13 +641,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsReliabilitySectionTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Система повторов'**
+  /// **'Повторы и лимиты'**
   String get settingsReliabilitySectionTitle;
 
   /// No description provided for @settingsReliabilitySectionSummary.
   ///
   /// In ru, this message translates to:
-  /// **'Автоповторы и обработка лимитов API'**
+  /// **'Автоповторы и реакция на ограничения API'**
   String get settingsReliabilitySectionSummary;
 
   /// No description provided for @settingsAccessSectionTitle.
@@ -551,7 +659,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAccessSectionSummary.
   ///
   /// In ru, this message translates to:
-  /// **'API-ключ и параметры запуска'**
+  /// **'API-ключ и запуск приложения'**
   String get settingsAccessSectionSummary;
 
   /// No description provided for @apiKeyRequiredTitle.
@@ -563,19 +671,19 @@ abstract class AppLocalizations {
   /// No description provided for @apiKeyRequiredSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'При отключении, разрешает запросы без Bearer-токена'**
+  /// **'Если выключить, запросы будут приниматься без Bearer-токена'**
   String get apiKeyRequiredSubtitle;
 
   /// No description provided for @windowsTrayTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Работа из трея'**
+  /// **'Сворачивать в трей'**
   String get windowsTrayTitle;
 
   /// No description provided for @windowsTraySubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Закрытие окна скрывает KiCk в системный трей'**
+  /// **'При закрытии окно не завершает работу, а скрывает KiCk в системный трей'**
   String get windowsTraySubtitle;
 
   /// No description provided for @windowsLaunchAtStartupTitle.
@@ -587,7 +695,7 @@ abstract class AppLocalizations {
   /// No description provided for @windowsLaunchAtStartupSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'При входе в систему KiCk будет стартовать в трее'**
+  /// **'KiCk будет автоматически запускаться при входе в систему'**
   String get windowsLaunchAtStartupSubtitle;
 
   /// No description provided for @windowsTrayNotificationTitle.
@@ -599,7 +707,7 @@ abstract class AppLocalizations {
   /// No description provided for @windowsTrayNotificationBody.
   ///
   /// In ru, this message translates to:
-  /// **'Приложение скрыто в системный трей'**
+  /// **'Приложение свернуто в системный трей'**
   String get windowsTrayNotificationBody;
 
   /// No description provided for @settingsModelsSectionTitle.
@@ -641,49 +749,49 @@ abstract class AppLocalizations {
   /// No description provided for @allowLanTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Доступ из LAN / Docker'**
+  /// **'Доступ из локальной сети и Docker'**
   String get allowLanTitle;
 
   /// No description provided for @allowLanSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Открывает прокси на 0.0.0.0 и делает его доступным из локальной сети и контейнеров'**
+  /// **'Прокси будет слушать 0.0.0.0 и станет доступен из локальной сети и контейнеров'**
   String get allowLanSubtitle;
 
   /// No description provided for @androidBackgroundRuntimeTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Фоновый запуск на Android'**
+  /// **'Работа в фоне на Android'**
   String get androidBackgroundRuntimeTitle;
 
   /// No description provided for @androidBackgroundRuntimeSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Необходимо для непрерывной работы прокси'**
+  /// **'Нужно, чтобы прокси не останавливался при сворачивании приложения'**
   String get androidBackgroundRuntimeSubtitle;
 
   /// No description provided for @requestRetriesLabel.
   ///
   /// In ru, this message translates to:
-  /// **'Повторы запросов к Google'**
+  /// **'Количество повторов запросов к Google'**
   String get requestRetriesLabel;
 
   /// No description provided for @requestRetriesHelperText.
   ///
   /// In ru, this message translates to:
-  /// **'Сколько раз KiCk повторит временно запрос при неудаче'**
+  /// **'Сколько раз KiCk повторит запрос после временной ошибки'**
   String get requestRetriesHelperText;
 
   /// No description provided for @mark429AsUnhealthyTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Отключать аккаунт при превышении лимитов (ошибка 429)'**
+  /// **'Временно выводить аккаунт из ротации при ошибке 429'**
   String get mark429AsUnhealthyTitle;
 
   /// No description provided for @mark429AsUnhealthySubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Помечает аккаунт как временно непригодный после ошибок 429, чтобы быстрее переключаться на другие'**
+  /// **'После ошибки 429 KiCk пометит аккаунт как временно недоступный и переключится на другой'**
   String get mark429AsUnhealthySubtitle;
 
   /// No description provided for @loggingLabel.
@@ -695,13 +803,13 @@ abstract class AppLocalizations {
   /// No description provided for @loggingQuiet.
   ///
   /// In ru, this message translates to:
-  /// **'Тихое'**
+  /// **'Минимальное'**
   String get loggingQuiet;
 
   /// No description provided for @loggingNormal.
   ///
   /// In ru, this message translates to:
-  /// **'Обычное'**
+  /// **'Стандартное'**
   String get loggingNormal;
 
   /// No description provided for @loggingVerbose.
@@ -713,13 +821,13 @@ abstract class AppLocalizations {
   /// No description provided for @unsafeRawLoggingTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Debug-логи'**
+  /// **'Сырые логи отладки'**
   String get unsafeRawLoggingTitle;
 
   /// No description provided for @unsafeRawLoggingSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Сохраняет сырые запросы. Используйте только для отладки'**
+  /// **'Сохраняет содержимое запросов и ответов. Включайте только для отладки!'**
   String get unsafeRawLoggingSubtitle;
 
   /// No description provided for @customModelsLabel.
@@ -731,7 +839,7 @@ abstract class AppLocalizations {
   /// No description provided for @customModelsHelperText.
   ///
   /// In ru, this message translates to:
-  /// **'Точный ID модели, по одному на строке'**
+  /// **'Указывайте точный ID модели, по одному на строке'**
   String get customModelsHelperText;
 
   /// No description provided for @settingsLoadErrorTitle.
@@ -749,13 +857,13 @@ abstract class AppLocalizations {
   /// No description provided for @aboutMenuSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Информация о программе'**
+  /// **'Версия, обновления и аналитика'**
   String get aboutMenuSubtitle;
 
   /// No description provided for @aboutDescription.
   ///
   /// In ru, this message translates to:
-  /// **'Локальный прокси-сервер, совместимый с OpenAI, для Gemini CLI с нативной оболочкой Flutter'**
+  /// **'Локальный OpenAI-совместимый прокси для Gemini CLI в нативном Flutter-приложении'**
   String get aboutDescription;
 
   /// No description provided for @aboutUpdatesTitle.
@@ -767,7 +875,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutUpdatesChecking.
   ///
   /// In ru, this message translates to:
-  /// **'Проверяем наличие новой версии на GitHub...'**
+  /// **'Проверяем обновления на GitHub...'**
   String get aboutUpdatesChecking;
 
   /// No description provided for @aboutUpdateAvailableTitle.
@@ -779,7 +887,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutUpdateAvailableMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Найдена версия {latestVersion}. Сейчас установлена {currentVersion}.'**
+  /// **'Доступна версия {latestVersion}. Сейчас у вас установлена {currentVersion}.'**
   String aboutUpdateAvailableMessage(String latestVersion, String currentVersion);
 
   /// No description provided for @aboutUpToDateTitle.
@@ -791,7 +899,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutUpToDateMessage.
   ///
   /// In ru, this message translates to:
-  /// **'У вас уже установлена актуальная версия {currentVersion}.'**
+  /// **'У вас установлена актуальная версия: {currentVersion}.'**
   String aboutUpToDateMessage(String currentVersion);
 
   /// No description provided for @aboutUpdateCheckFailedTitle.
@@ -803,7 +911,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutUpdateCheckFailedMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Что-то пошло не так'**
+  /// **'Не удалось получить информацию о релизах с GitHub.'**
   String get aboutUpdateCheckFailedMessage;
 
   /// No description provided for @aboutOpenReleaseButton.
@@ -815,7 +923,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutRetryUpdateCheckButton.
   ///
   /// In ru, this message translates to:
-  /// **'Проверить снова'**
+  /// **'Проверить еще раз'**
   String get aboutRetryUpdateCheckButton;
 
   /// No description provided for @aboutAnalyticsTitle.
@@ -827,19 +935,19 @@ abstract class AppLocalizations {
   /// No description provided for @aboutAnalyticsSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Анонимная статистика использования. Помогает делать KiCk лучше.'**
+  /// **'Анонимная статистика использования помогает улучшать KiCk.'**
   String get aboutAnalyticsSubtitle;
 
   /// No description provided for @copyProxyEndpointTooltip.
   ///
   /// In ru, this message translates to:
-  /// **'Скопировать URL прокси'**
+  /// **'Скопировать адрес прокси'**
   String get copyProxyEndpointTooltip;
 
   /// No description provided for @proxyEndpointCopiedMessage.
   ///
   /// In ru, this message translates to:
-  /// **'URL прокси скопирован'**
+  /// **'Адрес прокси скопирован'**
   String get proxyEndpointCopiedMessage;
 
   /// No description provided for @copyApiKeyTooltip.
@@ -857,25 +965,25 @@ abstract class AppLocalizations {
   /// No description provided for @apiKeyRegeneratedMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Новый API-ключ сохранён'**
+  /// **'Новый API-ключ сохранен'**
   String get apiKeyRegeneratedMessage;
 
   /// No description provided for @regenerateApiKeyAction.
   ///
   /// In ru, this message translates to:
-  /// **'Сгенерировать заново'**
+  /// **'Создать новый API-ключ'**
   String get regenerateApiKeyAction;
 
   /// No description provided for @regenerateApiKeyDialogTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Сгенерировать новый API-ключ?'**
+  /// **'Создать новый API-ключ?'**
   String get regenerateApiKeyDialogTitle;
 
   /// No description provided for @regenerateApiKeyDialogMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Старый ключ будет немедленно отозван. Подключенным клиентам потребуется новый ключ для работы.'**
+  /// **'Старый ключ будет сразу отозван. Всем подключенным клиентам понадобится новый ключ для работы.'**
   String get regenerateApiKeyDialogMessage;
 
   /// No description provided for @regenerateApiKeyConfirmButton.
@@ -893,31 +1001,31 @@ abstract class AppLocalizations {
   /// No description provided for @trayHideToTrayAction.
   ///
   /// In ru, this message translates to:
-  /// **'Скрыть в трей'**
+  /// **'Свернуть в трей'**
   String get trayHideToTrayAction;
 
   /// No description provided for @trayExitAction.
   ///
   /// In ru, this message translates to:
-  /// **'Выход'**
+  /// **'Выйти'**
   String get trayExitAction;
 
   /// No description provided for @noActiveAccountsWarning.
   ///
   /// In ru, this message translates to:
-  /// **'Активных аккаунтов нет. Прокси всё равно запустится, но не сможет обработать запросы, пока вы не добавите или не включите аккаунт.'**
+  /// **'Нет активных аккаунтов. Прокси запустится, но не сможет обрабатывать запросы, пока вы не добавите или не включите хотя бы один аккаунт.'**
   String get noActiveAccountsWarning;
 
   /// No description provided for @pinWindowTooltip.
   ///
   /// In ru, this message translates to:
-  /// **'Закрепить поверх остальных окон'**
+  /// **'Закрепить окно поверх остальных'**
   String get pinWindowTooltip;
 
   /// No description provided for @unpinWindowTooltip.
   ///
   /// In ru, this message translates to:
-  /// **'Открепить окно'**
+  /// **'Убрать закрепление окна'**
   String get unpinWindowTooltip;
 
   /// No description provided for @disclaimerTitle.
@@ -929,25 +1037,25 @@ abstract class AppLocalizations {
   /// No description provided for @disclaimerBodyLineOne.
   ///
   /// In ru, this message translates to:
-  /// **'Данное программное обеспечение предоставляется \"как есть\"'**
+  /// **'Программа предоставляется \"как есть\".'**
   String get disclaimerBodyLineOne;
 
   /// No description provided for @disclaimerBodyLineTwo.
   ///
   /// In ru, this message translates to:
-  /// **'Предназначено исключительно для некоммерческого использования в образовательных и исследовательских целях'**
+  /// **'Только для некоммерческого использования в образовательных и исследовательских целях.'**
   String get disclaimerBodyLineTwo;
 
   /// No description provided for @disclaimerLinkPrefix.
   ///
   /// In ru, this message translates to:
-  /// **'Подробнее'**
+  /// **'Подробнее:'**
   String get disclaimerLinkPrefix;
 
   /// No description provided for @disclaimerAnalyticsConsentLabel.
   ///
   /// In ru, this message translates to:
-  /// **'Разрешить отправку анонимной аналитики'**
+  /// **'Отправлять анонимную аналитику'**
   String get disclaimerAnalyticsConsentLabel;
 
   /// No description provided for @logsTitle.
@@ -965,7 +1073,7 @@ abstract class AppLocalizations {
   /// No description provided for @logsSearchHint.
   ///
   /// In ru, this message translates to:
-  /// **'Поиск по маршруту, сообщению'**
+  /// **'Поиск по маршруту или сообщению'**
   String get logsSearchHint;
 
   /// No description provided for @logsTotalCount.
@@ -995,7 +1103,7 @@ abstract class AppLocalizations {
   /// No description provided for @logsExportTooltip.
   ///
   /// In ru, this message translates to:
-  /// **'Сохранить лог-файл'**
+  /// **'Сохранить логи в файл'**
   String get logsExportTooltip;
 
   /// No description provided for @logsShareTooltip.
@@ -1007,13 +1115,13 @@ abstract class AppLocalizations {
   /// No description provided for @logsNothingToExportMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Нет логов для экспорта'**
+  /// **'Нет логов для сохранения'**
   String get logsNothingToExportMessage;
 
   /// No description provided for @logsExportedMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Логи сохранены: {fileName}'**
+  /// **'Логи сохранены в файл {fileName}'**
   String logsExportedMessage(String fileName);
 
   /// No description provided for @logsExportFailedMessage.
@@ -1031,7 +1139,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountDialogTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Аккаунт Google'**
+  /// **'Google-аккаунт'**
   String get accountDialogTitle;
 
   /// No description provided for @projectIdLabel.
@@ -1049,43 +1157,43 @@ abstract class AppLocalizations {
   /// No description provided for @projectIdConsoleLinkLabel.
   ///
   /// In ru, this message translates to:
-  /// **'Узнать ID проекта'**
+  /// **'Где посмотреть ID проекта'**
   String get projectIdConsoleLinkLabel;
 
   /// No description provided for @projectIdRequiredError.
   ///
   /// In ru, this message translates to:
-  /// **'Укажите PROJECT_ID'**
+  /// **'Укажите ID проекта'**
   String get projectIdRequiredError;
 
   /// No description provided for @projectIdLookupFailedMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Не удалось открыть Google Cloud Console'**
+  /// **'Не удалось открыть Google Cloud Console.'**
   String get projectIdLookupFailedMessage;
 
   /// No description provided for @accountNameLabel.
   ///
   /// In ru, this message translates to:
-  /// **'Название'**
+  /// **'Название аккаунта'**
   String get accountNameLabel;
 
   /// No description provided for @accountNameHint.
   ///
   /// In ru, this message translates to:
-  /// **'Основной аккаунт'**
+  /// **'Например, основной аккаунт'**
   String get accountNameHint;
 
   /// No description provided for @priorityLabel.
   ///
   /// In ru, this message translates to:
-  /// **'Роль в очереди'**
+  /// **'Приоритет'**
   String get priorityLabel;
 
   /// No description provided for @priorityHelperText.
   ///
   /// In ru, this message translates to:
-  /// **'Основные аккаунты получают запросы в первую очередь. Аккаунты одного уровня чередуются.'**
+  /// **'Сначала используются основные аккаунты. Аккаунты с одинаковым приоритетом чередуются.'**
   String get priorityHelperText;
 
   /// No description provided for @priorityLevelPrimary.
@@ -1109,13 +1217,13 @@ abstract class AppLocalizations {
   /// No description provided for @blockedModelsLabel.
   ///
   /// In ru, this message translates to:
-  /// **'Заблокированные модели'**
+  /// **'Недоступные модели'**
   String get blockedModelsLabel;
 
   /// No description provided for @blockedModelsHelperText.
   ///
   /// In ru, this message translates to:
-  /// **'По одной модели на строке'**
+  /// **'Укажите по одному ID модели на строке'**
   String get blockedModelsHelperText;
 
   /// No description provided for @cancelButton.
@@ -1157,13 +1265,13 @@ abstract class AppLocalizations {
   /// No description provided for @runtimeChannelName.
   ///
   /// In ru, this message translates to:
-  /// **'Фоновый прокси KiCk'**
+  /// **'Прокси KiCk в фоне'**
   String get runtimeChannelName;
 
   /// No description provided for @runtimeChannelDescription.
   ///
   /// In ru, this message translates to:
-  /// **'Удерживает прокси активным в фоне'**
+  /// **'Поддерживает работу прокси в фоновом режиме'**
   String get runtimeChannelDescription;
 
   /// No description provided for @runtimeNotificationTitle.
@@ -1181,7 +1289,7 @@ abstract class AppLocalizations {
   /// No description provided for @runtimeNotificationManage.
   ///
   /// In ru, this message translates to:
-  /// **'Нажмите, чтобы управлять аккаунтами и настройками'**
+  /// **'Нажмите, чтобы открыть аккаунты и настройки'**
   String get runtimeNotificationManage;
 
   /// No description provided for @runtimeNotificationActive.
@@ -1205,7 +1313,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorInvalidServiceResponse.
   ///
   /// In ru, this message translates to:
-  /// **'Сервер ответил что-то непонятное. Попробуйте ещё раз'**
+  /// **'Сервер вернул непонятный ответ. Попробуйте еще раз.'**
   String get errorInvalidServiceResponse;
 
   /// No description provided for @errorGoogleAuthTimedOut.
@@ -1223,7 +1331,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorOauthTokensMissing.
   ///
   /// In ru, this message translates to:
-  /// **'Для этого аккаунта не найдены токены авторизации. Переавторизуйте аккаунт'**
+  /// **'Для этого аккаунта не найдены токены авторизации. Переподключите аккаунт.'**
   String get errorOauthTokensMissing;
 
   /// No description provided for @errorAccountNotFound.
@@ -1241,43 +1349,55 @@ abstract class AppLocalizations {
   /// No description provided for @errorPermissionDenied.
   ///
   /// In ru, this message translates to:
-  /// **'Системе не хватило разрешений для запуска. Проверьте настройки приложения и повторите попытку.'**
+  /// **'Не хватило системных разрешений для запуска. Проверьте настройки приложения и повторите попытку.'**
   String get errorPermissionDenied;
 
   /// No description provided for @errorGoogleRateLimitedRetry.
   ///
   /// In ru, this message translates to:
-  /// **'Google временно ограничил запросы для этого аккаунта. Повторите попытку через {retryHint}.'**
+  /// **'Google временно ограничил запросы для этого аккаунта. Попробуйте снова через {retryHint}.'**
   String errorGoogleRateLimitedRetry(String retryHint);
 
   /// No description provided for @errorGoogleRateLimitedLater.
   ///
   /// In ru, this message translates to:
-  /// **'Google временно ограничил запросы для этого аккаунта. Повторите попытку позже.'**
+  /// **'Google временно ограничил запросы для этого аккаунта. Попробуйте снова позже.'**
   String get errorGoogleRateLimitedLater;
 
   /// No description provided for @errorGoogleAccountVerificationRequired.
   ///
   /// In ru, this message translates to:
-  /// **'Google просит подтвердить этот аккаунт. Откройте страницу подтверждения и войдите тем же Google-аккаунтом.'**
+  /// **'Google просит подтвердить этот аккаунт. Откройте страницу подтверждения и войдите под тем же Google-аккаунтом.'**
   String get errorGoogleAccountVerificationRequired;
 
   /// No description provided for @errorGoogleProjectIdMissing.
   ///
   /// In ru, this message translates to:
-  /// **'Google не смог определить корректный PROJECT_ID для этого аккаунта или запроса. Проверьте PROJECT_ID в аккаунте и при необходимости переавторизуйте его.'**
+  /// **'Google не смог определить корректный ID проекта для этого аккаунта или запроса. Проверьте ID проекта в настройках аккаунта и при необходимости переподключите его.'**
   String get errorGoogleProjectIdMissing;
+
+  /// No description provided for @errorGoogleProjectApiDisabled.
+  ///
+  /// In ru, this message translates to:
+  /// **'Gemini for Google Cloud API отключен для этого проекта. Откройте Google Cloud, включите API для нужного ID проекта и повторите проверку.'**
+  String get errorGoogleProjectApiDisabled;
+
+  /// No description provided for @errorGoogleProjectInvalid.
+  ///
+  /// In ru, this message translates to:
+  /// **'Google отклонил этот ID проекта. Проверьте, что указали существующий проект и что у аккаунта есть доступ именно к нему.'**
+  String get errorGoogleProjectInvalid;
 
   /// No description provided for @errorGoogleProjectAccessDenied.
   ///
   /// In ru, this message translates to:
-  /// **'Google отклонил запрос для этого проекта или аккаунта. Проверьте PROJECT_ID, выбранный аккаунт и что Gemini Code Assist активирован именно для этого проекта.'**
+  /// **'Google отклонил запрос для этого проекта или аккаунта. Проверьте ID проекта, выбранный аккаунт и убедитесь, что Gemini Code Assist включен именно для этого проекта.'**
   String get errorGoogleProjectAccessDenied;
 
   /// No description provided for @errorAuthExpired.
   ///
   /// In ru, this message translates to:
-  /// **'Авторизация истекла или стала недействительной. Переавторизуйте аккаунт и попробуйте снова.'**
+  /// **'Срок действия авторизации истек или она стала недействительной. Переподключите аккаунт и попробуйте снова.'**
   String get errorAuthExpired;
 
   /// No description provided for @errorGoogleCapacity.
@@ -1307,13 +1427,13 @@ abstract class AppLocalizations {
   /// No description provided for @errorQuotaExhausted.
   ///
   /// In ru, this message translates to:
-  /// **'Квота этого аккаунта исчерпана. Дождитесь сброса лимита или используйте другой аккаунт.'**
+  /// **'Лимит этого аккаунта исчерпан. Дождитесь сброса или используйте другой аккаунт.'**
   String get errorQuotaExhausted;
 
   /// No description provided for @errorQuotaExhaustedRetry.
   ///
   /// In ru, this message translates to:
-  /// **'Квота этого аккаунта исчерпана. Повторите попытку через {retryHint} или используйте другой аккаунт.'**
+  /// **'Лимит этого аккаунта исчерпан. Попробуйте снова через {retryHint} или используйте другой аккаунт.'**
   String errorQuotaExhaustedRetry(String retryHint);
 
   /// No description provided for @errorInvalidRequestRejected.
@@ -1325,7 +1445,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorReasoningConfigRejected.
   ///
   /// In ru, this message translates to:
-  /// **'Google отклонил параметры reasoning/thinking для этой модели. Верните Reasoning Effort в Auto или уберите кастомный thinking config.'**
+  /// **'Google отклонил параметры reasoning/thinking для этой модели. Включите автоматический режим размышлений (reasoning).'**
   String get errorReasoningConfigRejected;
 
   /// No description provided for @durationFewSeconds.

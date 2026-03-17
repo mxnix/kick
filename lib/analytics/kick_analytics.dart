@@ -234,6 +234,10 @@ class KickAnalytics {
     required bool stream,
     required String errorKind,
     int? statusCode,
+    String? errorDetail,
+    String? upstreamReason,
+    int? retryAfterMs,
+    bool? hasActionUrl,
   }) {
     final properties = <String, Object?>{
       'route': route,
@@ -244,6 +248,10 @@ class KickAnalytics {
     if (statusCode != null) {
       properties['status_code'] = statusCode;
     }
+    _putIfNotBlank(properties, 'error_detail', errorDetail);
+    _putIfNotBlank(properties, 'upstream_reason', upstreamReason);
+    _putIfPositive(properties, 'retry_after_ms', retryAfterMs);
+    _putIfBool(properties, 'has_action_url', hasActionUrl);
     return _track('proxy_request_failed', properties);
   }
 
@@ -258,6 +266,10 @@ class KickAnalytics {
     String? retryKinds,
     int? retryDelayMs,
     int? statusCode,
+    String? errorDetail,
+    String? upstreamReason,
+    int? retryAfterMs,
+    bool? hasActionUrl,
   }) {
     final properties = <String, Object?>{
       'route': route,
@@ -277,6 +289,10 @@ class KickAnalytics {
     if (statusCode != null) {
       properties['status_code'] = statusCode;
     }
+    _putIfNotBlank(properties, 'error_detail', errorDetail);
+    _putIfNotBlank(properties, 'upstream_reason', upstreamReason);
+    _putIfPositive(properties, 'retry_after_ms', retryAfterMs);
+    _putIfBool(properties, 'has_action_url', hasActionUrl);
     return _track('proxy_request_retried', properties);
   }
 
@@ -315,6 +331,10 @@ class KickAnalytics {
     required bool stream,
     String? errorKind,
     int? statusCode,
+    String? errorDetail,
+    String? upstreamReason,
+    int? retryAfterMs,
+    bool? hasActionUrl,
   }) {
     final properties = <String, Object?>{
       'issue_kind': issueKind,
@@ -328,6 +348,10 @@ class KickAnalytics {
     if (statusCode != null) {
       properties['status_code'] = statusCode;
     }
+    _putIfNotBlank(properties, 'error_detail', errorDetail);
+    _putIfNotBlank(properties, 'upstream_reason', upstreamReason);
+    _putIfPositive(properties, 'retry_after_ms', retryAfterMs);
+    _putIfBool(properties, 'has_action_url', hasActionUrl);
     return _track('upstream_compatibility_issue', properties);
   }
 
@@ -400,6 +424,28 @@ class KickAnalytics {
   }
 
   static int _flag(bool value) => value ? 1 : 0;
+
+  static void _putIfNotBlank(Map<String, Object?> properties, String key, String? value) {
+    final normalized = value?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return;
+    }
+    properties[key] = normalized;
+  }
+
+  static void _putIfPositive(Map<String, Object?> properties, String key, int? value) {
+    if (value == null || value <= 0) {
+      return;
+    }
+    properties[key] = value;
+  }
+
+  static void _putIfBool(Map<String, Object?> properties, String key, bool? value) {
+    if (value == null) {
+      return;
+    }
+    properties[key] = _flag(value);
+  }
 
   @visibleForTesting
   static String modelFamily(String model) {

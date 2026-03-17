@@ -12,6 +12,8 @@ void main() {
     required String email,
     required String projectId,
     required List<String> notSupportedModels,
+    String? googleSubjectId,
+    String? avatarUrl,
     DateTime? lastUsedAt,
     int usageCount = 0,
     int errorCount = 0,
@@ -24,6 +26,8 @@ void main() {
       label: label,
       email: email,
       projectId: projectId,
+      googleSubjectId: googleSubjectId,
+      avatarUrl: avatarUrl,
       enabled: true,
       priority: 1,
       notSupportedModels: notSupportedModels,
@@ -40,7 +44,9 @@ void main() {
     final tempDirectory = await Directory.systemTemp.createTemp('kick-accounts-repo');
     addTearDown(() => tempDirectory.delete(recursive: true));
 
-    final database = await AppDatabase.open('${tempDirectory.path}${Platform.pathSeparator}kick.sqlite');
+    final database = await AppDatabase.open(
+      '${tempDirectory.path}${Platform.pathSeparator}kick.sqlite',
+    );
     addTearDown(database.close);
 
     final repository = AccountsRepository(database);
@@ -50,6 +56,8 @@ void main() {
       email: 'primary@example.com',
       projectId: 'proj-primary',
       notSupportedModels: ['user-model'],
+      googleSubjectId: 'google-subject-primary',
+      avatarUrl: 'https://example.com/avatar-primary.png',
       tokenRef: 'primary-ref',
     );
     final untouched = buildAccount(
@@ -70,6 +78,8 @@ void main() {
         email: 'runtime@example.com',
         projectId: 'runtime-project',
         notSupportedModels: ['runtime-model'],
+        googleSubjectId: 'runtime-subject',
+        avatarUrl: 'https://example.com/runtime.png',
         lastUsedAt: DateTime.parse('2026-03-16T08:00:00Z'),
         usageCount: 7,
         errorCount: 2,
@@ -86,6 +96,8 @@ void main() {
     expect(merged.label, 'Primary');
     expect(merged.email, 'primary@example.com');
     expect(merged.projectId, 'proj-primary');
+    expect(merged.googleSubjectId, 'google-subject-primary');
+    expect(merged.avatarUrl, 'https://example.com/avatar-primary.png');
     expect(merged.tokenRef, 'primary-ref');
     expect(merged.notSupportedModels, containsAll(['user-model', 'runtime-model']));
     expect(merged.usageCount, 7);

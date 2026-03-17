@@ -92,6 +92,10 @@ void main() {
       retryKinds: 'quota,capacity',
       retryDelayMs: 49000,
       statusCode: 429,
+      errorDetail: 'quotaExhausted',
+      upstreamReason: 'RATE_LIMIT_EXCEEDED',
+      retryAfterMs: 30000,
+      hasActionUrl: true,
     );
 
     expect(transport.events, hasLength(1));
@@ -106,7 +110,49 @@ void main() {
     expect(transport.events.single.properties, containsPair('retry_kinds', 'quota,capacity'));
     expect(transport.events.single.properties, containsPair('retry_delay_ms', 49000));
     expect(transport.events.single.properties, containsPair('status_code', 429));
+    expect(transport.events.single.properties, containsPair('error_detail', 'quotaExhausted'));
+    expect(
+      transport.events.single.properties,
+      containsPair('upstream_reason', 'RATE_LIMIT_EXCEEDED'),
+    );
+    expect(transport.events.single.properties, containsPair('retry_after_ms', 30000));
+    expect(transport.events.single.properties, containsPair('has_action_url', 1));
     expect(transport.events.single.properties, containsPair('build_channel', 'test'));
+  });
+
+  test('tracks failed requests with safe structured gateway metadata', () async {
+    final transport = _RecordingAnalyticsTransport();
+    final analytics = KickAnalytics(
+      config: const AnalyticsBuildConfig(buildChannel: 'test', appKey: 'A-EU-test'),
+      transport: transport,
+      trackingAllowed: true,
+    );
+
+    await analytics.trackProxyRequestFailed(
+      route: '/v1/responses',
+      model: 'gemini-2.5-flash',
+      stream: true,
+      errorKind: 'invalidRequest',
+      statusCode: 403,
+      errorDetail: 'projectConfiguration',
+      upstreamReason: 'SERVICE_DISABLED',
+      retryAfterMs: 60000,
+      hasActionUrl: true,
+    );
+
+    expect(transport.events, hasLength(1));
+    expect(transport.events.single.name, 'proxy_request_failed');
+    expect(
+      transport.events.single.properties,
+      containsPair('model_family', KickAnalytics.modelFamily('gemini-2.5-flash')),
+    );
+    expect(
+      transport.events.single.properties,
+      containsPair('error_detail', 'projectConfiguration'),
+    );
+    expect(transport.events.single.properties, containsPair('upstream_reason', 'SERVICE_DISABLED'));
+    expect(transport.events.single.properties, containsPair('retry_after_ms', 60000));
+    expect(transport.events.single.properties, containsPair('has_action_url', 1));
   });
 
   test('tracks proxy session summaries with runtime configuration', () async {
@@ -155,6 +201,10 @@ void main() {
       stream: true,
       errorKind: 'unsupportedModel',
       statusCode: 400,
+      errorDetail: 'projectIdMissing',
+      upstreamReason: 'CONSUMER_INVALID',
+      retryAfterMs: 15000,
+      hasActionUrl: true,
     );
 
     expect(transport.events, hasLength(1));
@@ -163,6 +213,10 @@ void main() {
     expect(transport.events.single.properties, containsPair('model_family', 'custom'));
     expect(transport.events.single.properties, containsPair('stream', 1));
     expect(transport.events.single.properties, containsPair('status_code', 400));
+    expect(transport.events.single.properties, containsPair('error_detail', 'projectIdMissing'));
+    expect(transport.events.single.properties, containsPair('upstream_reason', 'CONSUMER_INVALID'));
+    expect(transport.events.single.properties, containsPair('retry_after_ms', 15000));
+    expect(transport.events.single.properties, containsPair('has_action_url', 1));
   });
 
   test('analytics swallows transport failures and retries later', () async {

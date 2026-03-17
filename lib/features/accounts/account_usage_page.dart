@@ -51,16 +51,17 @@ class AccountUsagePage extends ConsumerWidget {
         }
 
         final usageValue = ref.watch(accountUsageQueryProvider(resolvedAccount.id));
+        final usageSnapshot = usageValue.asData?.value;
         return _UsageScaffold(
           title: l10n.accountUsageTitle,
-          subtitle: resolvedAccount.email,
+          subtitle: null,
           onRefresh: () => ref.refresh(accountUsageQueryProvider(resolvedAccount.id).future),
           child: RefreshIndicator(
             onRefresh: () => ref.refresh(accountUsageQueryProvider(resolvedAccount.id).future),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                _UsageAccountCard(account: resolvedAccount),
+                _UsageAccountCard(account: resolvedAccount, usage: usageSnapshot),
                 const SizedBox(height: 16),
                 usageValue.when(
                   data: (usage) => _UsageContent(usage: usage),
@@ -68,7 +69,7 @@ class AccountUsagePage extends ConsumerWidget {
                     message: formatUserFacingError(l10n, error),
                     onRetry: () =>
                         ref.refresh(accountUsageQueryProvider(resolvedAccount.id).future),
-                    onOpenVerification: _verificationActionForError(context, error),
+                    errorAction: primaryActionForError(error),
                   ),
                   loading: () => const _UsageLoadingState(),
                 ),
@@ -97,15 +98,10 @@ class AccountUsagePage extends ConsumerWidget {
 }
 
 class _UsageScaffold extends StatelessWidget {
-  const _UsageScaffold({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-    this.onRefresh,
-  });
+  const _UsageScaffold({required this.title, required this.child, this.subtitle, this.onRefresh});
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final Widget child;
   final Future<void> Function()? onRefresh;
 
@@ -125,7 +121,7 @@ class _UsageHeader extends StatelessWidget {
   const _UsageHeader({required this.title, required this.subtitle, this.onRefresh});
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final Future<void> Function()? onRefresh;
 
   @override
@@ -146,15 +142,17 @@ class _UsageHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: Theme.of(context).textTheme.headlineLarge),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
-              ),
+              if (subtitle?.trim().isNotEmpty == true) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ],
             ],
           ),
         ),
@@ -170,28 +168,36 @@ class _UsageHeader extends StatelessWidget {
 }
 
 class _UsageAccountCard extends StatelessWidget {
-  const _UsageAccountCard({required this.account});
+  const _UsageAccountCard({required this.account, this.usage});
 
   final AccountProfile account;
+  final GeminiUsageSnapshot? usage;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
+    final hasQuotaPressure = account.lastQuotaSnapshot?.trim().isNotEmpty == true;
     final statusIcon = !account.enabled
         ? Icons.pause_circle_outline_rounded
         : account.isCoolingDown
         ? Icons.schedule_rounded
+        : hasQuotaPressure
+        ? Icons.query_stats_rounded
         : Icons.check_circle_rounded;
     final statusLabel = !account.enabled
         ? l10n.accountUsageStatusDisabled
         : account.isCoolingDown
+        ? l10n.accountUsageStatusCoolingDown
+        : hasQuotaPressure
         ? l10n.accountUsageStatusCoolingDown
         : l10n.accountUsageStatusHealthy;
     final statusTint = !account.enabled
         ? scheme.onSurfaceVariant
         : account.isCoolingDown
         ? scheme.error
+        : hasQuotaPressure
+        ? scheme.tertiary
         : scheme.primary;
 
     return KickPanel(
@@ -200,23 +206,33 @@ class _UsageAccountCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              KickBadge(
-                label: l10n.accountUsageProviderLabel,
-                leading: const Icon(Icons.auto_awesome_rounded),
-                emphasis: true,
-              ),
-              const Spacer(),
-              _StatusBadge(icon: statusIcon, label: statusLabel, tint: statusTint),
-            ],
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [_StatusBadge(icon: statusIcon, label: statusLabel, tint: statusTint)],
           ),
           const SizedBox(height: 16),
-          Text(account.label, style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 6),
-          Text(
-            account.email,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _UsageAccountAvatar(account: account),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(account.label, style: Theme.of(context).textTheme.headlineMedium),
+                    const SizedBox(height: 6),
+                    Text(
+                      account.email,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -242,7 +258,90 @@ class _UsageAccountCard extends StatelessWidget {
               ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
+          if (usage != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerLow.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(context.kickTokens.panelRadius - 10),
+                border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.22)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.accountUsageLastUpdated(_formatDateTime(l10n, usage!.fetchedAt)),
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      KickBadge(
+                        label: l10n.accountUsageModelCount(usage!.buckets.length),
+                        leading: const Icon(Icons.layers_outlined),
+                      ),
+                      KickBadge(
+                        label: l10n.accountUsageHealthyCount(usage!.healthyBucketCount),
+                        leading: const Icon(Icons.verified_rounded),
+                        tint: scheme.primary,
+                      ),
+                      if (usage!.lowQuotaBucketCount > 0)
+                        KickBadge(
+                          label: l10n.accountUsageAttentionCount(usage!.lowQuotaBucketCount),
+                          leading: const Icon(Icons.query_stats_rounded),
+                          tint: scheme.tertiary,
+                        ),
+                      if (usage!.criticalBucketCount > 0)
+                        KickBadge(
+                          label: l10n.accountUsageCriticalCount(usage!.criticalBucketCount),
+                          leading: const Icon(Icons.warning_amber_rounded),
+                          tint: scheme.error,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _UsageAccountAvatar extends StatelessWidget {
+  const _UsageAccountAvatar({required this.account});
+
+  final AccountProfile account;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final avatarUrl = account.avatarUrl;
+    final fallback = Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Icon(Icons.account_circle_rounded, color: scheme.onSecondaryContainer, size: 32),
+    );
+
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      return fallback;
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        width: 56,
+        height: 56,
+        child: Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
       ),
     );
   }
@@ -302,7 +401,7 @@ class _UsageBucketCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
-    final used = bucket.usedPercent;
+    final remaining = bucket.remainingPercent;
 
     return KickPanel(
       tone: KickPanelTone.soft,
@@ -314,16 +413,23 @@ class _UsageBucketCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: Text(bucket.modelId, style: Theme.of(context).textTheme.titleMedium)),
-              const SizedBox(width: 12),
-              Text(
-                '${_formatUsageValue(used)} / 100.00',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (bucket.tokenType.isNotEmpty)
+                KickBadge(
+                  label: l10n.accountUsageTokenType(bucket.tokenType),
+                  leading: const Icon(Icons.speed_rounded, size: 16),
+                ),
             ],
           ),
           const SizedBox(height: 14),
-          _UsageProgressBar(value: used),
-          const SizedBox(height: 12),
+          _UsageProgressBar(value: remaining),
+          const SizedBox(height: 8),
           Text(
             bucket.resetAt == null
                 ? l10n.accountUsageResetUnknown
@@ -346,28 +452,54 @@ class _UsageProgressBar extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final normalized = value.clamp(0, 100) / 100;
     final tint = switch (value) {
-      >= 90 => scheme.error,
-      >= 70 => scheme.tertiary,
-      _ => scheme.secondary,
+      <= 10 => scheme.error,
+      <= 25 => scheme.tertiary,
+      _ => scheme.primary,
+    };
+    final trackColor = switch (value) {
+      <= 10 => Color.alphaBlend(scheme.error.withValues(alpha: 0.16), scheme.surfaceContainerHigh),
+      <= 25 => Color.alphaBlend(
+        scheme.tertiary.withValues(alpha: 0.16),
+        scheme.surfaceContainerHigh,
+      ),
+      _ => Color.alphaBlend(scheme.primary.withValues(alpha: 0.12), scheme.surfaceContainerHigh),
+    };
+    final labelColor = switch (value) {
+      <= 25 => scheme.onSurface,
+      _ => scheme.onPrimary,
     };
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: Container(
-        height: 8,
-        color: scheme.surfaceContainerHighest,
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: normalized,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [tint.withValues(alpha: 0.92), tint.withValues(alpha: 0.72)],
+        height: 24,
+        color: trackColor,
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: normalized,
+                child: SizedBox.expand(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [tint.withValues(alpha: 1), tint.withValues(alpha: 0.84)],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            Center(
+              child: Text(
+                '${_formatUsageValue(value)}%',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(color: labelColor, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -389,11 +521,11 @@ class _UsageLoadingState extends StatelessWidget {
 }
 
 class _UsageErrorCard extends StatelessWidget {
-  const _UsageErrorCard({required this.message, required this.onRetry, this.onOpenVerification});
+  const _UsageErrorCard({required this.message, required this.onRetry, this.errorAction});
 
   final String message;
   final VoidCallback onRetry;
-  final VoidCallback? onOpenVerification;
+  final GeminiErrorAction? errorAction;
 
   @override
   Widget build(BuildContext context) {
@@ -407,11 +539,19 @@ class _UsageErrorCard extends StatelessWidget {
         spacing: 8,
         runSpacing: 8,
         children: [
-          if (onOpenVerification != null)
+          if (errorAction != null)
             FilledButton.icon(
-              onPressed: onOpenVerification,
-              icon: const Icon(Icons.verified_user_rounded),
-              label: Text(l10n.accountUsageVerifyAccountButton),
+              onPressed: () => unawaited(_openErrorAction(context, errorAction!.url)),
+              icon: Icon(
+                errorAction!.kind == GeminiErrorActionKind.accountVerification
+                    ? Icons.verified_user_rounded
+                    : Icons.open_in_new_rounded,
+              ),
+              label: Text(
+                errorAction!.kind == GeminiErrorActionKind.accountVerification
+                    ? l10n.accountUsageVerifyAccountButton
+                    : l10n.openGoogleCloudButton,
+              ),
             ),
           OutlinedButton.icon(
             onPressed: onRetry,
@@ -459,18 +599,9 @@ String _formatDateTime(KickLocalizations l10n, DateTime value) {
   return DateFormat('dd/MM/yyyy, HH:mm', l10n.localeName).format(value);
 }
 
-VoidCallback? _verificationActionForError(BuildContext context, Object error) {
-  final actionUrl = accountVerificationUrlForError(error);
-  if (actionUrl == null) {
-    return null;
-  }
-
-  return () => unawaited(_openAccountVerificationUrl(context, actionUrl));
-}
-
-Future<void> _openAccountVerificationUrl(BuildContext context, String actionUrl) async {
+Future<void> _openErrorAction(BuildContext context, String actionUrl) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
-  final failureMessage = context.l10n.accountUsageVerificationOpenFailedMessage;
+  final failureMessage = context.l10n.accountErrorActionOpenFailedMessage;
   final uri = Uri.tryParse(actionUrl);
   if (uri == null) {
     _showVerificationOpenFailedMessage(messenger, failureMessage);
@@ -487,10 +618,7 @@ Future<void> _openAccountVerificationUrl(BuildContext context, String actionUrl)
   }
 }
 
-void _showVerificationOpenFailedMessage(
-  ScaffoldMessengerState? messenger,
-  String failureMessage,
-) {
+void _showVerificationOpenFailedMessage(ScaffoldMessengerState? messenger, String failureMessage) {
   if (messenger == null) {
     return;
   }

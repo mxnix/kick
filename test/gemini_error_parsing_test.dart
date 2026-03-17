@@ -75,8 +75,18 @@ void main() {
               "domain": "googleapis.com",
               "metadata": {
                 "consumer": "projects/1234567890",
-                "service": "cloudcode-pa.googleapis.com"
+                "service": "cloudcode-pa.googleapis.com",
+                "activationUrl": "https://console.developers.google.com/apis/api/cloudaicompanion.googleapis.com/overview?project=demo-project"
               }
+            },
+            {
+              "@type": "type.googleapis.com/google.rpc.Help",
+              "links": [
+                {
+                  "description": "Google developers console",
+                  "url": "https://console.developers.google.com/apis/api/cloudaicompanion.googleapis.com/overview?project=demo-project"
+                }
+              ]
             }
           ]
         }
@@ -85,6 +95,11 @@ void main() {
 
     expect(error.kind, GeminiGatewayFailureKind.auth);
     expect(error.detail, GeminiGatewayFailureDetail.projectConfiguration);
+    expect(error.upstreamReason, 'SERVICE_DISABLED');
+    expect(
+      error.actionUrl,
+      'https://console.developers.google.com/apis/api/cloudaicompanion.googleapis.com/overview?project=demo-project',
+    );
   });
 
   test('treats 429 no capacity as capacity issue', () {
@@ -109,9 +124,7 @@ void main() {
   });
 
   test('does not invent retry delay for quota exhausted without timer', () {
-    final error = decodeGeminiGatewayError(
-      429,
-      '''
+    final error = decodeGeminiGatewayError(429, '''
       {
         "error": {
           "code": 429,
@@ -125,8 +138,7 @@ void main() {
           ]
         }
       }
-      ''',
-    );
+      ''');
 
     expect(error.kind, GeminiGatewayFailureKind.quota);
     expect(error.detail, GeminiGatewayFailureDetail.quotaExhausted);

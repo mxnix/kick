@@ -18,16 +18,19 @@ class AccountsRepository {
   Future<void> upsert(AccountProfile account) async {
     await _database.customInsert('''
       INSERT INTO accounts (
-        id, label, email, project_id, enabled, priority, not_supported_models,
+        id, label, email, project_id, google_subject_id, avatar_url,
+        enabled, priority, not_supported_models,
         last_used_at, usage_count, error_count, cooldown_until,
         last_quota_snapshot, token_ref
       ) VALUES (
-        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13
+        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15
       )
       ON CONFLICT(id) DO UPDATE SET
         label = excluded.label,
         email = excluded.email,
         project_id = excluded.project_id,
+        google_subject_id = excluded.google_subject_id,
+        avatar_url = excluded.avatar_url,
         enabled = excluded.enabled,
         priority = excluded.priority,
         not_supported_models = excluded.not_supported_models,
@@ -66,9 +69,7 @@ class AccountsRepository {
       return;
     }
 
-    final existingById = {
-      for (final account in await readAll()) account.id: account,
-    };
+    final existingById = {for (final account in await readAll()) account.id: account};
 
     await _database.transaction(() async {
       for (final runtimeAccount in runtimeAccounts) {
@@ -104,6 +105,8 @@ class AccountsRepository {
       Variable<String>(map['label'] as String),
       Variable<String>(map['email'] as String),
       Variable<String>(map['project_id'] as String),
+      Variable<String>((map['google_subject_id'] as String?) ?? ''),
+      Variable<String>((map['avatar_url'] as String?) ?? ''),
       Variable<int>((map['enabled'] as int?) ?? 1),
       Variable<int>((map['priority'] as int?) ?? 0),
       Variable<String>(map['not_supported_models'] as String? ?? ''),

@@ -149,7 +149,27 @@ void main() {
       transport.events.any(
         (event) =>
             event.name == 'upstream_compatibility_issue' &&
-            event.properties['issue_kind'] == 'unsupported_model',
+            event.properties['issue_kind'] == 'unsupported_model' &&
+            event.properties['upstream_reason'] == 'CONSUMER_INVALID' &&
+            event.properties['has_action_url'] == 1,
+      ),
+      isTrue,
+    );
+    expect(
+      transport.events.any(
+        (event) =>
+            event.name == 'proxy_request_failed' &&
+            event.properties['error_detail'] == 'projectConfiguration' &&
+            event.properties['retry_after_ms'] == 45000,
+      ),
+      isTrue,
+    );
+    expect(
+      transport.events.any(
+        (event) =>
+            event.name == 'proxy_request_retried' &&
+            event.properties['upstream_reason'] == 'SERVICE_DISABLED' &&
+            event.properties['has_action_url'] == 1,
       ),
       isTrue,
     );
@@ -246,6 +266,10 @@ Future<void> _analyticsSessionIsolate(SendPort sendPort) async {
             'stream': true,
             'error_kind': 'unsupportedModel',
             'status_code': 400,
+            'error_detail': 'projectConfiguration',
+            'upstream_reason': 'SERVICE_DISABLED',
+            'retry_after_ms': 45000,
+            'has_action_url': true,
           },
         });
         sendPort.send({
@@ -258,6 +282,10 @@ Future<void> _analyticsSessionIsolate(SendPort sendPort) async {
             'stream': true,
             'error_kind': 'unsupportedModel',
             'status_code': 400,
+            'error_detail': 'projectIdMissing',
+            'upstream_reason': 'CONSUMER_INVALID',
+            'retry_after_ms': 15000,
+            'has_action_url': true,
           },
         });
         sendPort.send({
@@ -271,6 +299,10 @@ Future<void> _analyticsSessionIsolate(SendPort sendPort) async {
             'retry_count': 2,
             'upstream_retry_count': 1,
             'account_failover_count': 1,
+            'error_detail': 'projectConfiguration',
+            'upstream_reason': 'SERVICE_DISABLED',
+            'retry_after_ms': 45000,
+            'has_action_url': true,
           },
         });
         break;

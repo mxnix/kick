@@ -31,6 +31,11 @@ void main() {
         {
           'role': 'assistant',
           'content': 'Checking',
+          'reasoning_content': 'Need weather lookup.',
+          'reasoning_signature': 'sig_weather',
+          'google_thoughts': [
+            {'text': 'Need weather lookup.', 'signature': 'sig_weather'},
+          ],
           'tool_calls': [
             {
               'id': 'call_1',
@@ -82,6 +87,9 @@ void main() {
     expect(request.turns.first.parts[1].fileUri, 'https://example.com/cat.png');
     expect(request.turns.first.parts[1].mimeType, 'image/png');
     expect(request.turns[1].role, 'assistant');
+    expect(request.turns[1].parts.first.type, UnifiedPartType.thought);
+    expect(request.turns[1].parts.first.text, 'Need weather lookup.');
+    expect(request.turns[1].parts.first.thoughtSignature, 'sig_weather');
     expect(request.turns[1].parts.last.name, 'lookupWeather');
     expect(request.turns[2].parts.single.type, UnifiedPartType.functionResponse);
     expect(request.turns[2].parts.single.arguments?['result'], 'Cold');
@@ -106,6 +114,16 @@ void main() {
           ],
         },
         {
+          'type': 'reasoning',
+          'reasoning_signature': 'sig_fact',
+          'google_thoughts': [
+            {'text': 'Need an external fact.', 'signature': 'sig_fact'},
+          ],
+          'summary': [
+            {'type': 'summary_text', 'text': 'Need an external fact.'},
+          ],
+        },
+        {
           'type': 'function_call',
           'call_id': 'call_9',
           'name': 'fetchFact',
@@ -125,14 +143,17 @@ void main() {
     expect(request.systemInstruction, 'Stay in character.');
     expect(request.maxOutputTokens, 512);
     expect(request.reasoningEffort, 'medium');
-    expect(request.turns, hasLength(3));
+    expect(request.turns, hasLength(4));
     expect(request.turns.first.parts.first.text, 'Tell me a joke');
     expect(request.turns.first.parts[1].type, UnifiedPartType.inlineData);
     expect(request.turns.first.parts[1].mimeType, 'image/png');
     expect(request.turns.first.parts[1].data, 'ZmFrZQ==');
     expect(request.turns[1].role, 'assistant');
-    expect(request.turns[1].parts.single.type, UnifiedPartType.functionCall);
-    expect(request.turns[1].parts.single.name, 'fetchFact');
+    expect(request.turns[1].parts.single.type, UnifiedPartType.thought);
+    expect(request.turns[1].parts.single.text, 'Need an external fact.');
+    expect(request.turns[1].parts.single.thoughtSignature, 'sig_fact');
+    expect(request.turns[2].parts.single.type, UnifiedPartType.functionCall);
+    expect(request.turns[2].parts.single.name, 'fetchFact');
     expect(request.turns.last.parts.single.type, UnifiedPartType.functionResponse);
     expect(request.turns.last.parts.single.name, 'fetchFact');
     expect(request.turns.last.parts.single.arguments?['result'], 'Bananas are berries.');

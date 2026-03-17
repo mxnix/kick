@@ -12,22 +12,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appTitle => 'KiCk';
 
   @override
-  String get shellSubtitle => 'Локальный прокси Gemini CLI';
+  String get shellSubtitle => 'Локальный прокси для Gemini CLI';
 
   @override
-  String get connectGoogleAccountTitle => 'Подключить Google аккаунт';
+  String get connectGoogleAccountTitle => 'Подключить Google-аккаунт';
 
   @override
   String get homeTitle => 'Главная';
 
   @override
-  String get proxyRunningStatus => 'Активно';
+  String get proxyRunningStatus => 'Запущен';
 
   @override
-  String get proxyStoppedStatus => 'Остановлено';
+  String get proxyStoppedStatus => 'Остановлен';
 
   @override
-  String get embeddedProxyTitle => 'Прокси';
+  String get embeddedProxyTitle => 'Прокси-сервер';
 
   @override
   String proxyAddress(String host, int port) {
@@ -35,7 +35,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get proxyEndpointTitle => 'URL прокси';
+  String get proxyEndpointTitle => 'Адрес прокси';
 
   @override
   String activeAccounts(int count) {
@@ -52,7 +52,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get uptimeTitle => 'Время работы';
 
   @override
-  String get uptimeNotStarted => 'Пока не запущен';
+  String get uptimeNotStarted => 'Еще не запущен';
 
   @override
   String uptimeValue(int hours, int minutes, int seconds) {
@@ -66,13 +66,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get apiKeyTitle => 'API-ключ';
 
   @override
-  String get apiKeyDisabledValue => 'Отключен';
+  String get apiKeyDisabledValue => 'Не требуется';
 
   @override
-  String get changeApiKeyLinkLabel => 'Изменить ключ';
+  String get changeApiKeyLinkLabel => 'Изменить API-ключ';
 
   @override
-  String get loadingValue => 'Загружается...';
+  String get loadingValue => 'Загрузка...';
 
   @override
   String get lastErrorTitle => 'Последняя ошибка';
@@ -81,22 +81,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get openLogsButton => 'Открыть логи';
 
   @override
-  String get accountsTitle => 'Список аккаунтов';
+  String get accountsTitle => 'Аккаунты';
 
   @override
-  String get accountsSubtitle => 'Добавляйте Google аккаунты и управляйте ими';
+  String get accountsSubtitle => 'Подключайте Google-аккаунты и управляйте ими';
 
   @override
   String get addButton => 'Добавить';
 
   @override
-  String get accountsEmptyTitle => 'Пока пусто';
+  String get accountsEmptyTitle => 'Аккаунтов пока нет';
 
   @override
-  String get accountsEmptyMessage => 'Подключите хотя бы один Google аккаунт';
+  String get accountsEmptyMessage => 'Подключите хотя бы один Google-аккаунт';
 
   @override
-  String get connectAccountButton => 'Подключить аккаунт';
+  String get connectAccountButton => 'Подключить Google-аккаунт';
 
   @override
   String get accountsLoadErrorTitle => 'Не удалось загрузить аккаунты';
@@ -108,40 +108,56 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String priorityChip(String priorityLabel) {
-    return 'Роль: $priorityLabel';
+    return 'Приоритет: $priorityLabel';
   }
 
   @override
-  String get accountCoolingDownStatus => 'Таймаут';
+  String get accountCoolingDownStatus => 'На паузе';
 
   @override
-  String get accountReadyStatus => 'Готов';
+  String get accountReadyStatus => 'Готов к работе';
 
   @override
-  String get accountDisabledStatus => 'Отключен';
+  String get accountDisabledStatus => 'Выключен';
 
   @override
   String unsupportedModelsList(String models) {
-    return 'Не использовать для: $models';
+    return 'Не использовать для моделей: $models';
   }
 
   @override
-  String get editAccountTitle => 'Редактировать аккаунт';
+  String get editAccountTitle => 'Редактирование аккаунта';
 
   @override
-  String get editButton => 'Изменить';
+  String get editButton => 'Редактировать';
 
   @override
-  String get reauthorizeAccountTitle => 'Переавторизовать аккаунт';
+  String get reauthorizeAccountTitle => 'Переподключить аккаунт';
 
   @override
-  String get reauthorizeButton => 'Переавторизовать';
+  String get reauthorizeButton => 'Переподключить';
 
   @override
-  String get resetCooldownTooltip => 'Сбросить статус';
+  String get accountProjectCheckButton => 'Проверить доступ к проекту';
 
   @override
-  String get clearCooldownAction => 'Снять блокировку';
+  String get accountProjectCheckInProgressMessage => 'Проверка...';
+
+  @override
+  String get accountProjectCheckSuccessTitle => 'Доступ к проекту подтвержден';
+
+  @override
+  String get accountProjectCheckSuccessMessage =>
+      'KiCk смог выполнить тестовый запрос к Google для этого аккаунта и проекта';
+
+  @override
+  String get accountProjectCheckFailureTitle => 'Не удалось проверить';
+
+  @override
+  String get resetCooldownTooltip => 'Сбросить состояние';
+
+  @override
+  String get clearCooldownAction => 'Снять паузу';
 
   @override
   String get deleteTooltip => 'Удалить';
@@ -150,71 +166,123 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountUsageOpenTooltip => 'Лимиты';
 
   @override
-  String get accountUsageTitle => 'Лимиты';
+  String get accountUsageTitle => 'Лимиты аккаунта';
 
   @override
-  String get accountUsageProviderLabel => 'Gemini CLI OAuth';
+  String get accountUsageProviderLabel => 'Авторизация Gemini CLI (OAuth)';
 
   @override
   String get accountUsageRefreshTooltip => 'Обновить';
 
   @override
-  String get accountUsageStatusHealthy => 'В норме';
+  String get accountUsageStatusHealthy => 'Доступен';
 
   @override
-  String get accountUsageStatusCoolingDown => 'Лимит';
+  String get accountUsageStatusCoolingDown => 'Ограничен';
 
   @override
   String get accountUsageStatusDisabled => 'Выключен';
 
   @override
-  String get accountUsageLoadErrorTitle => 'Не удалось загрузить текущие лимиты';
+  String get accountQuotaWarningStatus => 'Лимит заканчивается';
+
+  @override
+  String get accountUsageLoadErrorTitle => 'Не удалось загрузить данные по лимитам';
 
   @override
   String get accountUsageRetryButton => 'Повторить';
 
   @override
-  String get accountUsageVerifyAccountButton => 'Подтвердить аккаунт';
+  String get accountUsageVerifyAccountButton => 'Подтвердить в Google';
+
+  @override
+  String get openGoogleCloudButton => 'Открыть Google Cloud';
 
   @override
   String get accountUsageVerificationOpenFailedMessage =>
-      'Не удалось открыть страницу подтверждения аккаунта';
+      'Не удалось открыть страницу подтверждения в Google';
 
   @override
-  String get accountUsageEmptyTitle => 'Лимиты недоступны';
+  String get accountErrorActionOpenFailedMessage => 'Не удалось открыть страницу Google';
 
   @override
-  String get accountUsageEmptyMessage =>
-      'Google не вернул информацию по лимитам для этого аккаунта';
+  String get accountUsageEmptyTitle => 'Данные по лимитам недоступны';
+
+  @override
+  String get accountUsageEmptyMessage => 'Google не прислал данные по лимитам для этого аккаунта';
 
   @override
   String get accountUsageMissingTitle => 'Аккаунт не найден';
 
   @override
-  String get accountUsageMissingSubtitle => 'Экран лимитов';
+  String get accountUsageMissingSubtitle => 'Информация по лимитам';
 
   @override
   String get accountUsageMissingMessage =>
-      'Возможно, аккаунт был удалён или список ещё не успел обновиться';
+      'Возможно, аккаунт уже удален или список еще не успел обновиться';
 
   @override
   String accountUsageResetsAt(String time) {
-    return 'Будет сброшено $time';
+    return 'Сбросится $time';
   }
 
   @override
-  String get accountUsageResetUnknown => 'Время сброса не получено';
+  String get accountUsageResetUnknown => 'Время следующего сброса неизвестно';
 
   @override
   String accountUsageLastUpdated(String time) {
-    return 'Обновлено: $time';
+    return 'Данные обновлены: $time';
   }
+
+  @override
+  String accountUsageModelCount(int count) {
+    return 'Моделей: $count';
+  }
+
+  @override
+  String accountUsageAttentionCount(int count) {
+    return 'Низкий остаток: $count';
+  }
+
+  @override
+  String accountUsageCriticalCount(int count) {
+    return 'Почти исчерпано: $count';
+  }
+
+  @override
+  String accountUsageHealthyCount(int count) {
+    return 'В норме: $count';
+  }
+
+  @override
+  String accountUsageTokenType(String value) {
+    return 'Тип лимита: $value';
+  }
+
+  @override
+  String accountUsageRemainingPercent(String value) {
+    return 'Осталось $value%';
+  }
+
+  @override
+  String accountUsageUsedPercent(String value) {
+    return 'Израсходовано $value%';
+  }
+
+  @override
+  String get accountUsageBucketHealthy => 'Достаточно';
+
+  @override
+  String get accountUsageBucketLow => 'Заканчивается';
+
+  @override
+  String get accountUsageBucketCritical => 'Почти исчерпано';
 
   @override
   String get settingsTitle => 'Настройки';
 
   @override
-  String get settingsSubtitle => 'Сеть, тема, API-ключ и поведение прокси';
+  String get settingsSubtitle => 'Сеть, оформление, API-ключ и работа прокси';
 
   @override
   String get themeLabel => 'Тема';
@@ -232,13 +300,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get dynamicThemeTitle => 'Динамическая тема';
 
   @override
-  String get dynamicThemeSubtitle => 'Использовать системные динамические цвета';
+  String get dynamicThemeSubtitle => 'Использовать динамические цвета системы';
 
   @override
-  String get settingsAppearanceSectionTitle => 'Внешний вид и поведение';
+  String get settingsAppearanceSectionTitle => 'Оформление и поведение';
 
   @override
-  String get settingsAppearanceSectionSummary => 'Тема, логи и поведение программы';
+  String get settingsAppearanceSectionSummary => 'Тема, логи и работа приложения';
 
   @override
   String get settingsNetworkSectionTitle => 'Сеть';
@@ -247,40 +315,43 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsNetworkSectionSummary => 'Хост, порт и доступ из локальной сети';
 
   @override
-  String get settingsReliabilitySectionTitle => 'Система повторов';
+  String get settingsReliabilitySectionTitle => 'Повторы и лимиты';
 
   @override
-  String get settingsReliabilitySectionSummary => 'Автоповторы и обработка лимитов API';
+  String get settingsReliabilitySectionSummary => 'Автоповторы и реакция на ограничения API';
 
   @override
   String get settingsAccessSectionTitle => 'Доступ и запуск';
 
   @override
-  String get settingsAccessSectionSummary => 'API-ключ и параметры запуска';
+  String get settingsAccessSectionSummary => 'API-ключ и запуск приложения';
 
   @override
   String get apiKeyRequiredTitle => 'Требовать API-ключ';
 
   @override
-  String get apiKeyRequiredSubtitle => 'При отключении, разрешает запросы без Bearer-токена';
+  String get apiKeyRequiredSubtitle =>
+      'Если выключить, запросы будут приниматься без Bearer-токена';
 
   @override
-  String get windowsTrayTitle => 'Работа из трея';
+  String get windowsTrayTitle => 'Сворачивать в трей';
 
   @override
-  String get windowsTraySubtitle => 'Закрытие окна скрывает KiCk в системный трей';
+  String get windowsTraySubtitle =>
+      'При закрытии окно не завершает работу, а скрывает KiCk в системный трей';
 
   @override
   String get windowsLaunchAtStartupTitle => 'Запускать вместе с Windows';
 
   @override
-  String get windowsLaunchAtStartupSubtitle => 'При входе в систему KiCk будет стартовать в трее';
+  String get windowsLaunchAtStartupSubtitle =>
+      'KiCk будет автоматически запускаться при входе в систему';
 
   @override
   String get windowsTrayNotificationTitle => 'KiCk продолжает работать';
 
   @override
-  String get windowsTrayNotificationBody => 'Приложение скрыто в системный трей';
+  String get windowsTrayNotificationBody => 'Приложение свернуто в системный трей';
 
   @override
   String get settingsModelsSectionTitle => 'Модели';
@@ -301,54 +372,56 @@ class AppLocalizationsRu extends AppLocalizations {
   String get portHelperText => 'По умолчанию 3000';
 
   @override
-  String get allowLanTitle => 'Доступ из LAN / Docker';
+  String get allowLanTitle => 'Доступ из локальной сети и Docker';
 
   @override
   String get allowLanSubtitle =>
-      'Открывает прокси на 0.0.0.0 и делает его доступным из локальной сети и контейнеров';
+      'Прокси будет слушать 0.0.0.0 и станет доступен из локальной сети и контейнеров';
 
   @override
-  String get androidBackgroundRuntimeTitle => 'Фоновый запуск на Android';
+  String get androidBackgroundRuntimeTitle => 'Работа в фоне на Android';
 
   @override
-  String get androidBackgroundRuntimeSubtitle => 'Необходимо для непрерывной работы прокси';
+  String get androidBackgroundRuntimeSubtitle =>
+      'Нужно, чтобы прокси не останавливался при сворачивании приложения';
 
   @override
-  String get requestRetriesLabel => 'Повторы запросов к Google';
+  String get requestRetriesLabel => 'Количество повторов запросов к Google';
 
   @override
-  String get requestRetriesHelperText => 'Сколько раз KiCk повторит временно запрос при неудаче';
+  String get requestRetriesHelperText => 'Сколько раз KiCk повторит запрос после временной ошибки';
 
   @override
-  String get mark429AsUnhealthyTitle => 'Отключать аккаунт при превышении лимитов (ошибка 429)';
+  String get mark429AsUnhealthyTitle => 'Временно выводить аккаунт из ротации при ошибке 429';
 
   @override
   String get mark429AsUnhealthySubtitle =>
-      'Помечает аккаунт как временно непригодный после ошибок 429, чтобы быстрее переключаться на другие';
+      'После ошибки 429 KiCk пометит аккаунт как временно недоступный и переключится на другой';
 
   @override
   String get loggingLabel => 'Логирование';
 
   @override
-  String get loggingQuiet => 'Тихое';
+  String get loggingQuiet => 'Минимальное';
 
   @override
-  String get loggingNormal => 'Обычное';
+  String get loggingNormal => 'Стандартное';
 
   @override
   String get loggingVerbose => 'Подробное';
 
   @override
-  String get unsafeRawLoggingTitle => 'Debug-логи';
+  String get unsafeRawLoggingTitle => 'Сырые логи отладки';
 
   @override
-  String get unsafeRawLoggingSubtitle => 'Сохраняет сырые запросы. Используйте только для отладки';
+  String get unsafeRawLoggingSubtitle =>
+      'Сохраняет содержимое запросов и ответов. Включайте только для отладки!';
 
   @override
   String get customModelsLabel => 'Пользовательские ID моделей';
 
   @override
-  String get customModelsHelperText => 'Точный ID модели, по одному на строке';
+  String get customModelsHelperText => 'Указывайте точный ID модели, по одному на строке';
 
   @override
   String get settingsLoadErrorTitle => 'Не удалось загрузить настройки';
@@ -357,24 +430,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutTitle => 'О программе';
 
   @override
-  String get aboutMenuSubtitle => 'Информация о программе';
+  String get aboutMenuSubtitle => 'Версия, обновления и аналитика';
 
   @override
   String get aboutDescription =>
-      'Локальный прокси-сервер, совместимый с OpenAI, для Gemini CLI с нативной оболочкой Flutter';
+      'Локальный OpenAI-совместимый прокси для Gemini CLI в нативном Flutter-приложении';
 
   @override
   String get aboutUpdatesTitle => 'Обновления';
 
   @override
-  String get aboutUpdatesChecking => 'Проверяем наличие новой версии на GitHub...';
+  String get aboutUpdatesChecking => 'Проверяем обновления на GitHub...';
 
   @override
   String get aboutUpdateAvailableTitle => 'Доступно обновление';
 
   @override
   String aboutUpdateAvailableMessage(String latestVersion, String currentVersion) {
-    return 'Найдена версия $latestVersion. Сейчас установлена $currentVersion.';
+    return 'Доступна версия $latestVersion. Сейчас у вас установлена $currentVersion.';
   }
 
   @override
@@ -382,33 +455,32 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String aboutUpToDateMessage(String currentVersion) {
-    return 'У вас уже установлена актуальная версия $currentVersion.';
+    return 'У вас установлена актуальная версия: $currentVersion.';
   }
 
   @override
   String get aboutUpdateCheckFailedTitle => 'Не удалось проверить обновления';
 
   @override
-  String get aboutUpdateCheckFailedMessage => 'Что-то пошло не так';
+  String get aboutUpdateCheckFailedMessage => 'Не удалось получить информацию о релизах с GitHub.';
 
   @override
   String get aboutOpenReleaseButton => 'Открыть релиз';
 
   @override
-  String get aboutRetryUpdateCheckButton => 'Проверить снова';
+  String get aboutRetryUpdateCheckButton => 'Проверить еще раз';
 
   @override
   String get aboutAnalyticsTitle => 'Аналитика';
 
   @override
-  String get aboutAnalyticsSubtitle =>
-      'Анонимная статистика использования. Помогает делать KiCk лучше.';
+  String get aboutAnalyticsSubtitle => 'Анонимная статистика использования помогает улучшать KiCk.';
 
   @override
-  String get copyProxyEndpointTooltip => 'Скопировать URL прокси';
+  String get copyProxyEndpointTooltip => 'Скопировать адрес прокси';
 
   @override
-  String get proxyEndpointCopiedMessage => 'URL прокси скопирован';
+  String get proxyEndpointCopiedMessage => 'Адрес прокси скопирован';
 
   @override
   String get copyApiKeyTooltip => 'Скопировать API-ключ';
@@ -417,17 +489,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get apiKeyCopiedMessage => 'API-ключ скопирован';
 
   @override
-  String get apiKeyRegeneratedMessage => 'Новый API-ключ сохранён';
+  String get apiKeyRegeneratedMessage => 'Новый API-ключ сохранен';
 
   @override
-  String get regenerateApiKeyAction => 'Сгенерировать заново';
+  String get regenerateApiKeyAction => 'Создать новый API-ключ';
 
   @override
-  String get regenerateApiKeyDialogTitle => 'Сгенерировать новый API-ключ?';
+  String get regenerateApiKeyDialogTitle => 'Создать новый API-ключ?';
 
   @override
   String get regenerateApiKeyDialogMessage =>
-      'Старый ключ будет немедленно отозван. Подключенным клиентам потребуется новый ключ для работы.';
+      'Старый ключ будет сразу отозван. Всем подключенным клиентам понадобится новый ключ для работы.';
 
   @override
   String get regenerateApiKeyConfirmButton => 'Сгенерировать';
@@ -436,36 +508,36 @@ class AppLocalizationsRu extends AppLocalizations {
   String get trayOpenWindowAction => 'Открыть окно';
 
   @override
-  String get trayHideToTrayAction => 'Скрыть в трей';
+  String get trayHideToTrayAction => 'Свернуть в трей';
 
   @override
-  String get trayExitAction => 'Выход';
+  String get trayExitAction => 'Выйти';
 
   @override
   String get noActiveAccountsWarning =>
-      'Активных аккаунтов нет. Прокси всё равно запустится, но не сможет обработать запросы, пока вы не добавите или не включите аккаунт.';
+      'Нет активных аккаунтов. Прокси запустится, но не сможет обрабатывать запросы, пока вы не добавите или не включите хотя бы один аккаунт.';
 
   @override
-  String get pinWindowTooltip => 'Закрепить поверх остальных окон';
+  String get pinWindowTooltip => 'Закрепить окно поверх остальных';
 
   @override
-  String get unpinWindowTooltip => 'Открепить окно';
+  String get unpinWindowTooltip => 'Убрать закрепление окна';
 
   @override
   String get disclaimerTitle => 'Отказ от ответственности';
 
   @override
-  String get disclaimerBodyLineOne => 'Данное программное обеспечение предоставляется \"как есть\"';
+  String get disclaimerBodyLineOne => 'Программа предоставляется \"как есть\".';
 
   @override
   String get disclaimerBodyLineTwo =>
-      'Предназначено исключительно для некоммерческого использования в образовательных и исследовательских целях';
+      'Только для некоммерческого использования в образовательных и исследовательских целях.';
 
   @override
-  String get disclaimerLinkPrefix => 'Подробнее';
+  String get disclaimerLinkPrefix => 'Подробнее:';
 
   @override
-  String get disclaimerAnalyticsConsentLabel => 'Разрешить отправку анонимной аналитики';
+  String get disclaimerAnalyticsConsentLabel => 'Отправлять анонимную аналитику';
 
   @override
   String get logsTitle => 'Логи';
@@ -474,7 +546,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get logsSubtitle => 'История запросов и ошибок';
 
   @override
-  String get logsSearchHint => 'Поиск по маршруту, сообщению';
+  String get logsSearchHint => 'Поиск по маршруту или сообщению';
 
   @override
   String logsTotalCount(int count) {
@@ -493,17 +565,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get logsLoadErrorTitle => 'Не удалось загрузить логи';
 
   @override
-  String get logsExportTooltip => 'Сохранить лог-файл';
+  String get logsExportTooltip => 'Сохранить логи в файл';
 
   @override
   String get logsShareTooltip => 'Поделиться логами';
 
   @override
-  String get logsNothingToExportMessage => 'Нет логов для экспорта';
+  String get logsNothingToExportMessage => 'Нет логов для сохранения';
 
   @override
   String logsExportedMessage(String fileName) {
-    return 'Логи сохранены: $fileName';
+    return 'Логи сохранены в файл $fileName';
   }
 
   @override
@@ -517,7 +589,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get accountDialogTitle => 'Аккаунт Google';
+  String get accountDialogTitle => 'Google-аккаунт';
 
   @override
   String get projectIdLabel => 'PROJECT_ID';
@@ -526,26 +598,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get projectIdHint => 'my-google-cloud-project';
 
   @override
-  String get projectIdConsoleLinkLabel => 'Узнать ID проекта';
+  String get projectIdConsoleLinkLabel => 'Где посмотреть ID проекта';
 
   @override
-  String get projectIdRequiredError => 'Укажите PROJECT_ID';
+  String get projectIdRequiredError => 'Укажите ID проекта';
 
   @override
-  String get projectIdLookupFailedMessage => 'Не удалось открыть Google Cloud Console';
+  String get projectIdLookupFailedMessage => 'Не удалось открыть Google Cloud Console.';
 
   @override
-  String get accountNameLabel => 'Название';
+  String get accountNameLabel => 'Название аккаунта';
 
   @override
-  String get accountNameHint => 'Основной аккаунт';
+  String get accountNameHint => 'Например, основной аккаунт';
 
   @override
-  String get priorityLabel => 'Роль в очереди';
+  String get priorityLabel => 'Приоритет';
 
   @override
   String get priorityHelperText =>
-      'Основные аккаунты получают запросы в первую очередь. Аккаунты одного уровня чередуются.';
+      'Сначала используются основные аккаунты. Аккаунты с одинаковым приоритетом чередуются.';
 
   @override
   String get priorityLevelPrimary => 'Основной';
@@ -557,10 +629,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get priorityLevelReserve => 'Резервный';
 
   @override
-  String get blockedModelsLabel => 'Заблокированные модели';
+  String get blockedModelsLabel => 'Недоступные модели';
 
   @override
-  String get blockedModelsHelperText => 'По одной модели на строке';
+  String get blockedModelsHelperText => 'Укажите по одному ID модели на строке';
 
   @override
   String get cancelButton => 'Отмена';
@@ -581,10 +653,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get navLogs => 'Логи';
 
   @override
-  String get runtimeChannelName => 'Фоновый прокси KiCk';
+  String get runtimeChannelName => 'Прокси KiCk в фоне';
 
   @override
-  String get runtimeChannelDescription => 'Удерживает прокси активным в фоне';
+  String get runtimeChannelDescription => 'Поддерживает работу прокси в фоновом режиме';
 
   @override
   String get runtimeNotificationTitle => 'Прокси KiCk запущен';
@@ -593,7 +665,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get runtimeNotificationReturn => 'Нажмите, чтобы вернуться в приложение';
 
   @override
-  String get runtimeNotificationManage => 'Нажмите, чтобы управлять аккаунтами и настройками';
+  String get runtimeNotificationManage => 'Нажмите, чтобы открыть аккаунты и настройки';
 
   @override
   String get runtimeNotificationActive => 'Прокси активен';
@@ -607,7 +679,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Сервис Google временно недоступен. Повторите попытку позже.';
 
   @override
-  String get errorInvalidServiceResponse => 'Сервер ответил что-то непонятное. Попробуйте ещё раз';
+  String get errorInvalidServiceResponse => 'Сервер вернул непонятный ответ. Попробуйте еще раз.';
 
   @override
   String get errorGoogleAuthTimedOut =>
@@ -618,7 +690,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorOauthTokensMissing =>
-      'Для этого аккаунта не найдены токены авторизации. Переавторизуйте аккаунт';
+      'Для этого аккаунта не найдены токены авторизации. Переподключите аккаунт.';
 
   @override
   String get errorAccountNotFound => 'Аккаунт не найден. Возможно, он уже был удалён.';
@@ -629,32 +701,40 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorPermissionDenied =>
-      'Системе не хватило разрешений для запуска. Проверьте настройки приложения и повторите попытку.';
+      'Не хватило системных разрешений для запуска. Проверьте настройки приложения и повторите попытку.';
 
   @override
   String errorGoogleRateLimitedRetry(String retryHint) {
-    return 'Google временно ограничил запросы для этого аккаунта. Повторите попытку через $retryHint.';
+    return 'Google временно ограничил запросы для этого аккаунта. Попробуйте снова через $retryHint.';
   }
 
   @override
   String get errorGoogleRateLimitedLater =>
-      'Google временно ограничил запросы для этого аккаунта. Повторите попытку позже.';
+      'Google временно ограничил запросы для этого аккаунта. Попробуйте снова позже.';
 
   @override
   String get errorGoogleAccountVerificationRequired =>
-      'Google просит подтвердить этот аккаунт. Откройте страницу подтверждения и войдите тем же Google-аккаунтом.';
+      'Google просит подтвердить этот аккаунт. Откройте страницу подтверждения и войдите под тем же Google-аккаунтом.';
 
   @override
   String get errorGoogleProjectIdMissing =>
-      'Google не смог определить корректный PROJECT_ID для этого аккаунта или запроса. Проверьте PROJECT_ID в аккаунте и при необходимости переавторизуйте его.';
+      'Google не смог определить корректный ID проекта для этого аккаунта или запроса. Проверьте ID проекта в настройках аккаунта и при необходимости переподключите его.';
+
+  @override
+  String get errorGoogleProjectApiDisabled =>
+      'Gemini for Google Cloud API отключен для этого проекта. Откройте Google Cloud, включите API для нужного ID проекта и повторите проверку.';
+
+  @override
+  String get errorGoogleProjectInvalid =>
+      'Google отклонил этот ID проекта. Проверьте, что указали существующий проект и что у аккаунта есть доступ именно к нему.';
 
   @override
   String get errorGoogleProjectAccessDenied =>
-      'Google отклонил запрос для этого проекта или аккаунта. Проверьте PROJECT_ID, выбранный аккаунт и что Gemini Code Assist активирован именно для этого проекта.';
+      'Google отклонил запрос для этого проекта или аккаунта. Проверьте ID проекта, выбранный аккаунт и убедитесь, что Gemini Code Assist включен именно для этого проекта.';
 
   @override
   String get errorAuthExpired =>
-      'Авторизация истекла или стала недействительной. Переавторизуйте аккаунт и попробуйте снова.';
+      'Срок действия авторизации истек или она стала недействительной. Переподключите аккаунт и попробуйте снова.';
 
   @override
   String get errorGoogleCapacity =>
@@ -671,11 +751,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorQuotaExhausted =>
-      'Квота этого аккаунта исчерпана. Дождитесь сброса лимита или используйте другой аккаунт.';
+      'Лимит этого аккаунта исчерпан. Дождитесь сброса или используйте другой аккаунт.';
 
   @override
   String errorQuotaExhaustedRetry(String retryHint) {
-    return 'Квота этого аккаунта исчерпана. Повторите попытку через $retryHint или используйте другой аккаунт.';
+    return 'Лимит этого аккаунта исчерпан. Попробуйте снова через $retryHint или используйте другой аккаунт.';
   }
 
   @override
@@ -683,7 +763,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorReasoningConfigRejected =>
-      'Google отклонил параметры reasoning/thinking для этой модели. Верните Reasoning Effort в Auto или уберите кастомный thinking config.';
+      'Google отклонил параметры reasoning/thinking для этой модели. Включите автоматический режим размышлений (reasoning).';
 
   @override
   String get durationFewSeconds => 'несколько секунд';

@@ -47,6 +47,36 @@ void main() {
     expect(message, l10n.errorGoogleProjectAccessDenied);
   });
 
+  test('formats disabled Google project API distinctly', () {
+    final message = formatUserFacingError(
+      l10n,
+      GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.auth,
+        detail: GeminiGatewayFailureDetail.projectConfiguration,
+        message: 'API disabled.',
+        statusCode: 403,
+        upstreamReason: 'SERVICE_DISABLED',
+      ),
+    );
+
+    expect(message, l10n.errorGoogleProjectApiDisabled);
+  });
+
+  test('formats invalid Google project distinctly', () {
+    final message = formatUserFacingError(
+      l10n,
+      GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.auth,
+        detail: GeminiGatewayFailureDetail.projectConfiguration,
+        message: 'Permission denied on resource project invalid-project.',
+        statusCode: 403,
+        upstreamReason: 'CONSUMER_INVALID',
+      ),
+    );
+
+    expect(message, l10n.errorGoogleProjectInvalid);
+  });
+
   test('formats missing project id errors distinctly', () {
     final message = formatUserFacingMessage(
       l10n,

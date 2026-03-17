@@ -95,6 +95,8 @@ void main() {
             enabled,
             priority,
             not_supported_models,
+            google_subject_id,
+            avatar_url,
             usage_count,
             error_count,
             token_ref
@@ -111,6 +113,8 @@ void main() {
         'enabled',
         'priority',
         'not_supported_models',
+        'google_subject_id',
+        'avatar_url',
         'last_used_at',
         'usage_count',
         'error_count',
@@ -123,6 +127,8 @@ void main() {
     expect(accountRow.read<int>('enabled'), 1);
     expect(accountRow.read<int>('priority'), 0);
     expect(accountRow.read<String>('not_supported_models'), '');
+    expect(accountRow.read<String?>('google_subject_id'), anyOf(equals(null), isEmpty));
+    expect(accountRow.read<String?>('avatar_url'), anyOf(equals(null), isEmpty));
     expect(accountRow.read<int>('usage_count'), 0);
     expect(accountRow.read<int>('error_count'), 0);
     expect(accountRow.read<String>('token_ref'), 'kick.oauth.account-1');

@@ -6,6 +6,8 @@ class AccountProfile {
     required this.label,
     required this.email,
     required this.projectId,
+    this.googleSubjectId,
+    this.avatarUrl,
     required this.enabled,
     required this.priority,
     required this.notSupportedModels,
@@ -21,6 +23,8 @@ class AccountProfile {
   final String label;
   final String email;
   final String projectId;
+  final String? googleSubjectId;
+  final String? avatarUrl;
   final bool enabled;
   final int priority;
   final List<String> notSupportedModels;
@@ -38,6 +42,10 @@ class AccountProfile {
     String? label,
     String? email,
     String? projectId,
+    String? googleSubjectId,
+    bool clearGoogleSubjectId = false,
+    String? avatarUrl,
+    bool clearAvatarUrl = false,
     bool? enabled,
     int? priority,
     List<String>? notSupportedModels,
@@ -56,6 +64,8 @@ class AccountProfile {
       label: label ?? this.label,
       email: email ?? this.email,
       projectId: projectId ?? this.projectId,
+      googleSubjectId: clearGoogleSubjectId ? null : (googleSubjectId ?? this.googleSubjectId),
+      avatarUrl: clearAvatarUrl ? null : (avatarUrl ?? this.avatarUrl),
       enabled: enabled ?? this.enabled,
       priority: priority ?? this.priority,
       notSupportedModels: notSupportedModels ?? this.notSupportedModels,
@@ -74,6 +84,8 @@ class AccountProfile {
       'label': label,
       'email': email,
       'project_id': projectId,
+      'google_subject_id': googleSubjectId,
+      'avatar_url': avatarUrl,
       'enabled': enabled ? 1 : 0,
       'priority': priority,
       'not_supported_models': notSupportedModels.join('\n'),
@@ -91,6 +103,8 @@ class AccountProfile {
       ...toDatabaseMap(),
       'email': email,
       'enabled': enabled,
+      'google_subject_id': googleSubjectId,
+      'avatar_url': avatarUrl,
       'not_supported_models': List<String>.from(notSupportedModels),
       'last_used_at': lastUsedAt?.toIso8601String(),
       'cooldown_until': cooldownUntil?.toIso8601String(),
@@ -105,6 +119,8 @@ class AccountProfile {
       label: map['label'] as String? ?? '',
       email: map['email'] as String? ?? '',
       projectId: map['project_id'] as String? ?? '',
+      googleSubjectId: _readOptionalString(map['google_subject_id']),
+      avatarUrl: _readOptionalString(map['avatar_url']),
       enabled: (map['enabled'] as int? ?? 1) == 1,
       priority: map['priority'] as int? ?? 0,
       notSupportedModels: ((map['not_supported_models'] as String?) ?? '')
@@ -121,5 +137,13 @@ class AccountProfile {
           : rawQuotaSnapshot,
       tokenRef: map['token_ref'] as String? ?? '',
     );
+  }
+
+  static String? _readOptionalString(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) {
+      return null;
+    }
+    return text;
   }
 }

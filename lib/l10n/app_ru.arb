@@ -1,12 +1,12 @@
 {
   "@@locale": "ru",
   "appTitle": "KiCk",
-  "shellSubtitle": "Локальный прокси Gemini CLI",
-  "connectGoogleAccountTitle": "Подключить Google аккаунт",
+  "shellSubtitle": "Локальный прокси для Gemini CLI",
+  "connectGoogleAccountTitle": "Подключить Google-аккаунт",
   "homeTitle": "Главная",
-  "proxyRunningStatus": "Активно",
-  "proxyStoppedStatus": "Остановлено",
-  "embeddedProxyTitle": "Прокси",
+  "proxyRunningStatus": "Запущен",
+  "proxyStoppedStatus": "Остановлен",
+  "embeddedProxyTitle": "Прокси-сервер",
   "proxyAddress": "Адрес: {host}:{port}",
   "@proxyAddress": {
     "placeholders": {
@@ -18,7 +18,7 @@
       }
     }
   },
-  "proxyEndpointTitle": "URL прокси",
+  "proxyEndpointTitle": "Адрес прокси",
   "activeAccounts": "Активных аккаунтов: {count}",
   "@activeAccounts": {
     "placeholders": {
@@ -30,7 +30,7 @@
   "stopProxyButton": "Остановить",
   "startProxyButton": "Запустить",
   "uptimeTitle": "Время работы",
-  "uptimeNotStarted": "Пока не запущен",
+  "uptimeNotStarted": "Еще не запущен",
   "uptimeValue": "{hours} ч {minutes} мин {seconds} сек",
   "@uptimeValue": {
     "placeholders": {
@@ -47,17 +47,17 @@
   },
   "versionTitle": "Версия",
   "apiKeyTitle": "API-ключ",
-  "apiKeyDisabledValue": "Отключен",
-  "changeApiKeyLinkLabel": "Изменить ключ",
-  "loadingValue": "Загружается...",
+  "apiKeyDisabledValue": "Не требуется",
+  "changeApiKeyLinkLabel": "Изменить API-ключ",
+  "loadingValue": "Загрузка...",
   "lastErrorTitle": "Последняя ошибка",
   "openLogsButton": "Открыть логи",
-  "accountsTitle": "Список аккаунтов",
-  "accountsSubtitle": "Добавляйте Google аккаунты и управляйте ими",
+  "accountsTitle": "Аккаунты",
+  "accountsSubtitle": "Подключайте Google-аккаунты и управляйте ими",
   "addButton": "Добавить",
-  "accountsEmptyTitle": "Пока пусто",
-  "accountsEmptyMessage": "Подключите хотя бы один Google аккаунт",
-  "connectAccountButton": "Подключить аккаунт",
+  "accountsEmptyTitle": "Аккаунтов пока нет",
+  "accountsEmptyMessage": "Подключите хотя бы один Google-аккаунт",
+  "connectAccountButton": "Подключить Google-аккаунт",
   "accountsLoadErrorTitle": "Не удалось загрузить аккаунты",
   "projectIdChip": "PROJECT_ID: {projectId}",
   "@projectIdChip": {
@@ -67,7 +67,7 @@
       }
     }
   },
-  "priorityChip": "Роль: {priorityLabel}",
+  "priorityChip": "Приоритет: {priorityLabel}",
   "@priorityChip": {
     "placeholders": {
       "priorityLabel": {
@@ -75,10 +75,10 @@
       }
     }
   },
-  "accountCoolingDownStatus": "Таймаут",
-  "accountReadyStatus": "Готов",
-  "accountDisabledStatus": "Отключен",
-  "unsupportedModelsList": "Не использовать для: {models}",
+  "accountCoolingDownStatus": "На паузе",
+  "accountReadyStatus": "Готов к работе",
+  "accountDisabledStatus": "Выключен",
+  "unsupportedModelsList": "Не использовать для моделей: {models}",
   "@unsupportedModelsList": {
     "placeholders": {
       "models": {
@@ -86,30 +86,38 @@
       }
     }
   },
-  "editAccountTitle": "Редактировать аккаунт",
-  "editButton": "Изменить",
-  "reauthorizeAccountTitle": "Переавторизовать аккаунт",
-  "reauthorizeButton": "Переавторизовать",
-  "resetCooldownTooltip": "Сбросить статус",
-  "clearCooldownAction": "Снять блокировку",
+  "editAccountTitle": "Редактирование аккаунта",
+  "editButton": "Редактировать",
+  "reauthorizeAccountTitle": "Переподключить аккаунт",
+  "reauthorizeButton": "Переподключить",
+  "accountProjectCheckButton": "Проверить доступ к проекту",
+  "accountProjectCheckInProgressMessage": "Проверка...",
+  "accountProjectCheckSuccessTitle": "Доступ к проекту подтвержден",
+  "accountProjectCheckSuccessMessage": "KiCk смог выполнить тестовый запрос к Google для этого аккаунта и проекта",
+  "accountProjectCheckFailureTitle": "Не удалось проверить",
+  "resetCooldownTooltip": "Сбросить состояние",
+  "clearCooldownAction": "Снять паузу",
   "deleteTooltip": "Удалить",
   "accountUsageOpenTooltip": "Лимиты",
-  "accountUsageTitle": "Лимиты",
-  "accountUsageProviderLabel": "Gemini CLI OAuth",
+  "accountUsageTitle": "Лимиты аккаунта",
+  "accountUsageProviderLabel": "Авторизация Gemini CLI (OAuth)",
   "accountUsageRefreshTooltip": "Обновить",
-  "accountUsageStatusHealthy": "В норме",
-  "accountUsageStatusCoolingDown": "Лимит",
+  "accountUsageStatusHealthy": "Доступен",
+  "accountUsageStatusCoolingDown": "Ограничен",
   "accountUsageStatusDisabled": "Выключен",
-  "accountUsageLoadErrorTitle": "Не удалось загрузить текущие лимиты",
+  "accountQuotaWarningStatus": "Лимит заканчивается",
+  "accountUsageLoadErrorTitle": "Не удалось загрузить данные по лимитам",
   "accountUsageRetryButton": "Повторить",
-  "accountUsageVerifyAccountButton": "Подтвердить аккаунт",
-  "accountUsageVerificationOpenFailedMessage": "Не удалось открыть страницу подтверждения аккаунта",
-  "accountUsageEmptyTitle": "Лимиты недоступны",
-  "accountUsageEmptyMessage": "Google не вернул информацию по лимитам для этого аккаунта",
+  "accountUsageVerifyAccountButton": "Подтвердить в Google",
+  "openGoogleCloudButton": "Открыть Google Cloud",
+  "accountUsageVerificationOpenFailedMessage": "Не удалось открыть страницу подтверждения в Google",
+  "accountErrorActionOpenFailedMessage": "Не удалось открыть страницу Google",
+  "accountUsageEmptyTitle": "Данные по лимитам недоступны",
+  "accountUsageEmptyMessage": "Google не прислал данные по лимитам для этого аккаунта",
   "accountUsageMissingTitle": "Аккаунт не найден",
-  "accountUsageMissingSubtitle": "Экран лимитов",
-  "accountUsageMissingMessage": "Возможно, аккаунт был удалён или список ещё не успел обновиться",
-  "accountUsageResetsAt": "Будет сброшено {time}",
+  "accountUsageMissingSubtitle": "Информация по лимитам",
+  "accountUsageMissingMessage": "Возможно, аккаунт уже удален или список еще не успел обновиться",
+  "accountUsageResetsAt": "Сбросится {time}",
   "@accountUsageResetsAt": {
     "placeholders": {
       "time": {
@@ -117,8 +125,8 @@
       }
     }
   },
-  "accountUsageResetUnknown": "Время сброса не получено",
-  "accountUsageLastUpdated": "Обновлено: {time}",
+  "accountUsageResetUnknown": "Время следующего сброса неизвестно",
+  "accountUsageLastUpdated": "Данные обновлены: {time}",
   "@accountUsageLastUpdated": {
     "placeholders": {
       "time": {
@@ -126,60 +134,119 @@
       }
     }
   },
+  "accountUsageModelCount": "Моделей: {count}",
+  "@accountUsageModelCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountUsageAttentionCount": "Низкий остаток: {count}",
+  "@accountUsageAttentionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountUsageCriticalCount": "Почти исчерпано: {count}",
+  "@accountUsageCriticalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountUsageHealthyCount": "В норме: {count}",
+  "@accountUsageHealthyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountUsageTokenType": "Тип лимита: {value}",
+  "@accountUsageTokenType": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "accountUsageRemainingPercent": "Осталось {value}%",
+  "@accountUsageRemainingPercent": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "accountUsageUsedPercent": "Израсходовано {value}%",
+  "@accountUsageUsedPercent": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "accountUsageBucketHealthy": "Достаточно",
+  "accountUsageBucketLow": "Заканчивается",
+  "accountUsageBucketCritical": "Почти исчерпано",
   "settingsTitle": "Настройки",
-  "settingsSubtitle": "Сеть, тема, API-ключ и поведение прокси",
+  "settingsSubtitle": "Сеть, оформление, API-ключ и работа прокси",
   "themeLabel": "Тема",
   "themeModeSystem": "Системная",
   "themeModeLight": "Светлая",
   "themeModeDark": "Тёмная",
   "dynamicThemeTitle": "Динамическая тема",
-  "dynamicThemeSubtitle": "Использовать системные динамические цвета",
-  "settingsAppearanceSectionTitle": "Внешний вид и поведение",
-  "settingsAppearanceSectionSummary": "Тема, логи и поведение программы",
+  "dynamicThemeSubtitle": "Использовать динамические цвета системы",
+  "settingsAppearanceSectionTitle": "Оформление и поведение",
+  "settingsAppearanceSectionSummary": "Тема, логи и работа приложения",
   "settingsNetworkSectionTitle": "Сеть",
   "settingsNetworkSectionSummary": "Хост, порт и доступ из локальной сети",
-  "settingsReliabilitySectionTitle": "Система повторов",
-  "settingsReliabilitySectionSummary": "Автоповторы и обработка лимитов API",
+  "settingsReliabilitySectionTitle": "Повторы и лимиты",
+  "settingsReliabilitySectionSummary": "Автоповторы и реакция на ограничения API",
   "settingsAccessSectionTitle": "Доступ и запуск",
-  "settingsAccessSectionSummary": "API-ключ и параметры запуска",
+  "settingsAccessSectionSummary": "API-ключ и запуск приложения",
   "apiKeyRequiredTitle": "Требовать API-ключ",
-  "apiKeyRequiredSubtitle": "При отключении, разрешает запросы без Bearer-токена",
-  "windowsTrayTitle": "Работа из трея",
-  "windowsTraySubtitle": "Закрытие окна скрывает KiCk в системный трей",
+  "apiKeyRequiredSubtitle": "Если выключить, запросы будут приниматься без Bearer-токена",
+  "windowsTrayTitle": "Сворачивать в трей",
+  "windowsTraySubtitle": "При закрытии окно не завершает работу, а скрывает KiCk в системный трей",
   "windowsLaunchAtStartupTitle": "Запускать вместе с Windows",
-  "windowsLaunchAtStartupSubtitle": "При входе в систему KiCk будет стартовать в трее",
+  "windowsLaunchAtStartupSubtitle": "KiCk будет автоматически запускаться при входе в систему",
   "windowsTrayNotificationTitle": "KiCk продолжает работать",
-  "windowsTrayNotificationBody": "Приложение скрыто в системный трей",
+  "windowsTrayNotificationBody": "Приложение свернуто в системный трей",
   "settingsModelsSectionTitle": "Модели",
   "settingsModelsSectionSummary": "Пользовательские ID моделей",
   "hostLabel": "Хост",
   "hostHelperText": "Обычно 127.0.0.1",
   "portLabel": "Порт",
   "portHelperText": "По умолчанию 3000",
-  "allowLanTitle": "Доступ из LAN / Docker",
-  "allowLanSubtitle": "Открывает прокси на 0.0.0.0 и делает его доступным из локальной сети и контейнеров",
-  "androidBackgroundRuntimeTitle": "Фоновый запуск на Android",
-  "androidBackgroundRuntimeSubtitle": "Необходимо для непрерывной работы прокси",
-  "requestRetriesLabel": "Повторы запросов к Google",
-  "requestRetriesHelperText": "Сколько раз KiCk повторит временно запрос при неудаче",
-  "mark429AsUnhealthyTitle": "Отключать аккаунт при превышении лимитов (ошибка 429)",
-  "mark429AsUnhealthySubtitle": "Помечает аккаунт как временно непригодный после ошибок 429, чтобы быстрее переключаться на другие",
+  "allowLanTitle": "Доступ из локальной сети и Docker",
+  "allowLanSubtitle": "Прокси будет слушать 0.0.0.0 и станет доступен из локальной сети и контейнеров",
+  "androidBackgroundRuntimeTitle": "Работа в фоне на Android",
+  "androidBackgroundRuntimeSubtitle": "Нужно, чтобы прокси не останавливался при сворачивании приложения",
+  "requestRetriesLabel": "Количество повторов запросов к Google",
+  "requestRetriesHelperText": "Сколько раз KiCk повторит запрос после временной ошибки",
+  "mark429AsUnhealthyTitle": "Временно выводить аккаунт из ротации при ошибке 429",
+  "mark429AsUnhealthySubtitle": "После ошибки 429 KiCk пометит аккаунт как временно недоступный и переключится на другой",
   "loggingLabel": "Логирование",
-  "loggingQuiet": "Тихое",
-  "loggingNormal": "Обычное",
+  "loggingQuiet": "Минимальное",
+  "loggingNormal": "Стандартное",
   "loggingVerbose": "Подробное",
-  "unsafeRawLoggingTitle": "Debug-логи",
-  "unsafeRawLoggingSubtitle": "Сохраняет сырые запросы. Используйте только для отладки",
+  "unsafeRawLoggingTitle": "Сырые логи отладки",
+  "unsafeRawLoggingSubtitle": "Сохраняет содержимое запросов и ответов. Включайте только для отладки!",
   "customModelsLabel": "Пользовательские ID моделей",
-  "customModelsHelperText": "Точный ID модели, по одному на строке",
+  "customModelsHelperText": "Указывайте точный ID модели, по одному на строке",
   "settingsLoadErrorTitle": "Не удалось загрузить настройки",
   "aboutTitle": "О программе",
-  "aboutMenuSubtitle": "Информация о программе",
-  "aboutDescription": "Локальный прокси-сервер, совместимый с OpenAI, для Gemini CLI с нативной оболочкой Flutter",
+  "aboutMenuSubtitle": "Версия, обновления и аналитика",
+  "aboutDescription": "Локальный OpenAI-совместимый прокси для Gemini CLI в нативном Flutter-приложении",
   "aboutUpdatesTitle": "Обновления",
-  "aboutUpdatesChecking": "Проверяем наличие новой версии на GitHub...",
+  "aboutUpdatesChecking": "Проверяем обновления на GitHub...",
   "aboutUpdateAvailableTitle": "Доступно обновление",
-  "aboutUpdateAvailableMessage": "Найдена версия {latestVersion}. Сейчас установлена {currentVersion}.",
+  "aboutUpdateAvailableMessage": "Доступна версия {latestVersion}. Сейчас у вас установлена {currentVersion}.",
   "@aboutUpdateAvailableMessage": {
     "placeholders": {
       "latestVersion": {
@@ -191,7 +258,7 @@
     }
   },
   "aboutUpToDateTitle": "Обновлений нет",
-  "aboutUpToDateMessage": "У вас уже установлена актуальная версия {currentVersion}.",
+  "aboutUpToDateMessage": "У вас установлена актуальная версия: {currentVersion}.",
   "@aboutUpToDateMessage": {
     "placeholders": {
       "currentVersion": {
@@ -200,34 +267,34 @@
     }
   },
   "aboutUpdateCheckFailedTitle": "Не удалось проверить обновления",
-  "aboutUpdateCheckFailedMessage": "Что-то пошло не так",
+  "aboutUpdateCheckFailedMessage": "Не удалось получить информацию о релизах с GitHub.",
   "aboutOpenReleaseButton": "Открыть релиз",
-  "aboutRetryUpdateCheckButton": "Проверить снова",
+  "aboutRetryUpdateCheckButton": "Проверить еще раз",
   "aboutAnalyticsTitle": "Аналитика",
-  "aboutAnalyticsSubtitle": "Анонимная статистика использования. Помогает делать KiCk лучше.",
-  "copyProxyEndpointTooltip": "Скопировать URL прокси",
-  "proxyEndpointCopiedMessage": "URL прокси скопирован",
+  "aboutAnalyticsSubtitle": "Анонимная статистика использования помогает улучшать KiCk.",
+  "copyProxyEndpointTooltip": "Скопировать адрес прокси",
+  "proxyEndpointCopiedMessage": "Адрес прокси скопирован",
   "copyApiKeyTooltip": "Скопировать API-ключ",
   "apiKeyCopiedMessage": "API-ключ скопирован",
-  "apiKeyRegeneratedMessage": "Новый API-ключ сохранён",
-  "regenerateApiKeyAction": "Сгенерировать заново",
-  "regenerateApiKeyDialogTitle": "Сгенерировать новый API-ключ?",
-  "regenerateApiKeyDialogMessage": "Старый ключ будет немедленно отозван. Подключенным клиентам потребуется новый ключ для работы.",
+  "apiKeyRegeneratedMessage": "Новый API-ключ сохранен",
+  "regenerateApiKeyAction": "Создать новый API-ключ",
+  "regenerateApiKeyDialogTitle": "Создать новый API-ключ?",
+  "regenerateApiKeyDialogMessage": "Старый ключ будет сразу отозван. Всем подключенным клиентам понадобится новый ключ для работы.",
   "regenerateApiKeyConfirmButton": "Сгенерировать",
   "trayOpenWindowAction": "Открыть окно",
-  "trayHideToTrayAction": "Скрыть в трей",
-  "trayExitAction": "Выход",
-  "noActiveAccountsWarning": "Активных аккаунтов нет. Прокси всё равно запустится, но не сможет обработать запросы, пока вы не добавите или не включите аккаунт.",
-  "pinWindowTooltip": "Закрепить поверх остальных окон",
-  "unpinWindowTooltip": "Открепить окно",
+  "trayHideToTrayAction": "Свернуть в трей",
+  "trayExitAction": "Выйти",
+  "noActiveAccountsWarning": "Нет активных аккаунтов. Прокси запустится, но не сможет обрабатывать запросы, пока вы не добавите или не включите хотя бы один аккаунт.",
+  "pinWindowTooltip": "Закрепить окно поверх остальных",
+  "unpinWindowTooltip": "Убрать закрепление окна",
   "disclaimerTitle": "Отказ от ответственности",
-  "disclaimerBodyLineOne": "Данное программное обеспечение предоставляется \"как есть\"",
-  "disclaimerBodyLineTwo": "Предназначено исключительно для некоммерческого использования в образовательных и исследовательских целях",
-  "disclaimerLinkPrefix": "Подробнее",
-  "disclaimerAnalyticsConsentLabel": "Разрешить отправку анонимной аналитики",
+  "disclaimerBodyLineOne": "Программа предоставляется \"как есть\".",
+  "disclaimerBodyLineTwo": "Только для некоммерческого использования в образовательных и исследовательских целях.",
+  "disclaimerLinkPrefix": "Подробнее:",
+  "disclaimerAnalyticsConsentLabel": "Отправлять анонимную аналитику",
   "logsTitle": "Логи",
   "logsSubtitle": "История запросов и ошибок",
-  "logsSearchHint": "Поиск по маршруту, сообщению",
+  "logsSearchHint": "Поиск по маршруту или сообщению",
   "logsTotalCount": "Всего: {count}",
   "@logsTotalCount": {
     "placeholders": {
@@ -246,10 +313,10 @@
   },
   "logsEmptyTitle": "Логи пусты",
   "logsLoadErrorTitle": "Не удалось загрузить логи",
-  "logsExportTooltip": "Сохранить лог-файл",
+  "logsExportTooltip": "Сохранить логи в файл",
   "logsShareTooltip": "Поделиться логами",
-  "logsNothingToExportMessage": "Нет логов для экспорта",
-  "logsExportedMessage": "Логи сохранены: {fileName}",
+  "logsNothingToExportMessage": "Нет логов для сохранения",
+  "logsExportedMessage": "Логи сохранены в файл {fileName}",
   "@logsExportedMessage": {
     "placeholders": {
       "fileName": {
@@ -273,43 +340,43 @@
       }
     }
   },
-  "accountDialogTitle": "Аккаунт Google",
+  "accountDialogTitle": "Google-аккаунт",
   "projectIdLabel": "PROJECT_ID",
   "projectIdHint": "my-google-cloud-project",
-  "projectIdConsoleLinkLabel": "Узнать ID проекта",
-  "projectIdRequiredError": "Укажите PROJECT_ID",
-  "projectIdLookupFailedMessage": "Не удалось открыть Google Cloud Console",
-  "accountNameLabel": "Название",
-  "accountNameHint": "Основной аккаунт",
-  "priorityLabel": "Роль в очереди",
-  "priorityHelperText": "Основные аккаунты получают запросы в первую очередь. Аккаунты одного уровня чередуются.",
+  "projectIdConsoleLinkLabel": "Где посмотреть ID проекта",
+  "projectIdRequiredError": "Укажите ID проекта",
+  "projectIdLookupFailedMessage": "Не удалось открыть Google Cloud Console.",
+  "accountNameLabel": "Название аккаунта",
+  "accountNameHint": "Например, основной аккаунт",
+  "priorityLabel": "Приоритет",
+  "priorityHelperText": "Сначала используются основные аккаунты. Аккаунты с одинаковым приоритетом чередуются.",
   "priorityLevelPrimary": "Основной",
   "priorityLevelNormal": "Обычный",
   "priorityLevelReserve": "Резервный",
-  "blockedModelsLabel": "Заблокированные модели",
-  "blockedModelsHelperText": "По одной модели на строке",
+  "blockedModelsLabel": "Недоступные модели",
+  "blockedModelsHelperText": "Укажите по одному ID модели на строке",
   "cancelButton": "Отмена",
   "continueButton": "Продолжить",
   "navHome": "Главная",
   "navAccounts": "Аккаунты",
   "navSettings": "Настройки",
   "navLogs": "Логи",
-  "runtimeChannelName": "Фоновый прокси KiCk",
-  "runtimeChannelDescription": "Удерживает прокси активным в фоне",
+  "runtimeChannelName": "Прокси KiCk в фоне",
+  "runtimeChannelDescription": "Поддерживает работу прокси в фоновом режиме",
   "runtimeNotificationTitle": "Прокси KiCk запущен",
   "runtimeNotificationReturn": "Нажмите, чтобы вернуться в приложение",
-  "runtimeNotificationManage": "Нажмите, чтобы управлять аккаунтами и настройками",
+  "runtimeNotificationManage": "Нажмите, чтобы открыть аккаунты и настройки",
   "runtimeNotificationActive": "Прокси активен",
   "errorNetworkUnavailable": "Не удалось связаться с серверами Google. Проверьте интернет и попробуйте снова.",
   "errorGoogleServiceUnavailable": "Сервис Google временно недоступен. Повторите попытку позже.",
-  "errorInvalidServiceResponse": "Сервер ответил что-то непонятное. Попробуйте ещё раз",
+  "errorInvalidServiceResponse": "Сервер вернул непонятный ответ. Попробуйте еще раз.",
   "errorGoogleAuthTimedOut": "Авторизация Google не завершилась вовремя. Вернитесь в приложение и попробуйте снова. Если это повторяется на Android, отключите для KiCk ограничения батареи.",
   "errorUnknown": "Произошла неизвестная ошибка. Попробуйте снова.",
-  "errorOauthTokensMissing": "Для этого аккаунта не найдены токены авторизации. Переавторизуйте аккаунт",
+  "errorOauthTokensMissing": "Для этого аккаунта не найдены токены авторизации. Переподключите аккаунт.",
   "errorAccountNotFound": "Аккаунт не найден. Возможно, он уже был удалён.",
   "errorPortAlreadyInUse": "Этот порт уже занят другим приложением. Выберите другой порт в настройках.",
-  "errorPermissionDenied": "Системе не хватило разрешений для запуска. Проверьте настройки приложения и повторите попытку.",
-  "errorGoogleRateLimitedRetry": "Google временно ограничил запросы для этого аккаунта. Повторите попытку через {retryHint}.",
+  "errorPermissionDenied": "Не хватило системных разрешений для запуска. Проверьте настройки приложения и повторите попытку.",
+  "errorGoogleRateLimitedRetry": "Google временно ограничил запросы для этого аккаунта. Попробуйте снова через {retryHint}.",
   "@errorGoogleRateLimitedRetry": {
     "placeholders": {
       "retryHint": {
@@ -317,17 +384,19 @@
       }
     }
   },
-  "errorGoogleRateLimitedLater": "Google временно ограничил запросы для этого аккаунта. Повторите попытку позже.",
-  "errorGoogleAccountVerificationRequired": "Google просит подтвердить этот аккаунт. Откройте страницу подтверждения и войдите тем же Google-аккаунтом.",
-  "errorGoogleProjectIdMissing": "Google не смог определить корректный PROJECT_ID для этого аккаунта или запроса. Проверьте PROJECT_ID в аккаунте и при необходимости переавторизуйте его.",
-  "errorGoogleProjectAccessDenied": "Google отклонил запрос для этого проекта или аккаунта. Проверьте PROJECT_ID, выбранный аккаунт и что Gemini Code Assist активирован именно для этого проекта.",
-  "errorAuthExpired": "Авторизация истекла или стала недействительной. Переавторизуйте аккаунт и попробуйте снова.",
+  "errorGoogleRateLimitedLater": "Google временно ограничил запросы для этого аккаунта. Попробуйте снова позже.",
+  "errorGoogleAccountVerificationRequired": "Google просит подтвердить этот аккаунт. Откройте страницу подтверждения и войдите под тем же Google-аккаунтом.",
+  "errorGoogleProjectIdMissing": "Google не смог определить корректный ID проекта для этого аккаунта или запроса. Проверьте ID проекта в настройках аккаунта и при необходимости переподключите его.",
+  "errorGoogleProjectApiDisabled": "Gemini for Google Cloud API отключен для этого проекта. Откройте Google Cloud, включите API для нужного ID проекта и повторите проверку.",
+  "errorGoogleProjectInvalid": "Google отклонил этот ID проекта. Проверьте, что указали существующий проект и что у аккаунта есть доступ именно к нему.",
+  "errorGoogleProjectAccessDenied": "Google отклонил запрос для этого проекта или аккаунта. Проверьте ID проекта, выбранный аккаунт и убедитесь, что Gemini Code Assist включен именно для этого проекта.",
+  "errorAuthExpired": "Срок действия авторизации истек или она стала недействительной. Переподключите аккаунт и попробуйте снова.",
   "errorGoogleCapacity": "Сервера Google временно перегружены. Повторите попытку чуть позже.",
   "errorUnsupportedModel": "Выбранная модель сейчас недоступна для этого аккаунта.",
   "errorInvalidJson": "Запрос имеет неверный формат JSON.",
   "errorUnexpectedResponse": "Сервис вернул неожиданный ответ. Повторите попытку.",
-  "errorQuotaExhausted": "Квота этого аккаунта исчерпана. Дождитесь сброса лимита или используйте другой аккаунт.",
-  "errorQuotaExhaustedRetry": "Квота этого аккаунта исчерпана. Повторите попытку через {retryHint} или используйте другой аккаунт.",
+  "errorQuotaExhausted": "Лимит этого аккаунта исчерпан. Дождитесь сброса или используйте другой аккаунт.",
+  "errorQuotaExhaustedRetry": "Лимит этого аккаунта исчерпан. Попробуйте снова через {retryHint} или используйте другой аккаунт.",
   "@errorQuotaExhaustedRetry": {
     "placeholders": {
       "retryHint": {
@@ -336,7 +405,7 @@
     }
   },
   "errorInvalidRequestRejected": "Запрос имеет неверный формат и был отклонён.",
-  "errorReasoningConfigRejected": "Google отклонил параметры reasoning/thinking для этой модели. Верните Reasoning Effort в Auto или уберите кастомный thinking config.",
+  "errorReasoningConfigRejected": "Google отклонил параметры reasoning/thinking для этой модели. Включите автоматический режим размышлений (reasoning).",
   "durationFewSeconds": "несколько секунд",
   "durationSeconds": "{seconds} сек",
   "@durationSeconds": {

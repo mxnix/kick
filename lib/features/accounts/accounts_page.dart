@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/errors/gemini_error_actions.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../data/models/account_profile.dart';
 import '../../l10n/kick_localizations.dart';
@@ -127,6 +131,7 @@ class _AccountCard extends ConsumerWidget {
         ? scheme.error
         : scheme.primary;
     final statusEmphasis = account.enabled && !account.isCoolingDown;
+    final hasQuotaWarning = account.lastQuotaSnapshot?.trim().isNotEmpty == true;
 
     return KickPanel(
       tone: KickPanelTone.soft,
@@ -137,19 +142,7 @@ class _AccountCard extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: scheme.secondaryContainer.withValues(alpha: 0.84),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(
-                  Icons.account_circle_rounded,
-                  color: scheme.onSecondaryContainer,
-                  size: 30,
-                ),
-              ),
+              _AccountAvatar(account: account),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -193,12 +186,25 @@ class _AccountCard extends ConsumerWidget {
                 emphasis: statusEmphasis,
                 tint: statusTint,
               ),
+              if (hasQuotaWarning)
+                KickBadge(
+                  label: l10n.accountQuotaWarningStatus,
+                  leading: const Icon(Icons.query_stats_rounded, size: 16),
+                  tint: scheme.tertiary,
+                ),
             ],
           ),
           if (account.notSupportedModels.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(
               l10n.unsupportedModelsList(account.notSupportedModels.join(', ')),
+              style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+          if (hasQuotaWarning) ...[
+            const SizedBox(height: 14),
+            Text(
+              account.lastQuotaSnapshot!,
               style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
@@ -255,6 +261,11 @@ class _AccountCard extends ConsumerWidget {
                 },
               ),
               _AccountActionButton(
+                icon: Icons.fact_check_outlined,
+                label: l10n.accountProjectCheckButton,
+                onPressed: () => _diagnoseProject(context, ref, account),
+              ),
+              _AccountActionButton(
                 icon: account.isCoolingDown ? Icons.lock_open_rounded : Icons.restart_alt_rounded,
                 label: resetLabel,
                 onPressed: () => ref.read(accountsControllerProvider.notifier).resetHealth(account),
@@ -275,6 +286,40 @@ class _AccountCard extends ConsumerWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AccountAvatar extends StatelessWidget {
+  const _AccountAvatar({required this.account});
+
+  final AccountProfile account;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final avatarUrl = account.avatarUrl;
+    final fallback = Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Icon(Icons.account_circle_rounded, color: scheme.onSecondaryContainer, size: 30),
+    );
+
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      return fallback;
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        width: 52,
+        height: 52,
+        child: Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
       ),
     );
   }
@@ -307,6 +352,144 @@ Future<void> _connectGoogleAccount(
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(content: Text(formatUserFacingError(context.l10n, error))));
+  }
+}
+
+Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfile account) async {
+  final l10n = context.l10n;
+  final navigator = Navigator.of(context, rootNavigator: true);
+
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => PopScope(
+      canPop: false,
+      child: AlertDialog(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.4),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Text(l10n.accountProjectCheckInProgressMessage)),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Object? failure;
+  StackTrace? failureStackTrace;
+
+  try {
+    final snapshot = await ref.read(geminiProjectDiagnosticsServiceProvider).diagnose(account);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+    if (!context.mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.verified_rounded),
+        title: Text(l10n.accountProjectCheckSuccessTitle),
+        content: Text(
+          [
+            l10n.accountProjectCheckSuccessMessage,
+            'PROJECT_ID: ${account.projectId}',
+            'Model: ${snapshot.modelVersion ?? snapshot.modelId}',
+            if (snapshot.traceId?.trim().isNotEmpty == true) 'Trace ID: ${snapshot.traceId}',
+          ].join('\n\n'),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.continueButton),
+          ),
+        ],
+      ),
+    );
+  } catch (error, stackTrace) {
+    failure = error;
+    failureStackTrace = stackTrace;
+  }
+
+  if (failure == null) {
+    return;
+  }
+
+  if (navigator.canPop()) {
+    navigator.pop();
+  }
+  if (!context.mounted) {
+    return;
+  }
+
+  final action = primaryActionForError(failure);
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      icon: const Icon(Icons.error_outline_rounded),
+      title: Text(l10n.accountProjectCheckFailureTitle),
+      content: Text(formatUserFacingError(l10n, failure!)),
+      actions: [
+        if (action != null)
+          OutlinedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              unawaited(_openErrorAction(context, action.url));
+            },
+            child: Text(_errorActionLabel(l10n, action)),
+          ),
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: Text(l10n.cancelButton),
+        ),
+      ],
+    ),
+  );
+
+  if (failureStackTrace != null) {
+    final reportedFailure = failure;
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: reportedFailure,
+        stack: failureStackTrace,
+        library: 'kick',
+        context: ErrorDescription('while running a Gemini project diagnostic'),
+        silent: true,
+      ),
+    );
+  }
+}
+
+String _errorActionLabel(KickLocalizations l10n, GeminiErrorAction action) {
+  return switch (action.kind) {
+    GeminiErrorActionKind.accountVerification => l10n.accountUsageVerifyAccountButton,
+    GeminiErrorActionKind.projectConfiguration => l10n.openGoogleCloudButton,
+  };
+}
+
+Future<void> _openErrorAction(BuildContext context, String url) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final failureMessage = context.l10n.accountErrorActionOpenFailedMessage;
+  final uri = Uri.tryParse(url);
+  if (uri == null) {
+    messenger?.showSnackBar(SnackBar(content: Text(failureMessage)));
+    return;
+  }
+
+  try {
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened) {
+      messenger?.showSnackBar(SnackBar(content: Text(failureMessage)));
+    }
+  } catch (_) {
+    messenger?.showSnackBar(SnackBar(content: Text(failureMessage)));
   }
 }
 

@@ -584,6 +584,12 @@ class KickProxyController {
           stream: payload['stream'] == true,
           errorKind: payload['error_kind'] as String? ?? 'unknown',
           statusCode: payload['status_code'] as int?,
+          errorDetail: payload['error_detail'] as String?,
+          upstreamReason: payload['upstream_reason'] as String?,
+          retryAfterMs: payload['retry_after_ms'] as int?,
+          hasActionUrl: payload.containsKey('has_action_url')
+              ? payload['has_action_url'] == true
+              : null,
         );
         break;
       case 'proxy_request_retried':
@@ -601,6 +607,12 @@ class KickProxyController {
           retryKinds: payload['retry_kinds'] as String?,
           retryDelayMs: payload['retry_delay_ms'] as int?,
           statusCode: payload['status_code'] as int?,
+          errorDetail: payload['error_detail'] as String?,
+          upstreamReason: payload['upstream_reason'] as String?,
+          retryAfterMs: payload['retry_after_ms'] as int?,
+          hasActionUrl: payload.containsKey('has_action_url')
+              ? payload['has_action_url'] == true
+              : null,
         );
         break;
       case 'upstream_compatibility_issue':
@@ -611,6 +623,12 @@ class KickProxyController {
           stream: payload['stream'] == true,
           errorKind: payload['error_kind'] as String?,
           statusCode: payload['status_code'] as int?,
+          errorDetail: payload['error_detail'] as String?,
+          upstreamReason: payload['upstream_reason'] as String?,
+          retryAfterMs: payload['retry_after_ms'] as int?,
+          hasActionUrl: payload.containsKey('has_action_url')
+              ? payload['has_action_url'] == true
+              : null,
         );
         break;
     }

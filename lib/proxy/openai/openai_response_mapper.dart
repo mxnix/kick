@@ -40,6 +40,10 @@ class OpenAiResponseMapper {
                   : extracted.choices[index].text,
               if (extracted.choices[index].reasoningText.isNotEmpty)
                 'reasoning_content': extracted.choices[index].reasoningText,
+              if (extracted.choices[index].reasoningSignature != null)
+                'reasoning_signature': extracted.choices[index].reasoningSignature,
+              if (extracted.choices[index].googleThoughts.isNotEmpty)
+                'google_thoughts': extracted.choices[index].googleThoughts,
               if (extracted.choices[index].toolCalls.isNotEmpty)
                 'tool_calls': extracted.choices[index].toolCalls,
             },
@@ -162,13 +166,18 @@ class OpenAiResponseMapper {
     final extracted = _extractPrimaryChoice(payload);
     final output = <Map<String, Object?>>[];
 
-    if (extracted.reasoningText.isNotEmpty) {
+    if (extracted.reasoningText.isNotEmpty || extracted.googleThoughts.isNotEmpty) {
       output.add({
         'id': 'rs_$requestId',
         'type': 'reasoning',
-        'summary': [
-          {'type': 'summary_text', 'text': extracted.reasoningText},
-        ],
+        'summary': extracted.reasoningText.isEmpty
+            ? const <Map<String, Object?>>[]
+            : [
+                {'type': 'summary_text', 'text': extracted.reasoningText},
+              ],
+        if (extracted.reasoningSignature != null)
+          'reasoning_signature': extracted.reasoningSignature,
+        if (extracted.googleThoughts.isNotEmpty) 'google_thoughts': extracted.googleThoughts,
       });
     }
 
@@ -425,6 +434,40 @@ class OpenAiResponseMapper {
     return _extractPrimaryChoice(payload).finishReason;
   }
 
+  static String? currentTraceId(Map<String, Object?> payload) {
+    return _nonEmptyString(payload['traceId']);
+  }
+
+  static String? currentUpstreamResponseId(Map<String, Object?> payload) {
+    final response = _rawResponseMap(payload);
+    return _nonEmptyString(response['responseId']);
+  }
+
+  static String? currentModelVersion(Map<String, Object?> payload) {
+    final response = _rawResponseMap(payload);
+    return _nonEmptyString(response['modelVersion']);
+  }
+
+  static int? currentPromptTokenCount(Map<String, Object?> payload) {
+    return _usageIntValue(payload, 'promptTokenCount');
+  }
+
+  static int? currentCompletionTokenCount(Map<String, Object?> payload) {
+    return _usageIntValue(payload, 'candidatesTokenCount');
+  }
+
+  static int? currentTotalTokenCount(Map<String, Object?> payload) {
+    return _usageIntValue(payload, 'totalTokenCount');
+  }
+
+  static int? currentCachedTokenCount(Map<String, Object?> payload) {
+    return _usageIntValue(payload, 'cachedContentTokenCount');
+  }
+
+  static int? currentReasoningTokenCount(Map<String, Object?> payload) {
+    return _usageIntValue(payload, 'thoughtsTokenCount');
+  }
+
   static int currentToolCallCount(Map<String, Object?> payload) {
     return _extractPrimaryChoice(payload).toolCalls.length;
   }
@@ -471,6 +514,7 @@ class OpenAiResponseMapper {
         return _ExtractedChoice(
           text: '[$_promptBlockedFallbackText $blockReasonMessage]',
           reasoningText: '',
+          googleThoughts: const <Map<String, Object?>>[],
           toolCalls: const <Map<String, Object?>>[],
           finishReason: 'content_filter',
         );
@@ -478,6 +522,7 @@ class OpenAiResponseMapper {
       return const _ExtractedChoice(
         text: '[$_promptBlockedFallbackText]',
         reasoningText: '',
+        googleThoughts: <Map<String, Object?>>[],
         toolCalls: <Map<String, Object?>>[],
         finishReason: 'content_filter',
       );
@@ -486,6 +531,7 @@ class OpenAiResponseMapper {
     return const _ExtractedChoice(
       text: '[Upstream returned an empty response. Please retry.]',
       reasoningText: '',
+      googleThoughts: <Map<String, Object?>>[],
       toolCalls: <Map<String, Object?>>[],
       finishReason: 'stop',
     );
@@ -495,6 +541,37 @@ class OpenAiResponseMapper {
     return _extractResponsePayload(payload).choices.first;
   }
 
+  static Map<String, Object?> _rawResponseMap(Map<String, Object?> payload) {
+    return (payload['response'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
+  }
+
+  static Map<String, Object?> _rawUsageMetadata(Map<String, Object?> payload) {
+    final response = _rawResponseMap(payload);
+    return (response['usageMetadata'] as Map?)?.cast<String, Object?>() ??
+        const <String, Object?>{};
+  }
+
+  static int? _usageIntValue(Map<String, Object?> payload, String key) {
+    return _parseInt(_rawUsageMetadata(payload)[key]);
+  }
+
+  static String? _nonEmptyString(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) {
+      return null;
+    }
+    return text;
+  }
+
+  static int? _parseInt(Object? value) {
+    return switch (value) {
+      int integer => integer,
+      num number => number.toInt(),
+      String text => int.tryParse(text.trim()),
+      _ => null,
+    };
+  }
+
   static _ExtractedChoice _extractChoice(Map<String, Object?> candidate) {
     final content =
         (candidate['content'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
@@ -502,6 +579,7 @@ class OpenAiResponseMapper {
 
     final textBuffer = StringBuffer();
     final reasoningBuffer = StringBuffer();
+    final googleThoughts = <Map<String, Object?>>[];
     final toolCalls = <Map<String, Object?>>[];
 
     for (final rawPart in parts) {
@@ -510,8 +588,17 @@ class OpenAiResponseMapper {
       }
       final part = rawPart.cast<String, Object?>();
       if (part['thought'] == true) {
-        if (part['text'] is String) {
-          reasoningBuffer.write(part['text'] as String);
+        final thoughtText = part['text'] as String? ?? '';
+        final thoughtSignature = (part['thoughtSignature'] as String?)?.trim();
+        if (thoughtText.isNotEmpty) {
+          reasoningBuffer.write(thoughtText);
+        }
+        if (thoughtText.isNotEmpty || thoughtSignature != null) {
+          googleThoughts.add({
+            if (thoughtText.isNotEmpty) 'text': thoughtText,
+            if (thoughtSignature != null && thoughtSignature.isNotEmpty)
+              'signature': thoughtSignature,
+          });
         }
         continue;
       }
@@ -553,6 +640,7 @@ class OpenAiResponseMapper {
     return _ExtractedChoice(
       text: text,
       reasoningText: reasoningText,
+      googleThoughts: googleThoughts,
       toolCalls: toolCalls,
       finishReason: finishReason,
     );
@@ -672,12 +760,21 @@ class _ExtractedChoice {
   const _ExtractedChoice({
     required this.text,
     required this.reasoningText,
+    required this.googleThoughts,
     required this.toolCalls,
     required this.finishReason,
   });
 
   final String text;
   final String reasoningText;
+  final List<Map<String, Object?>> googleThoughts;
   final List<Map<String, Object?>> toolCalls;
   final String finishReason;
+
+  String? get reasoningSignature {
+    if (googleThoughts.length != 1) {
+      return null;
+    }
+    return googleThoughts.single['signature'] as String?;
+  }
 }

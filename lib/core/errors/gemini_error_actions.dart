@@ -1,11 +1,16 @@
 import '../../proxy/gemini/gemini_code_assist_client.dart';
 
-String? accountVerificationUrlForError(Object error) {
-  if (error is! GeminiGatewayException) {
-    return null;
-  }
+enum GeminiErrorActionKind { accountVerification, projectConfiguration }
 
-  if (error.detail != GeminiGatewayFailureDetail.accountVerificationRequired) {
+class GeminiErrorAction {
+  const GeminiErrorAction({required this.kind, required this.url});
+
+  final GeminiErrorActionKind kind;
+  final String url;
+}
+
+GeminiErrorAction? primaryActionForError(Object error) {
+  if (error is! GeminiGatewayException) {
     return null;
   }
 
@@ -14,5 +19,27 @@ String? accountVerificationUrlForError(Object error) {
     return null;
   }
 
-  return actionUrl;
+  return switch (error.detail) {
+    GeminiGatewayFailureDetail.accountVerificationRequired => GeminiErrorAction(
+      kind: GeminiErrorActionKind.accountVerification,
+      url: actionUrl,
+    ),
+    GeminiGatewayFailureDetail.projectConfiguration => GeminiErrorAction(
+      kind: GeminiErrorActionKind.projectConfiguration,
+      url: actionUrl,
+    ),
+    GeminiGatewayFailureDetail.projectIdMissing ||
+    GeminiGatewayFailureDetail.quotaExhausted ||
+    GeminiGatewayFailureDetail.rateLimited ||
+    GeminiGatewayFailureDetail.reasoningConfigUnsupported ||
+    null => null,
+  };
+}
+
+String? accountVerificationUrlForError(Object error) {
+  final action = primaryActionForError(error);
+  if (action?.kind != GeminiErrorActionKind.accountVerification) {
+    return null;
+  }
+  return action!.url;
 }

@@ -47,11 +47,21 @@ class UnifiedTurn {
   final List<UnifiedPart> parts;
 }
 
-enum UnifiedPartType { text, functionCall, functionResponse, inlineData, fileData }
+enum UnifiedPartType { text, thought, functionCall, functionResponse, inlineData, fileData }
 
 class UnifiedPart {
   const UnifiedPart.text(this.text)
     : type = UnifiedPartType.text,
+      thoughtSignature = null,
+      callId = null,
+      name = null,
+      arguments = null,
+      mimeType = null,
+      data = null,
+      fileUri = null;
+
+  const UnifiedPart.thought({required this.text, this.thoughtSignature})
+    : type = UnifiedPartType.thought,
       callId = null,
       name = null,
       arguments = null,
@@ -64,6 +74,7 @@ class UnifiedPart {
     required this.name,
     required this.arguments,
   }) : type = UnifiedPartType.functionCall,
+       thoughtSignature = null,
        text = null,
        mimeType = null,
        data = null,
@@ -74,6 +85,7 @@ class UnifiedPart {
     required this.name,
     required this.arguments,
   }) : type = UnifiedPartType.functionResponse,
+       thoughtSignature = null,
        text = null,
        mimeType = null,
        data = null,
@@ -82,6 +94,7 @@ class UnifiedPart {
   const UnifiedPart.inlineData({required this.mimeType, required this.data})
     : type = UnifiedPartType.inlineData,
       text = null,
+      thoughtSignature = null,
       callId = null,
       name = null,
       arguments = null,
@@ -90,6 +103,7 @@ class UnifiedPart {
   const UnifiedPart.fileData({required this.mimeType, required this.fileUri})
     : type = UnifiedPartType.fileData,
       text = null,
+      thoughtSignature = null,
       callId = null,
       name = null,
       arguments = null,
@@ -97,6 +111,7 @@ class UnifiedPart {
 
   final UnifiedPartType type;
   final String? text;
+  final String? thoughtSignature;
   final String? callId;
   final String? name;
   final Map<String, Object?>? arguments;
@@ -173,7 +188,10 @@ class OpenAiRequestParser {
         continue;
       }
 
-      final parts = _extractChatParts(message['content']);
+      final parts = <UnifiedPart>[
+        ..._extractMessageThoughtParts(message),
+        ..._extractChatParts(message['content']),
+      ];
 
       final toolCalls = message['tool_calls'];
       if (toolCalls is List) {
@@ -284,8 +302,19 @@ class OpenAiRequestParser {
           continue;
         }
 
+        if (type == 'reasoning') {
+          final parts = _extractReasoningParts(item);
+          if (parts.isNotEmpty) {
+            turns.add(UnifiedTurn(role: 'assistant', parts: parts));
+          }
+          continue;
+        }
+
         final role = (item['role'] as String? ?? 'user') == 'assistant' ? 'assistant' : 'user';
-        final parts = _extractResponsesParts(item['content']);
+        final parts = <UnifiedPart>[
+          ..._extractMessageThoughtParts(item),
+          ..._extractResponsesParts(item['content']),
+        ];
         if (parts.isNotEmpty) {
           turns.add(UnifiedTurn(role: role, parts: parts));
         }
@@ -431,6 +460,19 @@ class OpenAiRequestParser {
   static void _appendContentItemAsPart(List<UnifiedPart> parts, Map<String, Object?> item) {
     final type = item['type'] as String? ?? '';
     switch (type) {
+      case 'reasoning':
+      case 'reasoning_content':
+      case 'summary_text':
+        final text = (item['text'] as String?)?.trim();
+        if (text != null && text.isNotEmpty) {
+          parts.add(
+            UnifiedPart.thought(
+              text: text,
+              thoughtSignature: (item['thought_signature'] as String?)?.trim(),
+            ),
+          );
+        }
+        break;
       case 'text':
       case 'input_text':
       case 'output_text':
@@ -454,6 +496,64 @@ class OpenAiRequestParser {
         }
         break;
     }
+  }
+
+  static List<UnifiedPart> _extractMessageThoughtParts(Map<String, Object?> message) {
+    final explicitThoughts = message['google_thoughts'];
+    if (explicitThoughts is List) {
+      final parts = <UnifiedPart>[];
+      for (final rawThought in explicitThoughts) {
+        if (rawThought is! Map) {
+          continue;
+        }
+        final thought = rawThought.cast<String, Object?>();
+        final text = (thought['text'] as String?)?.trim() ?? '';
+        final signature = (thought['signature'] as String?)?.trim();
+        if (text.isEmpty && (signature == null || signature.isEmpty)) {
+          continue;
+        }
+        parts.add(UnifiedPart.thought(text: text, thoughtSignature: signature));
+      }
+      if (parts.isNotEmpty) {
+        return parts;
+      }
+    }
+
+    final reasoningText = (message['reasoning_content'] as String?)?.trim();
+    final reasoningSignature = (message['reasoning_signature'] as String?)?.trim();
+    if ((reasoningText == null || reasoningText.isEmpty) &&
+        (reasoningSignature == null || reasoningSignature.isEmpty)) {
+      return const [];
+    }
+
+    return [UnifiedPart.thought(text: reasoningText ?? '', thoughtSignature: reasoningSignature)];
+  }
+
+  static List<UnifiedPart> _extractReasoningParts(Map<String, Object?> item) {
+    final explicitThoughts = _extractMessageThoughtParts(item);
+    if (explicitThoughts.isNotEmpty) {
+      return explicitThoughts;
+    }
+
+    final summary = item['summary'];
+    if (summary is! List) {
+      return const [];
+    }
+
+    final parts = <UnifiedPart>[];
+    for (final rawPart in summary) {
+      if (rawPart is! Map) {
+        continue;
+      }
+      final entry = rawPart.cast<String, Object?>();
+      final text = (entry['text'] as String?)?.trim() ?? '';
+      final signature = (entry['thought_signature'] as String?)?.trim();
+      if (text.isEmpty && (signature == null || signature.isEmpty)) {
+        continue;
+      }
+      parts.add(UnifiedPart.thought(text: text, thoughtSignature: signature));
+    }
+    return parts;
   }
 
   static void _appendImagePart(List<UnifiedPart> parts, Object? rawImage) {

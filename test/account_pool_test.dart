@@ -90,4 +90,70 @@ void main() {
 
     expect(pool.select('gemini-3-flash'), isNull);
   });
+
+  test('prefers account without recent quota warning inside same priority tier', () {
+    final pool = GeminiAccountPool([
+      ProxyRuntimeAccount(
+        id: 'quota-hit',
+        label: 'Quota hit',
+        email: 'quota@example.com',
+        projectId: 'proj-quota',
+        enabled: true,
+        priority: 5,
+        notSupportedModels: [],
+        lastUsedAt: DateTime.now().subtract(const Duration(hours: 2)),
+        usageCount: 0,
+        errorCount: 1,
+        cooldownUntil: null,
+        lastQuotaSnapshot: 'Quota exhausted recently.',
+        tokenRef: 'quota-hit',
+        tokens: sampleTokens(),
+      ),
+      ProxyRuntimeAccount(
+        id: 'healthy',
+        label: 'Healthy',
+        email: 'healthy@example.com',
+        projectId: 'proj-healthy',
+        enabled: true,
+        priority: 5,
+        notSupportedModels: [],
+        lastUsedAt: DateTime.now().subtract(const Duration(minutes: 30)),
+        usageCount: 5,
+        errorCount: 0,
+        cooldownUntil: null,
+        lastQuotaSnapshot: null,
+        tokenRef: 'healthy',
+        tokens: sampleTokens(),
+      ),
+    ]);
+
+    final selected = pool.select('gemini-2.5-flash');
+
+    expect(selected?.id, 'healthy');
+  });
+
+  test('clears stale quota warning after a successful request', () {
+    final account = ProxyRuntimeAccount(
+      id: 'quota-hit',
+      label: 'Quota hit',
+      email: 'quota@example.com',
+      projectId: 'proj-quota',
+      enabled: true,
+      priority: 5,
+      notSupportedModels: [],
+      lastUsedAt: null,
+      usageCount: 0,
+      errorCount: 1,
+      cooldownUntil: null,
+      lastQuotaSnapshot: 'Quota exhausted recently.',
+      tokenRef: 'quota-hit',
+      tokens: sampleTokens(),
+    );
+    final pool = GeminiAccountPool([account]);
+
+    final changed = pool.markSuccess(account);
+
+    expect(changed, isTrue);
+    expect(account.lastQuotaSnapshot, isNull);
+  });
 }

@@ -31,6 +31,7 @@ class GeminiGatewayException implements Exception {
     this.retryAfter,
     this.detail,
     this.actionUrl,
+    this.upstreamReason,
   });
 
   final GeminiGatewayFailureKind kind;
@@ -40,6 +41,7 @@ class GeminiGatewayException implements Exception {
   final Duration? retryAfter;
   final GeminiGatewayFailureDetail? detail;
   final String? actionUrl;
+  final String? upstreamReason;
 
   @override
   String toString() => 'GeminiGatewayException($statusCode, $kind, $message)';
@@ -89,6 +91,7 @@ const _maxTransientRequestRetries = 3;
 const _maxRetryable429Delay = Duration(minutes: 1);
 const _maxRetryableTransientDelay = Duration(minutes: 5);
 const _gemini3DefaultTopK = 64;
+const _gemini3ShortTextMaxOutputTokens = 256;
 const defaultGeminiMaxOutputTokens = 8192;
 const _continuationPrompt = 'Please continue from where you left off.';
 const _continuationTailLength = 180;
@@ -122,7 +125,7 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
       .cast<String, Object?>();
   final lower = message.toLowerCase();
   final quotaSnapshot = decoded['quota']?.toString();
-  final actionUrl = _accountVerificationUrl(errorMetadata, help);
+  final actionUrl = _gatewayActionUrl(errorMetadata, help);
   final isProjectIdMissing = _looksLikeMissingProjectIdError(lower);
 
   if (statusCode == 404 ||
@@ -154,6 +157,7 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
       kind: GeminiGatewayFailureKind.auth,
       message: message,
       statusCode: statusCode,
+      upstreamReason: errorReason,
       detail: isAccountVerificationRequired
           ? GeminiGatewayFailureDetail.accountVerificationRequired
           : isProjectIdMissing
@@ -171,9 +175,11 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
       kind: GeminiGatewayFailureKind.invalidRequest,
       message: message,
       statusCode: statusCode == 0 ? 400 : statusCode,
+      upstreamReason: errorReason,
       detail: isProjectIdMissing
           ? GeminiGatewayFailureDetail.projectIdMissing
           : GeminiGatewayFailureDetail.projectConfiguration,
+      actionUrl: actionUrl,
     );
   }
 
@@ -227,6 +233,7 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
       message: message,
       statusCode: statusCode == 0 ? 429 : statusCode,
       quotaSnapshot: quotaSnapshot,
+      upstreamReason: errorReason,
       detail: isQuotaExhausted
           ? GeminiGatewayFailureDetail.quotaExhausted
           : GeminiGatewayFailureDetail.rateLimited,
@@ -252,10 +259,14 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
       kind: GeminiGatewayFailureKind.invalidRequest,
       message: message,
       statusCode: statusCode,
+      upstreamReason: errorReason,
       detail: _looksLikeReasoningConfigError(lower)
           ? GeminiGatewayFailureDetail.reasoningConfigUnsupported
           : _looksLikeProjectConfigurationError(statusCode, lower, errorReason, errorMetadata)
           ? GeminiGatewayFailureDetail.projectConfiguration
+          : null,
+      actionUrl: _looksLikeProjectConfigurationError(statusCode, lower, errorReason, errorMetadata)
+          ? actionUrl
           : null,
     );
   }
@@ -265,6 +276,7 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
     message: message,
     statusCode: statusCode,
     retryAfter: retryAfter,
+    upstreamReason: errorReason,
   );
 }
 
@@ -494,6 +506,18 @@ class GeminiCodeAssistClient {
           case UnifiedPartType.text:
             if ((part.text ?? '').trim().isNotEmpty) {
               parts.add({'text': part.text!.trim()});
+            }
+            break;
+          case UnifiedPartType.thought:
+            final thoughtText = (part.text ?? '').trim();
+            final thoughtSignature = part.thoughtSignature?.trim();
+            if (thoughtText.isNotEmpty || thoughtSignature?.isNotEmpty == true) {
+              parts.add({
+                'thought': true,
+                if (thoughtText.isNotEmpty) 'text': thoughtText,
+                if (thoughtSignature != null && thoughtSignature.isNotEmpty)
+                  'thoughtSignature': thoughtSignature,
+              });
             }
             break;
           case UnifiedPartType.functionCall:
@@ -1195,12 +1219,7 @@ class GeminiCodeAssistClient {
     final reasoningEffort = request.reasoningEffort?.trim().toLowerCase();
     if (reasoningEffort != null && reasoningEffort.isNotEmpty && _modelSupportsThinking(model)) {
       if (_isGemini3Model(model)) {
-        return switch (reasoningEffort) {
-          'none' => null,
-          'auto' => {'includeThoughts': true},
-          'low' || 'medium' || 'high' => {'thinkingLevel': reasoningEffort.toUpperCase()},
-          _ => null,
-        };
+        return _buildGemini3ThinkingConfigFromReasoningEffort(model, reasoningEffort);
       }
 
       return switch (reasoningEffort) {
@@ -1214,27 +1233,43 @@ class GeminiCodeAssistClient {
     }
 
     final googleThinkingConfig = request.googleThinkingConfig;
-    if (googleThinkingConfig == null || !_modelSupportsThinking(model) || _isGemini3Model(model)) {
-      return null;
+    if (googleThinkingConfig != null) {
+      if (!_modelSupportsThinking(model)) {
+        return null;
+      }
+
+      if (_isGemini3Model(model)) {
+        return _normalizeGemini3ThinkingConfig(googleThinkingConfig);
+      }
+
+      final thinkingConfig = <String, Object?>{};
+      final budget =
+          _parseInteger(googleThinkingConfig['thinkingBudget']) ??
+          _parseInteger(googleThinkingConfig['thinking_budget']);
+      if (budget != null) {
+        thinkingConfig['thinkingBudget'] = budget;
+      }
+
+      if (googleThinkingConfig['includeThoughts'] is bool) {
+        thinkingConfig['includeThoughts'] = googleThinkingConfig['includeThoughts'] as bool;
+      } else if (googleThinkingConfig['include_thoughts'] is bool) {
+        thinkingConfig['includeThoughts'] = googleThinkingConfig['include_thoughts'] as bool;
+      } else if (budget != null && budget != 0) {
+        thinkingConfig['includeThoughts'] = true;
+      }
+
+      return thinkingConfig.isEmpty ? null : thinkingConfig;
     }
 
-    final thinkingConfig = <String, Object?>{};
-    final budget =
-        _parseInteger(googleThinkingConfig['thinkingBudget']) ??
-        _parseInteger(googleThinkingConfig['thinking_budget']);
-    if (budget != null) {
-      thinkingConfig['thinkingBudget'] = budget;
+    if (_shouldDisableThinkingByDefault(request, model)) {
+      return const {'thinkingBudget': 0, 'includeThoughts': false};
     }
 
-    if (googleThinkingConfig['includeThoughts'] is bool) {
-      thinkingConfig['includeThoughts'] = googleThinkingConfig['includeThoughts'] as bool;
-    } else if (googleThinkingConfig['include_thoughts'] is bool) {
-      thinkingConfig['includeThoughts'] = googleThinkingConfig['include_thoughts'] as bool;
-    } else if (budget != null && budget != 0) {
-      thinkingConfig['includeThoughts'] = true;
+    if (_shouldConstrainGemini3ThinkingByDefault(request, model)) {
+      return {'thinkingLevel': _defaultGemini3ThinkingLevel(model)};
     }
 
-    return thinkingConfig.isEmpty ? null : thinkingConfig;
+    return null;
   }
 
   List<String>? _resolveResponseModalities(UnifiedPromptRequest request, String model) {
@@ -1262,9 +1297,96 @@ class GeminiCodeAssistClient {
         normalized.contains('2.0-flash-thinking');
   }
 
+  bool _shouldDisableThinkingByDefault(UnifiedPromptRequest request, String model) {
+    return _isGemini25FlashModel(model) &&
+        request.tools.isEmpty &&
+        request.responseModalities == null &&
+        _isTextOnlyRequest(request);
+  }
+
+  bool _shouldConstrainGemini3ThinkingByDefault(UnifiedPromptRequest request, String model) {
+    final maxOutputTokens = request.maxOutputTokens;
+    return _isGemini3Model(model) &&
+        request.tools.isEmpty &&
+        request.responseModalities == null &&
+        maxOutputTokens != null &&
+        maxOutputTokens <= _gemini3ShortTextMaxOutputTokens &&
+        _isTextOnlyRequest(request);
+  }
+
+  bool _isTextOnlyRequest(UnifiedPromptRequest request) {
+    for (final turn in request.turns) {
+      for (final part in turn.parts) {
+        if (part.type != UnifiedPartType.text) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   bool _isGemini3Model(String model) {
     final normalized = model.toLowerCase();
     return normalized.contains('gemini-3') || normalized.contains('gemini3');
+  }
+
+  bool _isGemini3FlashModel(String model) {
+    final normalized = model.toLowerCase();
+    return _isGemini3Model(normalized) && normalized.contains('flash');
+  }
+
+  String _defaultGemini3ThinkingLevel(String model) {
+    return _isGemini3FlashModel(model) ? 'MINIMAL' : 'LOW';
+  }
+
+  Map<String, Object?>? _buildGemini3ThinkingConfigFromReasoningEffort(
+    String model,
+    String reasoningEffort,
+  ) {
+    final thinkingLevel = switch (reasoningEffort) {
+      'auto' => null,
+      'none' || 'minimal' => _isGemini3FlashModel(model) ? 'MINIMAL' : 'LOW',
+      'low' => 'LOW',
+      'medium' => _isGemini3FlashModel(model) ? 'MEDIUM' : 'LOW',
+      'high' => 'HIGH',
+      _ => null,
+    };
+    return thinkingLevel == null ? null : {'thinkingLevel': thinkingLevel};
+  }
+
+  Map<String, Object?>? _normalizeGemini3ThinkingConfig(Map<String, Object?> googleThinkingConfig) {
+    final thinkingConfig = <String, Object?>{};
+    final thinkingLevel =
+        (googleThinkingConfig['thinkingLevel'] as String?)?.trim() ??
+        (googleThinkingConfig['thinking_level'] as String?)?.trim();
+    if (thinkingLevel != null && thinkingLevel.isNotEmpty) {
+      thinkingConfig['thinkingLevel'] = thinkingLevel.toUpperCase();
+    }
+
+    final budget =
+        _parseInteger(googleThinkingConfig['thinkingBudget']) ??
+        _parseInteger(googleThinkingConfig['thinking_budget']);
+    if (budget != null && !thinkingConfig.containsKey('thinkingLevel')) {
+      thinkingConfig['thinkingBudget'] = budget;
+    }
+
+    if (googleThinkingConfig['includeThoughts'] is bool) {
+      thinkingConfig['includeThoughts'] = googleThinkingConfig['includeThoughts'] as bool;
+    } else if (googleThinkingConfig['include_thoughts'] is bool) {
+      thinkingConfig['includeThoughts'] = googleThinkingConfig['include_thoughts'] as bool;
+    }
+
+    return thinkingConfig.isEmpty ? null : thinkingConfig;
+  }
+
+  bool _isGemini25Model(String model) {
+    final normalized = model.toLowerCase();
+    return normalized.contains('2.5');
+  }
+
+  bool _isGemini25FlashModel(String model) {
+    final normalized = model.toLowerCase();
+    return _isGemini25Model(normalized) && normalized.contains('flash');
   }
 
   bool _shouldForceTextResponseModality(String model) {
@@ -1571,10 +1693,12 @@ bool _looksLikeProjectConfigurationError(
       consumer.contains('projects/');
 }
 
-String? _accountVerificationUrl(Map<String, Object?> metadata, Map<String, Object?>? help) {
-  final validationUrl = metadata['validation_url'] as String?;
-  if (validationUrl != null && validationUrl.trim().isNotEmpty) {
-    return validationUrl.trim();
+String? _gatewayActionUrl(Map<String, Object?> metadata, Map<String, Object?>? help) {
+  for (final key in const ['validation_url', 'activationUrl', 'activation_url']) {
+    final url = metadata[key] as String?;
+    if (url != null && url.trim().isNotEmpty) {
+      return url.trim();
+    }
   }
 
   final links = (help?['links'] as List?) ?? const [];

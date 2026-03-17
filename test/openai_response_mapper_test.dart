@@ -203,7 +203,11 @@ void main() {
           {
             'content': {
               'parts': [
-                {'thought': true, 'text': 'Need weather lookup.'},
+                {
+                  'thought': true,
+                  'text': 'Need weather lookup.',
+                  'thoughtSignature': 'sig_weather',
+                },
                 {
                   'functionCall': {
                     'id': 'call_weather',
@@ -237,6 +241,10 @@ void main() {
     final toolCall = ((message['tool_calls'] as List).single as Map).cast<String, Object?>();
 
     expect(message['reasoning_content'], 'Need weather lookup.');
+    expect(message['reasoning_signature'], 'sig_weather');
+    expect(message['google_thoughts'], [
+      {'text': 'Need weather lookup.', 'signature': 'sig_weather'},
+    ]);
     expect(message['content'], isNull);
     expect(toolCall['id'], 'call_weather');
     expect(toolCall['index'], 0);
@@ -250,6 +258,38 @@ void main() {
       (((response['usage'] as Map)['completion_tokens_details'] as Map)['reasoning_tokens']),
       4,
     );
+  });
+
+  test('responses object keeps Google thought signatures for round-tripping', () {
+    final payload = <String, Object?>{
+      'response': {
+        'candidates': [
+          {
+            'content': {
+              'parts': [
+                {'thought': true, 'text': 'Need a plan.', 'thoughtSignature': 'sig_plan'},
+              ],
+            },
+            'finishReason': 'STOP',
+          },
+        ],
+      },
+    };
+
+    final response = OpenAiResponseMapper.toResponsesObject(
+      requestId: 'resp_reasoning',
+      model: 'gemini-3.1-pro-preview',
+      payload: payload,
+    );
+
+    final output = (response['output'] as List).cast<Map>();
+    final reasoning = output.first.cast<String, Object?>();
+
+    expect(reasoning['type'], 'reasoning');
+    expect(reasoning['reasoning_signature'], 'sig_plan');
+    expect(reasoning['google_thoughts'], [
+      {'text': 'Need a plan.', 'signature': 'sig_plan'},
+    ]);
   });
 
   test('chat completion surfaces prompt-filtered empty Gemini responses', () {
@@ -550,5 +590,41 @@ void main() {
     expect(firstEvents[2]['delta'], '{"city":"Mos"}');
     expect(secondEvents.single['type'], 'response.function_call_arguments.delta');
     expect(secondEvents.single['delta'], 'cow"}');
+  });
+
+  test('extracts safe upstream metadata from raw Gemini payloads', () {
+    final payload = <String, Object?>{
+      'traceId': 'trace-123',
+      'response': {
+        'responseId': 'response-456',
+        'modelVersion': 'gemini-3.1-pro-preview-002',
+        'usageMetadata': {
+          'promptTokenCount': 101,
+          'candidatesTokenCount': 27,
+          'totalTokenCount': 128,
+          'cachedContentTokenCount': 8,
+          'thoughtsTokenCount': 13,
+        },
+        'candidates': [
+          {
+            'content': {
+              'parts': [
+                {'text': 'ok'},
+              ],
+            },
+            'finishReason': 'STOP',
+          },
+        ],
+      },
+    };
+
+    expect(OpenAiResponseMapper.currentTraceId(payload), 'trace-123');
+    expect(OpenAiResponseMapper.currentUpstreamResponseId(payload), 'response-456');
+    expect(OpenAiResponseMapper.currentModelVersion(payload), 'gemini-3.1-pro-preview-002');
+    expect(OpenAiResponseMapper.currentPromptTokenCount(payload), 101);
+    expect(OpenAiResponseMapper.currentCompletionTokenCount(payload), 27);
+    expect(OpenAiResponseMapper.currentTotalTokenCount(payload), 128);
+    expect(OpenAiResponseMapper.currentCachedTokenCount(payload), 8);
+    expect(OpenAiResponseMapper.currentReasoningTokenCount(payload), 13);
   });
 }

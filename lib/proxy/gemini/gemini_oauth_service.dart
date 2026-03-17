@@ -21,17 +21,35 @@ typedef CodeExchangeHandler =
       required String redirectUri,
       required String codeVerifier,
     });
-typedef ProfileFetcher = Future<Map<String, String>> Function(String accessToken);
+typedef ProfileFetcher = Future<GoogleAccountProfile> Function(String accessToken);
+
+class GoogleAccountProfile {
+  const GoogleAccountProfile({
+    required this.email,
+    required this.displayName,
+    this.googleSubjectId,
+    this.avatarUrl,
+  });
+
+  final String email;
+  final String displayName;
+  final String? googleSubjectId;
+  final String? avatarUrl;
+}
 
 class AuthenticatedGoogleAccount {
   const AuthenticatedGoogleAccount({
     required this.email,
     required this.displayName,
+    this.googleSubjectId,
+    this.avatarUrl,
     required this.tokens,
   });
 
   final String email;
   final String displayName;
+  final String? googleSubjectId;
+  final String? avatarUrl;
   final OAuthTokens tokens;
 }
 
@@ -189,8 +207,10 @@ class GeminiOAuthService {
         'Google profile lookup',
       );
       return AuthenticatedGoogleAccount(
-        email: profile['email'] ?? '',
-        displayName: profile['name'] ?? profile['email'] ?? 'Google account',
+        email: profile.email,
+        displayName: profile.displayName,
+        googleSubjectId: profile.googleSubjectId,
+        avatarUrl: profile.avatarUrl,
         tokens: tokens,
       );
     } finally {
@@ -274,7 +294,7 @@ class GeminiOAuthService {
     );
   }
 
-  Future<Map<String, String>> _fetchProfile(String accessToken) async {
+  Future<GoogleAccountProfile> _fetchProfile(String accessToken) async {
     final response = await _runWithRequestTimeout(
       () => _http.get(
         Uri.https('www.googleapis.com', '/oauth2/v2/userinfo'),
@@ -289,7 +309,18 @@ class GeminiOAuthService {
     }
 
     final payload = jsonDecode(response.body) as Map<String, dynamic>;
-    return payload.map((key, value) => MapEntry(key, value?.toString() ?? ''));
+    final email = (payload['email'] as String? ?? '').trim();
+    final displayName = (payload['name'] as String? ?? '').trim().isNotEmpty
+        ? (payload['name'] as String).trim()
+        : email.isNotEmpty
+        ? email
+        : 'Google account';
+    return GoogleAccountProfile(
+      email: email,
+      displayName: displayName,
+      googleSubjectId: (payload['id'] as String?)?.trim(),
+      avatarUrl: (payload['picture'] as String?)?.trim(),
+    );
   }
 
   Future<LaunchMode> _resolveLaunchMode() async {

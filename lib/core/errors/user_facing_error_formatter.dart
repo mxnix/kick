@@ -117,7 +117,7 @@ String _formatGatewayError(KickLocalizations l10n, GeminiGatewayException error)
         case GeminiGatewayFailureDetail.projectIdMissing:
           return l10n.errorGoogleProjectIdMissing;
         case GeminiGatewayFailureDetail.projectConfiguration:
-          return l10n.errorGoogleProjectAccessDenied;
+          return _formatProjectConfigurationError(l10n, error.upstreamReason);
         case GeminiGatewayFailureDetail.quotaExhausted:
         case GeminiGatewayFailureDetail.rateLimited:
         case GeminiGatewayFailureDetail.reasoningConfigUnsupported:
@@ -147,12 +147,20 @@ String _formatGatewayError(KickLocalizations l10n, GeminiGatewayException error)
         return l10n.errorReasoningConfigRejected;
       }
       if (error.detail == GeminiGatewayFailureDetail.projectConfiguration) {
-        return l10n.errorGoogleProjectAccessDenied;
+        return _formatProjectConfigurationError(l10n, error.upstreamReason);
       }
       return l10n.errorInvalidRequestRejected;
     case GeminiGatewayFailureKind.unknown:
       return formatUserFacingMessage(l10n, error.message);
   }
+}
+
+String _formatProjectConfigurationError(KickLocalizations l10n, String? upstreamReason) {
+  return switch (upstreamReason?.trim().toUpperCase()) {
+    'SERVICE_DISABLED' => l10n.errorGoogleProjectApiDisabled,
+    'CONSUMER_INVALID' => l10n.errorGoogleProjectInvalid,
+    _ => l10n.errorGoogleProjectAccessDenied,
+  };
 }
 
 bool _looksLikeQuotaError(String message) {
