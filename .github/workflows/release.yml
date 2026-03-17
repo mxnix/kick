@@ -306,17 +306,38 @@ jobs:
       - android-release
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.metadata.outputs.ref }}
+
+      - name: Fetch tags
+        shell: bash
+        run: git fetch --force --tags origin
+
       - name: Download release artifacts
         uses: actions/download-artifact@v8
         with:
           path: release-artifacts
           merge-multiple: true
 
+      - name: Generate release notes
+        shell: bash
+        run: |
+          chmod +x scripts/generate-release-notes.sh
+          scripts/generate-release-notes.sh \
+            --tag "${{ needs.metadata.outputs.tag }}" \
+            --version "${{ needs.metadata.outputs.version }}" \
+            --repository "${{ github.repository }}" \
+            --template ".github/release_template.md" \
+            --output "release-notes.md"
+
       - name: Create or update GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.metadata.outputs.tag }}
-          generate_release_notes: true
+          body_path: release-notes.md
           overwrite_files: true
           files: |
             release-artifacts/**/*.zip
