@@ -7,6 +7,24 @@ const _minRequestMaxRetries = 0;
 const _maxRequestMaxRetries = 20;
 
 class AppSettings {
+  static const Set<String> storageKeys = {
+    'api_key_required',
+    'theme_mode',
+    'use_dynamic_color',
+    'has_acknowledged_disclaimer',
+    'analytics_consent_enabled',
+    'host',
+    'port',
+    'allow_lan',
+    'android_background_runtime',
+    'windows_launch_at_startup',
+    'request_max_retries',
+    'mark_429_as_unhealthy',
+    'logging_verbosity',
+    'unsafe_raw_logging_enabled',
+    'custom_models',
+  };
+
   const AppSettings({
     required this.apiKey,
     required this.apiKeyRequired,
@@ -18,6 +36,7 @@ class AppSettings {
     required this.port,
     required this.allowLan,
     required this.androidBackgroundRuntime,
+    required this.windowsLaunchAtStartup,
     required this.requestMaxRetries,
     required this.mark429AsUnhealthy,
     required this.loggingVerbosity,
@@ -35,6 +54,7 @@ class AppSettings {
   final int port;
   final bool allowLan;
   final bool androidBackgroundRuntime;
+  final bool windowsLaunchAtStartup;
   final int requestMaxRetries;
   final bool mark429AsUnhealthy;
   final KickLogVerbosity loggingVerbosity;
@@ -53,6 +73,7 @@ class AppSettings {
       port: 3000,
       allowLan: false,
       androidBackgroundRuntime: true,
+      windowsLaunchAtStartup: false,
       requestMaxRetries: _defaultRequestMaxRetries,
       mark429AsUnhealthy: false,
       loggingVerbosity: KickLogVerbosity.normal,
@@ -72,6 +93,7 @@ class AppSettings {
     int? port,
     bool? allowLan,
     bool? androidBackgroundRuntime,
+    bool? windowsLaunchAtStartup,
     int? requestMaxRetries,
     bool? mark429AsUnhealthy,
     KickLogVerbosity? loggingVerbosity,
@@ -90,6 +112,7 @@ class AppSettings {
       port: port ?? this.port,
       allowLan: resolvedAllowLan,
       androidBackgroundRuntime: androidBackgroundRuntime ?? this.androidBackgroundRuntime,
+      windowsLaunchAtStartup: windowsLaunchAtStartup ?? this.windowsLaunchAtStartup,
       requestMaxRetries: _normalizeRequestMaxRetries(requestMaxRetries ?? this.requestMaxRetries),
       mark429AsUnhealthy: mark429AsUnhealthy ?? this.mark429AsUnhealthy,
       loggingVerbosity: loggingVerbosity ?? this.loggingVerbosity,
@@ -109,6 +132,7 @@ class AppSettings {
       'port': port.toString(),
       'allow_lan': allowLan.toString(),
       'android_background_runtime': androidBackgroundRuntime.toString(),
+      'windows_launch_at_startup': windowsLaunchAtStartup.toString(),
       'request_max_retries': requestMaxRetries.toString(),
       'mark_429_as_unhealthy': mark429AsUnhealthy.toString(),
       'logging_verbosity': loggingVerbosity.name,
@@ -133,6 +157,7 @@ class AppSettings {
       port: int.tryParse(values['port'] ?? '') ?? 3000,
       allowLan: allowLan,
       androidBackgroundRuntime: values['android_background_runtime'] != 'false',
+      windowsLaunchAtStartup: values['windows_launch_at_startup'] == 'true',
       requestMaxRetries: _normalizeRequestMaxRetries(
         int.tryParse(values['request_max_retries'] ?? ''),
       ),

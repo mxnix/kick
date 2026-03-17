@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/user_facing_error_formatter.dart';
 import '../core/platform/window_bootstrap.dart';
+import '../core/platform/windows_desktop_runtime.dart';
 import '../core/theme/kick_theme.dart';
 import '../features/shared/kick_surfaces.dart';
 import '../features/shared/kick_window_frame.dart';
@@ -108,7 +109,9 @@ class _KickBootstrapGateState extends State<KickBootstrapGate> {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         WidgetsBinding.instance.allowFirstFrame();
       }
-      unawaited(WindowBootstrap.reveal());
+      if (!WindowsDesktopRuntime.startHiddenOnLaunch) {
+        unawaited(WindowBootstrap.reveal());
+      }
     });
   }
 }
@@ -145,11 +148,7 @@ class _BootstrapShell extends StatelessWidget {
               child: Scaffold(
                 body: KickBackdrop(
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                  child: KickContentFrame(
-                    maxWidth: 560,
-                    alignment: Alignment.center,
-                    child: child,
-                  ),
+                  child: KickContentFrame(maxWidth: 560, alignment: Alignment.center, child: child),
                 ),
               ),
             ),

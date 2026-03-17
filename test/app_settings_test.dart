@@ -25,6 +25,7 @@ void main() {
       port: 8080,
       allowLan: true,
       androidBackgroundRuntime: false,
+      windowsLaunchAtStartup: true,
       requestMaxRetries: 7,
       mark429AsUnhealthy: true,
       loggingVerbosity: KickLogVerbosity.verbose,
@@ -41,6 +42,7 @@ void main() {
     expect(restored.allowLan, isTrue);
     expect(restored.requestMaxRetries, 7);
     expect(restored.mark429AsUnhealthy, isTrue);
+    expect(restored.windowsLaunchAtStartup, isTrue);
     expect(restored.unsafeRawLoggingEnabled, isTrue);
     expect(restored.customModels, ['gemini-2.5-flash']);
   });

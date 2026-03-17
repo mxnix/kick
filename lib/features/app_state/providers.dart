@@ -9,6 +9,7 @@ import '../../app/app_version_reader.dart';
 import '../../app/bootstrap.dart';
 import '../../core/accounts/account_priority.dart';
 import '../../core/platform/android_foreground_runtime.dart';
+import '../../core/platform/windows_desktop_runtime.dart';
 import '../../core/security/proxy_api_key.dart';
 import '../../data/models/account_profile.dart';
 import '../../data/models/app_log_entry.dart';
@@ -88,6 +89,7 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     final bootstrap = ref.read(appBootstrapProvider);
     await bootstrap.secretStore.writeProxyApiKey(settings.apiKey);
     await bootstrap.settingsRepository.writeSettings(settings);
+    await WindowsDesktopRuntime.applySettings(settings);
     await bootstrap.analytics.setTrackingAllowed(analyticsTrackingAllowed(settings));
     state = AsyncData(settings);
   }

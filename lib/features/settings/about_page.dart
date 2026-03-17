@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_metadata.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../core/theme/kick_theme.dart';
 import '../../l10n/kick_localizations.dart';
 import '../app_state/providers.dart';
+import '../shared/app_update_banner.dart';
 import '../shared/kick_surfaces.dart';
 import 'app_update_checker.dart';
 
@@ -79,17 +79,7 @@ class _AboutUpdatesCard extends StatelessWidget {
     return updateValue.when(
       data: (updateInfo) {
         if (updateInfo.hasUpdate) {
-          return _AboutActionCard(
-            icon: Icons.system_update_rounded,
-            title: l10n.aboutUpdateAvailableTitle,
-            message: l10n.aboutUpdateAvailableMessage(
-              updateInfo.latestVersion,
-              updateInfo.currentVersion,
-            ),
-            actionLabel: l10n.aboutOpenReleaseButton,
-            emphasis: true,
-            onPressed: () => _openExternalUrl(updateInfo.releaseUrl),
-          );
+          return AppUpdateBanner(updateInfo: updateInfo);
         }
 
         return _AboutActionCard(
@@ -115,14 +105,6 @@ class _AboutUpdatesCard extends StatelessWidget {
       ),
     );
   }
-
-  Future<void> _openExternalUrl(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) {
-      return;
-    }
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
 }
 
 class _AboutActionCard extends StatelessWidget {
@@ -132,7 +114,6 @@ class _AboutActionCard extends StatelessWidget {
     required this.message,
     required this.actionLabel,
     this.onPressed,
-    this.emphasis = false,
   });
 
   final IconData icon;
@@ -140,15 +121,14 @@ class _AboutActionCard extends StatelessWidget {
   final String message;
   final String actionLabel;
   final VoidCallback? onPressed;
-  final bool emphasis;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final tint = emphasis ? scheme.primary : scheme.onSurfaceVariant;
+    final tint = scheme.onSurfaceVariant;
 
     return KickPanel(
-      tone: emphasis ? KickPanelTone.accent : KickPanelTone.soft,
+      tone: KickPanelTone.soft,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -42,6 +42,7 @@ void main() {
       port: 3000,
       allowLan: false,
       androidBackgroundRuntime: true,
+      windowsLaunchAtStartup: false,
       requestMaxRetries: 10,
       mark429AsUnhealthy: false,
       loggingVerbosity: KickLogVerbosity.normal,

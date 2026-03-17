@@ -235,10 +235,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get dynamicThemeSubtitle => 'Использовать системные динамические цвета';
 
   @override
-  String get settingsAppearanceSectionTitle => 'Внешний вид';
+  String get settingsAppearanceSectionTitle => 'Внешний вид и поведение';
 
   @override
-  String get settingsAppearanceSectionSummary => 'Тема, динамические цвета и логирование';
+  String get settingsAppearanceSectionSummary => 'Тема, логи и поведение программы';
 
   @override
   String get settingsNetworkSectionTitle => 'Сеть';
@@ -263,6 +263,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get apiKeyRequiredSubtitle => 'При отключении, разрешает запросы без Bearer-токена';
+
+  @override
+  String get windowsTrayTitle => 'Работа из трея';
+
+  @override
+  String get windowsTraySubtitle => 'Закрытие окна скрывает KiCk в системный трей';
+
+  @override
+  String get windowsLaunchAtStartupTitle => 'Запускать вместе с Windows';
+
+  @override
+  String get windowsLaunchAtStartupSubtitle => 'При входе в систему KiCk будет стартовать в трее';
+
+  @override
+  String get windowsTrayNotificationTitle => 'KiCk продолжает работать';
+
+  @override
+  String get windowsTrayNotificationBody => 'Приложение скрыто в системный трей';
 
   @override
   String get settingsModelsSectionTitle => 'Модели';
@@ -413,6 +431,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get regenerateApiKeyConfirmButton => 'Сгенерировать';
+
+  @override
+  String get trayOpenWindowAction => 'Открыть окно';
+
+  @override
+  String get trayHideToTrayAction => 'Скрыть в трей';
+
+  @override
+  String get trayExitAction => 'Выход';
 
   @override
   String get noActiveAccountsWarning =>

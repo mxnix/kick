@@ -7,7 +7,6 @@ import '../../l10n/kick_localizations.dart';
 
 class WindowBootstrap {
   static Future<void>? _configureFuture;
-  static Future<void>? _revealFuture;
 
   static Future<void> configure() async {
     if (!Platform.isWindows) {
@@ -22,7 +21,7 @@ class WindowBootstrap {
       return;
     }
 
-    await (_revealFuture ??= _revealWindow());
+    await _revealWindow();
   }
 
   static Future<void> _configureWindow() async {

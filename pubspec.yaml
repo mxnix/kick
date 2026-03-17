@@ -1,7 +1,7 @@
 name: kick
 description: "Kick: a local OpenAI-compatible proxy for Gemini CLI with a Flutter shell"
 publish_to: "none"
-version: 1.0.2+2
+version: 1.0.3+3
 
 environment:
   sdk: ^3.11.1
@@ -32,6 +32,9 @@ dependencies:
   window_manager: ^0.5.1
   share_plus: ^12.0.1
   package_info_plus: ^8.3.1
+  tray_manager: ^0.5.2
+  launch_at_startup: ^0.3.1
+  local_notifier: ^0.1.6
 
 dev_dependencies:
   flutter_test:
@@ -43,3 +46,4 @@ flutter:
   uses-material-design: true
   assets:
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+    - windows/runner/resources/app_icon.ico

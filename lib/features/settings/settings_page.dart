@@ -35,6 +35,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _allowLan = false;
   bool _apiKeyRequired = true;
   bool _androidBackgroundRuntime = true;
+  bool _windowsLaunchAtStartup = false;
   bool _unsafeRawLoggingEnabled = false;
   bool _initialized = false;
   bool _appearanceExpanded = false;
@@ -75,6 +76,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isAndroidPlatform = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final isWindowsPlatform = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
     final settingsValue = ref.watch(settingsControllerProvider);
 
     return settingsValue.when(
@@ -173,6 +175,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         _saveImmediately();
                       },
                     ),
+                    if (isWindowsPlatform) ...[
+                      const SizedBox(height: 18),
+                      _SettingInfoCard(
+                        icon: Icons.inbox_rounded,
+                        title: l10n.windowsTrayTitle,
+                        subtitle: l10n.windowsTraySubtitle,
+                      ),
+                      const SizedBox(height: 18),
+                      _SettingToggle(
+                        title: l10n.windowsLaunchAtStartupTitle,
+                        subtitle: l10n.windowsLaunchAtStartupSubtitle,
+                        value: _windowsLaunchAtStartup,
+                        onChanged: (value) {
+                          setState(() => _windowsLaunchAtStartup = value);
+                          _saveImmediately();
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -353,6 +373,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _useDynamicColor = settings.useDynamicColor;
     _allowLan = settings.allowLan;
     _androidBackgroundRuntime = settings.androidBackgroundRuntime;
+    _windowsLaunchAtStartup = settings.windowsLaunchAtStartup;
     _mark429AsUnhealthy = settings.mark429AsUnhealthy;
     _unsafeRawLoggingEnabled = settings.unsafeRawLoggingEnabled;
     _initialized = true;
@@ -391,6 +412,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       port: int.tryParse(_portController.text.trim()) ?? 3000,
       allowLan: _allowLan,
       androidBackgroundRuntime: _androidBackgroundRuntime,
+      windowsLaunchAtStartup: _windowsLaunchAtStartup,
       requestMaxRetries: int.tryParse(_requestRetriesController.text.trim()) ?? 10,
       mark429AsUnhealthy: _mark429AsUnhealthy,
       loggingVerbosity: _verbosity,
@@ -482,6 +504,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         left.port == right.port &&
         left.allowLan == right.allowLan &&
         left.androidBackgroundRuntime == right.androidBackgroundRuntime &&
+        left.windowsLaunchAtStartup == right.windowsLaunchAtStartup &&
         left.requestMaxRetries == right.requestMaxRetries &&
         left.mark429AsUnhealthy == right.mark429AsUnhealthy &&
         left.loggingVerbosity == right.loggingVerbosity &&
@@ -591,6 +614,61 @@ class _SettingsSection extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SettingInfoCard extends StatelessWidget {
+  const _SettingInfoCard({required this.icon, required this.title, required this.subtitle});
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: scheme.surfaceContainerLowest.withValues(alpha: 0.84),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.38)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                if (subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -10,14 +10,16 @@ void main() {
     final tempDirectory = await Directory.systemTemp.createTemp('kick-settings-repo');
     addTearDown(() => tempDirectory.delete(recursive: true));
 
-    final database = await AppDatabase.open('${tempDirectory.path}${Platform.pathSeparator}kick.sqlite');
+    final database = await AppDatabase.open(
+      '${tempDirectory.path}${Platform.pathSeparator}kick.sqlite',
+    );
     addTearDown(database.close);
 
     final repository = SettingsRepository(database);
-    await database.customStatement(
-      'INSERT INTO settings (key, value) VALUES (?1, ?2)',
-      ['api_key', 'legacy-key'],
-    );
+    await database.customStatement('INSERT INTO settings (key, value) VALUES (?1, ?2)', [
+      'api_key',
+      'legacy-key',
+    ]);
 
     expect(await repository.readLegacyApiKey(), 'legacy-key');
 
@@ -29,5 +31,22 @@ void main() {
     final restored = await repository.readSettings(apiKey: 'secure-key');
     expect(restored, isNotNull);
     expect(restored?.apiKey, 'secure-key');
+  });
+
+  test('preserves auxiliary flags when writing user settings', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick-settings-repo');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+
+    final database = await AppDatabase.open(
+      '${tempDirectory.path}${Platform.pathSeparator}kick.sqlite',
+    );
+    addTearDown(database.close);
+
+    final repository = SettingsRepository(database);
+    await repository.writeBooleanFlag('aux_flag', true);
+
+    await repository.writeSettings(AppSettings.defaults(apiKey: 'secure-key'));
+
+    expect(await repository.readBooleanFlag('aux_flag'), isTrue);
   });
 }

@@ -509,13 +509,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAppearanceSectionTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Внешний вид'**
+  /// **'Внешний вид и поведение'**
   String get settingsAppearanceSectionTitle;
 
   /// No description provided for @settingsAppearanceSectionSummary.
   ///
   /// In ru, this message translates to:
-  /// **'Тема, динамические цвета и логирование'**
+  /// **'Тема, логи и поведение программы'**
   String get settingsAppearanceSectionSummary;
 
   /// No description provided for @settingsNetworkSectionTitle.
@@ -565,6 +565,42 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'При отключении, разрешает запросы без Bearer-токена'**
   String get apiKeyRequiredSubtitle;
+
+  /// No description provided for @windowsTrayTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Работа из трея'**
+  String get windowsTrayTitle;
+
+  /// No description provided for @windowsTraySubtitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Закрытие окна скрывает KiCk в системный трей'**
+  String get windowsTraySubtitle;
+
+  /// No description provided for @windowsLaunchAtStartupTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Запускать вместе с Windows'**
+  String get windowsLaunchAtStartupTitle;
+
+  /// No description provided for @windowsLaunchAtStartupSubtitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'При входе в систему KiCk будет стартовать в трее'**
+  String get windowsLaunchAtStartupSubtitle;
+
+  /// No description provided for @windowsTrayNotificationTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'KiCk продолжает работать'**
+  String get windowsTrayNotificationTitle;
+
+  /// No description provided for @windowsTrayNotificationBody.
+  ///
+  /// In ru, this message translates to:
+  /// **'Приложение скрыто в системный трей'**
+  String get windowsTrayNotificationBody;
 
   /// No description provided for @settingsModelsSectionTitle.
   ///
@@ -847,6 +883,24 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Сгенерировать'**
   String get regenerateApiKeyConfirmButton;
+
+  /// No description provided for @trayOpenWindowAction.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть окно'**
+  String get trayOpenWindowAction;
+
+  /// No description provided for @trayHideToTrayAction.
+  ///
+  /// In ru, this message translates to:
+  /// **'Скрыть в трей'**
+  String get trayHideToTrayAction;
+
+  /// No description provided for @trayExitAction.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выход'**
+  String get trayExitAction;
 
   /// No description provided for @noActiveAccountsWarning.
   ///

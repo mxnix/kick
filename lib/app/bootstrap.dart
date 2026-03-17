@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../analytics/kick_analytics.dart';
 import '../core/platform/android_foreground_runtime.dart';
 import '../core/platform/window_bootstrap.dart';
+import '../core/platform/windows_desktop_runtime.dart';
 import '../core/security/proxy_api_key.dart';
 import '../data/app_database.dart';
 import '../data/models/account_profile.dart';
@@ -49,6 +50,7 @@ class AppBootstrap {
   final List<AccountProfile> initialAccounts;
 
   Future<void> dispose() async {
+    await WindowsDesktopRuntime.dispose();
     await proxyController.dispose();
     await database.close();
   }
@@ -86,6 +88,14 @@ Future<AppBootstrap> initializeAppBootstrap() async {
   timings.mark('settings_ready');
   final effectiveSettings =
       currentSettings?.copyWith(apiKey: apiKey) ?? AppSettings.defaults(apiKey: apiKey);
+  await WindowsDesktopRuntime.configure(
+    settings: effectiveSettings,
+    readTrayNotificationShown: () =>
+        settingsRepository.readBooleanFlag(WindowsDesktopRuntime.trayNotificationShownKey),
+    writeTrayNotificationShown: (value) =>
+        settingsRepository.writeBooleanFlag(WindowsDesktopRuntime.trayNotificationShownKey, value),
+  );
+  timings.mark('windows_runtime_ready');
   final initialAccounts = await accountsRepository.readAll();
   timings.mark('accounts_ready');
   final analytics = KickAnalytics(trackingAllowed: analyticsTrackingAllowed(effectiveSettings));

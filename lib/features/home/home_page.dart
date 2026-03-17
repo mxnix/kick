@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../l10n/kick_localizations.dart';
 import '../app_state/providers.dart';
+import '../shared/app_update_banner.dart';
 import '../shared/kick_surfaces.dart';
 
 class HomePage extends ConsumerWidget {
@@ -22,6 +23,7 @@ class HomePage extends ConsumerWidget {
         ref.watch(proxyControllerProvider).currentState;
     final settings = ref.watch(settingsControllerProvider).asData?.value;
     final accounts = ref.watch(accountsControllerProvider).asData?.value;
+    final updateInfo = ref.watch(appUpdateQueryProvider).asData?.value;
 
     final activeAccounts = accounts?.where((item) => item.enabled).length ?? 0;
     final uptimeText = proxyStatus.uptime == null
@@ -73,6 +75,10 @@ class HomePage extends ConsumerWidget {
               }
             },
           ),
+          if (updateInfo?.hasUpdate == true) ...[
+            const SizedBox(height: 20),
+            AppUpdateBanner(updateInfo: updateInfo!),
+          ],
           if (proxyStatus.lastError != null) ...[
             const SizedBox(height: 20),
             EmptyStateCard(
