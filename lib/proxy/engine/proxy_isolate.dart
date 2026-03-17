@@ -12,10 +12,10 @@ import '../../core/logging/log_sanitizer.dart';
 import '../account_pool/account_pool.dart';
 import '../gemini/gemini_code_assist_client.dart';
 import '../model_catalog.dart';
-import 'proxy_cors.dart';
 import '../openai/openai_request_parser.dart';
 import '../openai/openai_response_mapper.dart';
 import '../openai/sse.dart';
+import 'proxy_cors.dart';
 
 const _maxRequestBodyBytes = 20 * 1024 * 1024;
 
@@ -28,7 +28,10 @@ Future<void> proxyIsolateMain(SendPort sendPort) async {
     if (message is! Map) {
       continue;
     }
-    await host.handle(message.cast<String, Object?>());
+    final shouldContinue = await host.handle(message.cast<String, Object?>());
+    if (!shouldContinue) {
+      commands.close();
+    }
   }
 }
 
@@ -53,12 +56,12 @@ class _ProxyIsolateHost {
   HttpServer? _server;
   DateTime? _startedAt;
   int _requestCount = 0;
-  String? _lastError;
+  String? _lastRuntimeError;
 
   bool get _allowLan => _settings?['allow_lan'] == true;
   String get _configuredHost => _settings?['host'] as String? ?? '127.0.0.1';
 
-  Future<void> handle(Map<String, Object?> message) async {
+  Future<bool> handle(Map<String, Object?> message) async {
     switch (message['type']) {
       case 'configure':
         final payload =
@@ -85,26 +88,27 @@ class _ProxyIsolateHost {
         } else {
           _publishStatus();
         }
-        break;
+        return true;
       case 'start':
         await _startServer();
-        break;
+        return true;
       case 'stop':
         await _stopServer();
-        break;
+        return true;
       case 'shutdown':
         await _stopServer();
-        break;
+        return false;
     }
+    return true;
   }
 
   Future<void> _startServer() async {
     if (_settings == null) {
-      _lastError = 'Proxy is not configured yet.';
+      _lastRuntimeError = 'Proxy is not configured yet.';
       await _logFailure(
         category: 'proxy.runtime',
         route: '/runtime/start',
-        message: _lastError!,
+        message: _lastRuntimeError!,
         stackTrace: StackTrace.current,
       );
       _publishStatus();
@@ -125,13 +129,13 @@ class _ProxyIsolateHost {
     try {
       _server = await shelf_io.serve(handler, host, port);
       _startedAt = DateTime.now();
-      _lastError = null;
+      _lastRuntimeError = null;
     } catch (error, stackTrace) {
-      _lastError = error.toString();
+      _lastRuntimeError = error.toString();
       await _logFailure(
         category: 'proxy.runtime',
         route: '/runtime/start',
-        message: _lastError!,
+        message: _lastRuntimeError!,
         stackTrace: stackTrace,
       );
     }
@@ -468,7 +472,6 @@ class _ProxyIsolateHost {
         );
         final payload = await _client.generateContent(account: account, request: request);
         _requestCount += 1;
-        _lastError = null;
         _publishStatus();
         _emitRequestSucceededAnalytics(request: request, route: route);
         return payload;
@@ -541,7 +544,6 @@ class _ProxyIsolateHost {
             }
             completed = true;
             _requestCount += 1;
-            _lastError = null;
             _publishStatus();
             _emitRequestSucceededAnalytics(request: request, route: route);
           } on GeminiGatewayException catch (error, stackTrace) {
@@ -614,7 +616,6 @@ class _ProxyIsolateHost {
     String requestedModel,
     GeminiGatewayException error,
   ) {
-    _lastError = error.message;
     switch (error.kind) {
       case GeminiGatewayFailureKind.auth:
         _pool.markAuthFailure(account, cooldown: error.retryAfter);
@@ -643,7 +644,6 @@ class _ProxyIsolateHost {
         break;
     }
     _publishAccounts();
-    _publishStatus();
   }
 
   bool _shouldRetry(GeminiGatewayFailureKind kind) {
@@ -892,8 +892,6 @@ class _ProxyIsolateHost {
   }
 
   Response _errorResponse(int status, String code, String message, {Map<String, String>? headers}) {
-    _lastError = message;
-    _publishStatus();
     return _jsonResponse(
       {
         'error': {'message': message, 'type': code, 'code': code},
@@ -1091,7 +1089,7 @@ class _ProxyIsolateHost {
         'started_at': _startedAt?.toIso8601String(),
         'request_count': _requestCount,
         'active_accounts': _pool.accounts.where((account) => account.enabled).length,
-        'last_error': _lastError,
+        'last_error': _lastRuntimeError,
       },
     });
   }

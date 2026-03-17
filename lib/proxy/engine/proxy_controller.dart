@@ -14,6 +14,9 @@ import '../../data/repositories/logs_repository.dart';
 import '../../data/repositories/secret_store.dart';
 import '../engine/proxy_isolate.dart';
 
+typedef ProxyIsolateSpawner =
+    Future<Isolate> Function(SendPort messagePort, SendPort errorPort, SendPort exitPort);
+
 class ProxyRuntimeState {
   const ProxyRuntimeState({
     required this.ready,
@@ -94,15 +97,18 @@ class KickProxyController {
     required KickAnalytics analytics,
     required LogsRepository logsRepository,
     required SecretStore secretStore,
+    ProxyIsolateSpawner? spawnIsolate,
   }) : _accountsRepository = accountsRepository,
-       _analytics = analytics,
-       _logsRepository = logsRepository,
-       _secretStore = secretStore;
+        _analytics = analytics,
+        _logsRepository = logsRepository,
+        _secretStore = secretStore,
+        _spawnIsolate = spawnIsolate ?? _defaultSpawnIsolate;
 
   final AccountsRepository _accountsRepository;
   final KickAnalytics _analytics;
   final LogsRepository _logsRepository;
   final SecretStore _secretStore;
+  final ProxyIsolateSpawner _spawnIsolate;
 
   final _states = StreamController<ProxyRuntimeState>.broadcast();
   final _activity = StreamController<String>.broadcast();
@@ -112,24 +118,51 @@ class KickProxyController {
   Stream<String> get activity => _activity.stream;
 
   ReceivePort? _receivePort;
+  ReceivePort? _errorPort;
+  ReceivePort? _exitPort;
+  StreamSubscription<dynamic>? _receiveSubscription;
+  StreamSubscription<dynamic>? _errorSubscription;
+  StreamSubscription<dynamic>? _exitSubscription;
   SendPort? _commandPort;
   Isolate? _isolate;
   Completer<void>? _readyCompleter;
+  Completer<void>? _shutdownCompleter;
   String? _lastSignature;
   AppSettings? _lastSettings;
   List<AccountProfile> _lastAccounts = const [];
+  String? _pendingIsolateFailure;
   bool _awaitingStartResult = false;
+  bool _disposing = false;
+  bool _disposed = false;
 
   Future<void> initialize() async {
+    if (_disposed || _disposing) {
+      throw StateError('Proxy controller has already been disposed.');
+    }
+
     final existingCompleter = _readyCompleter;
     if (existingCompleter != null) {
       return existingCompleter.future;
     }
 
-    _receivePort = ReceivePort();
     final readyCompleter = _readyCompleter = Completer<void>();
-    _receivePort!.listen(_handleIsolateMessage);
-    _isolate = await Isolate.spawn(proxyIsolateMain, _receivePort!.sendPort);
+    _shutdownCompleter = Completer<void>();
+    _receivePort = ReceivePort();
+    _errorPort = ReceivePort();
+    _exitPort = ReceivePort();
+    _receiveSubscription = _receivePort!.listen(_handleIsolateMessage);
+    _errorSubscription = _errorPort!.listen(_handleIsolateError);
+    _exitSubscription = _exitPort!.listen(_handleIsolateExit);
+    try {
+      _isolate = await _spawnIsolate(
+        _receivePort!.sendPort,
+        _errorPort!.sendPort,
+        _exitPort!.sendPort,
+      );
+    } catch (error, stackTrace) {
+      _completeInitializationError(error, stackTrace);
+      await _resetIsolateConnection();
+    }
     await readyCompleter.future;
   }
 
@@ -181,6 +214,9 @@ class KickProxyController {
 
   Future<void> start() async {
     await initialize();
+    if (_lastSettings != null && _lastSignature == null) {
+      await configure(settings: _lastSettings!, accounts: _lastAccounts);
+    }
     _awaitingStartResult = true;
     final settings = _lastSettings;
     if (settings != null && await _syncExistingAndroidRuntime(settings)) {
@@ -215,9 +251,35 @@ class KickProxyController {
   }
 
   Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposing = true;
+    _awaitingStartResult = false;
+    _completeInitializationError(
+      StateError('Proxy controller was disposed during initialization.'),
+      StackTrace.current,
+    );
+    final isolate = _isolate;
+    final shutdown = _shutdownCompleter ?? Completer<void>();
+    _shutdownCompleter = shutdown;
     _commandPort?.send({'type': 'shutdown'});
-    _isolate?.kill(priority: Isolate.immediate);
-    _receivePort?.close();
+    if (isolate != null) {
+      try {
+        await shutdown.future.timeout(const Duration(seconds: 2));
+      } on TimeoutException {
+        isolate.kill(priority: Isolate.immediate);
+        try {
+          await shutdown.future.timeout(const Duration(seconds: 1));
+        } on TimeoutException {
+          if (!shutdown.isCompleted) {
+            shutdown.complete();
+          }
+        }
+      }
+    }
+    await _resetIsolateConnection();
+    _disposed = true;
     await _states.close();
     await _activity.close();
   }
@@ -231,7 +293,7 @@ class KickProxyController {
       case 'ready':
         _commandPort = message['port'] as SendPort?;
         _currentState = _currentState.copyWith(ready: true);
-        _states.add(_currentState);
+        _emitState(_currentState);
         final readyCompleter = _readyCompleter;
         if (readyCompleter != null && !readyCompleter.isCompleted) {
           readyCompleter.complete();
@@ -243,7 +305,7 @@ class KickProxyController {
           (message['payload'] as Map).cast<String, Object?>(),
         );
         _currentState = state;
-        _states.add(_currentState);
+        _emitState(_currentState);
         _handleStatusTransition(previousState, state);
         break;
       case 'log':
@@ -263,7 +325,7 @@ class KickProxyController {
             rawPayload: payload['raw_payload'] as String?,
           ),
         );
-        _activity.add('logs');
+        _emitActivity('logs');
         break;
       case 'accounts_runtime_updated':
         final accounts = ((message['payload'] as List?) ?? const [])
@@ -271,7 +333,7 @@ class KickProxyController {
             .map((item) => AccountProfile.fromDatabaseMap(item.cast<String, Object?>()))
             .toList(growable: false);
         await _accountsRepository.mergeRuntimeState(accounts);
-        _activity.add('accounts');
+        _emitActivity('accounts');
         break;
       case 'analytics':
         final payload = (message['payload'] as Map).cast<String, Object?>();
@@ -295,6 +357,37 @@ class KickProxyController {
     }
   }
 
+  void _handleIsolateError(dynamic message) {
+    _pendingIsolateFailure = _formatIsolateFailure(message);
+  }
+
+  Future<void> _handleIsolateExit(dynamic _) async {
+    final failureMessage =
+        _pendingIsolateFailure ??
+        (_disposing ? null : 'Proxy runtime stopped unexpectedly. Restart the proxy.');
+    _pendingIsolateFailure = null;
+    await _resetIsolateConnection();
+    _completeInitializationError(
+      StateError(failureMessage ?? 'Proxy isolate exited before initialization completed.'),
+      StackTrace.current,
+    );
+    final shutdownCompleter = _shutdownCompleter;
+    if (shutdownCompleter != null && !shutdownCompleter.isCompleted) {
+      shutdownCompleter.complete();
+    }
+    if (_disposing) {
+      return;
+    }
+    _lastSignature = null;
+    _currentState = _currentState.copyWith(
+      ready: false,
+      running: false,
+      clearStartedAt: true,
+      lastError: failureMessage,
+    );
+    _emitState(_currentState);
+  }
+
   Future<bool> _syncExistingAndroidRuntime(AppSettings settings) async {
     if (!Platform.isAndroid || !await AndroidForegroundRuntime.isRunning()) {
       return false;
@@ -313,7 +406,7 @@ class KickProxyController {
       activeAccounts: payload['active_accounts'] as int? ?? 0,
       clearLastError: true,
     );
-    _states.add(_currentState);
+    _emitState(_currentState);
     return true;
   }
 
@@ -398,6 +491,80 @@ class KickProxyController {
       return 'permission_denied';
     }
     return 'runtime_error';
+  }
+
+  void _emitState(ProxyRuntimeState state) {
+    if (_states.isClosed) {
+      return;
+    }
+    _states.add(state);
+  }
+
+  void _emitActivity(String value) {
+    if (_activity.isClosed) {
+      return;
+    }
+    _activity.add(value);
+  }
+
+  void _completeInitializationError(Object error, StackTrace stackTrace) {
+    final readyCompleter = _readyCompleter;
+    if (readyCompleter != null && !readyCompleter.isCompleted) {
+      readyCompleter.completeError(error, stackTrace);
+    }
+    _readyCompleter = null;
+  }
+
+  Future<void> _resetIsolateConnection() async {
+    _commandPort = null;
+    _isolate = null;
+    _lastSignature = null;
+
+    await _receiveSubscription?.cancel();
+    await _errorSubscription?.cancel();
+    await _exitSubscription?.cancel();
+    _receiveSubscription = null;
+    _errorSubscription = null;
+    _exitSubscription = null;
+
+    _receivePort?.close();
+    _errorPort?.close();
+    _exitPort?.close();
+    _receivePort = null;
+    _errorPort = null;
+    _exitPort = null;
+  }
+
+  String _formatIsolateFailure(dynamic message) {
+    if (message is List && message.isNotEmpty) {
+      final error = message.first;
+      final stackTrace = message.length > 1 ? message[1] : null;
+      final errorText = error?.toString().trim();
+      final stackText = stackTrace?.toString().trim();
+      if (errorText != null && errorText.isNotEmpty) {
+        if (stackText != null && stackText.isNotEmpty) {
+          return '$errorText\n$stackText';
+        }
+        return errorText;
+      }
+    }
+    final value = message?.toString().trim();
+    return value == null || value.isEmpty
+        ? 'Proxy isolate exited before initialization completed.'
+        : value;
+  }
+
+  static Future<Isolate> _defaultSpawnIsolate(
+    SendPort messagePort,
+    SendPort errorPort,
+    SendPort exitPort,
+  ) {
+    return Isolate.spawn(
+      proxyIsolateMain,
+      messagePort,
+      onError: errorPort,
+      onExit: exitPort,
+    );
   }
 }
 

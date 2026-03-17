@@ -252,6 +252,7 @@ class _ProxyConfigurationSyncState extends ConsumerState<ProxyConfigurationSync>
   ProviderSubscription<AsyncValue<List<AccountProfile>>>? _accountsSub;
   ProviderSubscription<AsyncValue<String>>? _activitySub;
   Future<void>? _pendingSync;
+  bool _syncRequested = false;
   bool _suppressAccountsSync = false;
 
   @override
@@ -287,13 +288,31 @@ class _ProxyConfigurationSyncState extends ConsumerState<ProxyConfigurationSync>
   }
 
   void _scheduleSync() {
+    _syncRequested = true;
     _pendingSync ??= Future<void>.microtask(() async {
-      final settings = ref.read(settingsControllerProvider).asData?.value;
-      final accounts = ref.read(accountsControllerProvider).asData?.value;
-      if (settings != null && accounts != null) {
-        await ref.read(proxyControllerProvider).configure(settings: settings, accounts: accounts);
+      try {
+        while (_syncRequested) {
+          _syncRequested = false;
+          final settings = ref.read(settingsControllerProvider).asData?.value;
+          final accounts = ref.read(accountsControllerProvider).asData?.value;
+          try {
+            if (settings != null && accounts != null) {
+              await ref.read(proxyControllerProvider).configure(settings: settings, accounts: accounts);
+            }
+          } catch (error, stackTrace) {
+            FlutterError.reportError(
+              FlutterErrorDetails(
+                exception: error,
+                stack: stackTrace,
+                library: 'kick',
+                context: ErrorDescription('while synchronizing proxy configuration'),
+              ),
+            );
+          }
+        }
+      } finally {
+        _pendingSync = null;
       }
-      _pendingSync = null;
     });
   }
 
