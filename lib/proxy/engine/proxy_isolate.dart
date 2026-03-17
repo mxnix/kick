@@ -1170,13 +1170,10 @@ class _ProxyIsolateHost {
   Map<String, Object?> _responseSummaryPayload(Map<String, Object?> payload) {
     final preview = OpenAiResponseMapper.currentText(payload);
     final reasoningText = OpenAiResponseMapper.currentReasoningText(payload);
-    final finishReason = _extractPayloadFinishReason(payload);
+    final finishReason = OpenAiResponseMapper.currentFinishReason(payload);
     final toolCallCount = OpenAiResponseMapper.currentToolCallCount(payload);
-    final finishReasonEntry = finishReason == null
-        ? const <String, Object?>{}
-        : <String, Object?>{'finish_reason': finishReason};
     return {
-      ...finishReasonEntry,
+      'finish_reason': finishReason,
       if (preview.isNotEmpty) 'output_text_chars': preview.length,
       if (reasoningText.isNotEmpty) 'reasoning_text_chars': reasoningText.length,
       if (toolCallCount > 0) 'tool_call_count': toolCallCount,
@@ -1448,22 +1445,6 @@ class _ProxyIsolateHost {
       requestedHeaders: requestedHeaders,
       requestedPrivateNetwork: requestedPrivateNetwork,
     );
-  }
-
-  String? _extractPayloadFinishReason(Map<String, Object?> payload) {
-    final response = ((payload['response'] as Map?) ?? payload).cast<String, Object?>();
-    final candidates = (response['candidates'] as List?) ?? const [];
-    if (candidates.isEmpty || candidates.first is! Map) {
-      return null;
-    }
-    final candidate = (candidates.first as Map).cast<String, Object?>();
-    final finishReason = candidate['finishReason'] as String?;
-    return switch (finishReason) {
-      'MAX_TOKENS' => 'length',
-      'SAFETY' || 'RECITATION' => 'content_filter',
-      'STOP' => 'stop',
-      _ => finishReason?.toLowerCase(),
-    };
   }
 
   void _publishStatus() {

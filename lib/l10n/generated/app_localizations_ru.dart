@@ -405,26 +405,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Анонимная статистика использования. Помогает делать KiCk лучше.';
 
   @override
-  String get aboutDiagnosticsTitle => 'Диагностика';
-
-  @override
-  String get aboutDiagnosticsMessage =>
-      'Отправить тестовое событие в GlitchTip для проверки интеграции?';
-
-  @override
-  String get aboutDiagnosticsDisabledMessage =>
-      'GlitchTip отключен в этой сборке. Пересоберите приложение с SENTRY_DSN.';
-
-  @override
-  String get aboutDiagnosticsSendGlitchTipButton => 'Отправить в GlitchTip';
-
-  @override
-  String get aboutDiagnosticsSentMessage => 'Тестовое событие GlitchTip отправлено';
-
-  @override
-  String get aboutDiagnosticsFailedMessage => 'Не удалось отправить тестовое событие GlitchTip';
-
-  @override
   String get copyProxyEndpointTooltip => 'Скопировать URL прокси';
 
   @override

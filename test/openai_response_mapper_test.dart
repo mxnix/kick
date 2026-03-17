@@ -252,6 +252,127 @@ void main() {
     );
   });
 
+  test('chat completion surfaces prompt-filtered empty Gemini responses', () {
+    final payload = <String, Object?>{
+      'response': {
+        'promptFeedback': {
+          'blockReason': 'SAFETY',
+          'blockReasonMessage': 'Prompt blocked by safety filters.',
+        },
+      },
+    };
+
+    final response = OpenAiResponseMapper.toChatCompletion(
+      requestId: 'req_prompt_blocked',
+      model: 'gemini-3.1-pro-preview',
+      payload: payload,
+    );
+
+    final choice = ((response['choices'] as List).single as Map).cast<String, Object?>();
+    final message = (choice['message'] as Map).cast<String, Object?>();
+
+    expect(
+      message['content'],
+      '[Upstream blocked the prompt before generating a response. Prompt blocked by safety filters.]',
+    );
+    expect(choice['finish_reason'], 'content_filter');
+  });
+
+  test('chat stream emits fallback text for prompt-filtered empty responses', () {
+    final payload = <String, Object?>{
+      'response': {
+        'promptFeedback': {'blockReason': 'SAFETY'},
+      },
+      'final_chunk': true,
+    };
+
+    final events = OpenAiResponseMapper.toChatStreamDeltas(
+      requestId: 'req_prompt_blocked_stream',
+      model: 'gemini-3-flash-preview',
+      payload: payload,
+      includeRole: true,
+      previousText: '',
+      previousReasoningText: '',
+      previousToolCallCount: 0,
+    );
+
+    expect(((events[1]['choices'] as List).single as Map)['delta'], {
+      'content': '[Upstream blocked the prompt before generating a response.]',
+    });
+    expect(((events.last['choices'] as List).single as Map)['finish_reason'], 'content_filter');
+  });
+
+  test('responses object falls back when Gemini returns no candidates at all', () {
+    final payload = <String, Object?>{
+      'response': {
+        'usageMetadata': {'promptTokenCount': 7, 'candidatesTokenCount': 0, 'totalTokenCount': 7},
+      },
+    };
+
+    final response = OpenAiResponseMapper.toResponsesObject(
+      requestId: 'resp_empty',
+      model: 'gemini-3-flash-preview',
+      payload: payload,
+    );
+
+    final output = (response['output'] as List).cast<Map>();
+    final message = output.singleWhere((item) => item['type'] == 'message').cast<String, Object?>();
+    final content = ((message['content'] as List).single as Map).cast<String, Object?>();
+
+    expect(content['text'], '[Upstream returned an empty response. Please retry.]');
+  });
+
+  test('chat completion maps blocklist empty candidates to content filter', () {
+    final payload = <String, Object?>{
+      'response': {
+        'candidates': [
+          {
+            'content': {'parts': const []},
+            'finishReason': 'BLOCKLIST',
+          },
+        ],
+      },
+    };
+
+    final response = OpenAiResponseMapper.toChatCompletion(
+      requestId: 'req_blocklist',
+      model: 'gemini-3-flash-preview',
+      payload: payload,
+    );
+
+    final choice = ((response['choices'] as List).single as Map).cast<String, Object?>();
+    final message = (choice['message'] as Map).cast<String, Object?>();
+
+    expect(message['content'], '[Upstream returned no text because the response was filtered.]');
+    expect(choice['finish_reason'], 'content_filter');
+  });
+
+  test('chat completion uses Gemini finishMessage when empty candidate includes one', () {
+    final payload = <String, Object?>{
+      'response': {
+        'candidates': [
+          {
+            'content': {'parts': const []},
+            'finishReason': 'SAFETY',
+            'finishMessage': 'Blocked due to policy.',
+          },
+        ],
+      },
+    };
+
+    final response = OpenAiResponseMapper.toChatCompletion(
+      requestId: 'req_finish_message',
+      model: 'gemini-3-flash-preview',
+      payload: payload,
+    );
+
+    final choice = ((response['choices'] as List).single as Map).cast<String, Object?>();
+    final message = (choice['message'] as Map).cast<String, Object?>();
+
+    expect(message['content'], '[Upstream returned no text. Blocked due to policy.]');
+    expect(choice['finish_reason'], 'content_filter');
+  });
+
   test('responses stream keeps a stable message id across chunks', () {
     final firstPayload = <String, Object?>{
       'response': {

@@ -1,7 +1,6 @@
 import 'dart:ui' show lerpDouble;
 
 import 'package:dynamic_color/dynamic_color.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class KickThemeBootstrapData {
@@ -198,50 +197,48 @@ class KickThemeData {
       visualDensity: VisualDensity.standard,
     );
     const tokens = KickThemeTokens.fallback;
-    final systemFontSpec = _systemFontSpec();
-    final seededTextTheme = _applySystemFontSpec(base.textTheme, systemFontSpec);
 
-    final textTheme = seededTextTheme.copyWith(
-      displayLarge: seededTextTheme.displayLarge?.copyWith(
+    final textTheme = base.textTheme.copyWith(
+      displayLarge: base.textTheme.displayLarge?.copyWith(
         fontWeight: FontWeight.w700,
         letterSpacing: -1.2,
         height: 0.98,
       ),
-      displayMedium: seededTextTheme.displayMedium?.copyWith(
+      displayMedium: base.textTheme.displayMedium?.copyWith(
         fontWeight: FontWeight.w700,
         letterSpacing: -0.9,
         height: 1,
       ),
-      displaySmall: seededTextTheme.displaySmall?.copyWith(
+      displaySmall: base.textTheme.displaySmall?.copyWith(
         fontWeight: FontWeight.w700,
         letterSpacing: -0.6,
         height: 1.02,
       ),
-      headlineLarge: seededTextTheme.headlineLarge?.copyWith(
+      headlineLarge: base.textTheme.headlineLarge?.copyWith(
         fontWeight: FontWeight.w600,
         letterSpacing: -0.4,
         height: 1.06,
       ),
-      headlineMedium: seededTextTheme.headlineMedium?.copyWith(
+      headlineMedium: base.textTheme.headlineMedium?.copyWith(
         fontWeight: FontWeight.w600,
         letterSpacing: -0.2,
         height: 1.08,
       ),
-      titleLarge: seededTextTheme.titleLarge?.copyWith(
+      titleLarge: base.textTheme.titleLarge?.copyWith(
         fontWeight: FontWeight.w600,
         letterSpacing: -0.1,
       ),
-      titleMedium: seededTextTheme.titleMedium?.copyWith(
+      titleMedium: base.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w500,
         letterSpacing: -0.1,
       ),
-      bodyLarge: seededTextTheme.bodyLarge?.copyWith(height: 1.45),
-      bodyMedium: seededTextTheme.bodyMedium?.copyWith(height: 1.4),
-      labelLarge: seededTextTheme.labelLarge?.copyWith(
+      bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.45),
+      bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.4),
+      labelLarge: base.textTheme.labelLarge?.copyWith(
         fontWeight: FontWeight.w600,
         letterSpacing: 0.24,
       ),
-      labelMedium: seededTextTheme.labelMedium?.copyWith(
+      labelMedium: base.textTheme.labelMedium?.copyWith(
         fontWeight: FontWeight.w500,
         letterSpacing: 0.16,
       ),
@@ -459,60 +456,6 @@ class KickThemeData {
   static Color _layeredColor(Color tint, Color surface, double opacity) {
     return Color.alphaBlend(tint.withValues(alpha: opacity), surface);
   }
-
-  static _SystemFontSpec _systemFontSpec() {
-    if (kIsWeb) {
-      return const _SystemFontSpec();
-    }
-
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return const _SystemFontSpec(
-          family: 'Google Sans Text',
-          fallback: ['Google Sans', 'sans-serif', 'Roboto'],
-        );
-      default:
-        return const _SystemFontSpec();
-    }
-  }
-
-  static TextTheme _applySystemFontSpec(TextTheme textTheme, _SystemFontSpec spec) {
-    if (spec.family == null && spec.fallback.isEmpty) {
-      return textTheme;
-    }
-
-    return textTheme.copyWith(
-      displayLarge: _applySystemFontToStyle(textTheme.displayLarge, spec),
-      displayMedium: _applySystemFontToStyle(textTheme.displayMedium, spec),
-      displaySmall: _applySystemFontToStyle(textTheme.displaySmall, spec),
-      headlineLarge: _applySystemFontToStyle(textTheme.headlineLarge, spec),
-      headlineMedium: _applySystemFontToStyle(textTheme.headlineMedium, spec),
-      headlineSmall: _applySystemFontToStyle(textTheme.headlineSmall, spec),
-      titleLarge: _applySystemFontToStyle(textTheme.titleLarge, spec),
-      titleMedium: _applySystemFontToStyle(textTheme.titleMedium, spec),
-      titleSmall: _applySystemFontToStyle(textTheme.titleSmall, spec),
-      bodyLarge: _applySystemFontToStyle(textTheme.bodyLarge, spec),
-      bodyMedium: _applySystemFontToStyle(textTheme.bodyMedium, spec),
-      bodySmall: _applySystemFontToStyle(textTheme.bodySmall, spec),
-      labelLarge: _applySystemFontToStyle(textTheme.labelLarge, spec),
-      labelMedium: _applySystemFontToStyle(textTheme.labelMedium, spec),
-      labelSmall: _applySystemFontToStyle(textTheme.labelSmall, spec),
-    );
-  }
-
-  static TextStyle? _applySystemFontToStyle(TextStyle? style, _SystemFontSpec spec) {
-    return style?.copyWith(
-      fontFamily: spec.family,
-      fontFamilyFallback: spec.fallback.isEmpty ? null : spec.fallback,
-    );
-  }
-}
-
-class _SystemFontSpec {
-  const _SystemFontSpec({this.family, this.fallback = const []});
-
-  final String? family;
-  final List<String> fallback;
 }
 
 class KickSchemes {

@@ -830,42 +830,6 @@ abstract class AppLocalizations {
   /// **'Анонимная статистика использования. Помогает делать KiCk лучше.'**
   String get aboutAnalyticsSubtitle;
 
-  /// No description provided for @aboutDiagnosticsTitle.
-  ///
-  /// In ru, this message translates to:
-  /// **'Диагностика'**
-  String get aboutDiagnosticsTitle;
-
-  /// No description provided for @aboutDiagnosticsMessage.
-  ///
-  /// In ru, this message translates to:
-  /// **'Отправить тестовое событие в GlitchTip для проверки интеграции?'**
-  String get aboutDiagnosticsMessage;
-
-  /// No description provided for @aboutDiagnosticsDisabledMessage.
-  ///
-  /// In ru, this message translates to:
-  /// **'GlitchTip отключен в этой сборке. Пересоберите приложение с SENTRY_DSN.'**
-  String get aboutDiagnosticsDisabledMessage;
-
-  /// No description provided for @aboutDiagnosticsSendGlitchTipButton.
-  ///
-  /// In ru, this message translates to:
-  /// **'Отправить в GlitchTip'**
-  String get aboutDiagnosticsSendGlitchTipButton;
-
-  /// No description provided for @aboutDiagnosticsSentMessage.
-  ///
-  /// In ru, this message translates to:
-  /// **'Тестовое событие GlitchTip отправлено'**
-  String get aboutDiagnosticsSentMessage;
-
-  /// No description provided for @aboutDiagnosticsFailedMessage.
-  ///
-  /// In ru, this message translates to:
-  /// **'Не удалось отправить тестовое событие GlitchTip'**
-  String get aboutDiagnosticsFailedMessage;
-
   /// No description provided for @copyProxyEndpointTooltip.
   ///
   /// In ru, this message translates to:

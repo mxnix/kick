@@ -3,6 +3,19 @@ import 'dart:math';
 
 class OpenAiResponseMapper {
   static const int _minimumContinuationOverlap = 6;
+  static const String _promptBlockedFallbackText =
+      'Upstream blocked the prompt before generating a response.';
+  static const Set<String> _contentFilteredFinishReasons = {
+    'SAFETY',
+    'RECITATION',
+    'BLOCKLIST',
+    'PROHIBITED_CONTENT',
+    'SPII',
+    'MODEL_ARMOR',
+    'IMAGE_SAFETY',
+    'IMAGE_PROHIBITED_CONTENT',
+    'IMAGE_RECITATION',
+  };
 
   static Map<String, Object?> toChatCompletion({
     required String requestId,
@@ -408,6 +421,10 @@ class OpenAiResponseMapper {
     return _extractPrimaryChoice(payload).reasoningText;
   }
 
+  static String currentFinishReason(Map<String, Object?> payload) {
+    return _extractPrimaryChoice(payload).finishReason;
+  }
+
   static int currentToolCallCount(Map<String, Object?> payload) {
     return _extractPrimaryChoice(payload).toolCalls.length;
   }
@@ -432,14 +449,7 @@ class OpenAiResponseMapper {
         (response['usageMetadata'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
     return _ExtractedResponse(
       choices: extractedChoices.isEmpty
-          ? const [
-              _ExtractedChoice(
-                text: '',
-                reasoningText: '',
-                toolCalls: <Map<String, Object?>>[],
-                finishReason: 'stop',
-              ),
-            ]
+          ? [_fallbackChoiceForEmptyResponse(response)]
           : extractedChoices,
       usage: {
         'prompt_tokens': usageMetadata['promptTokenCount'] ?? 0,
@@ -449,6 +459,35 @@ class OpenAiResponseMapper {
         'prompt_tokens_details': {'cached_tokens': usageMetadata['cachedContentTokenCount'] ?? 0},
         'completion_tokens_details': {'reasoning_tokens': usageMetadata['thoughtsTokenCount'] ?? 0},
       },
+    );
+  }
+
+  static _ExtractedChoice _fallbackChoiceForEmptyResponse(Map<String, Object?> response) {
+    final promptFeedback =
+        (response['promptFeedback'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
+    if (promptFeedback.isNotEmpty) {
+      final blockReasonMessage = (promptFeedback['blockReasonMessage'] as String?)?.trim();
+      if (blockReasonMessage != null && blockReasonMessage.isNotEmpty) {
+        return _ExtractedChoice(
+          text: '[$_promptBlockedFallbackText $blockReasonMessage]',
+          reasoningText: '',
+          toolCalls: const <Map<String, Object?>>[],
+          finishReason: 'content_filter',
+        );
+      }
+      return const _ExtractedChoice(
+        text: '[$_promptBlockedFallbackText]',
+        reasoningText: '',
+        toolCalls: <Map<String, Object?>>[],
+        finishReason: 'content_filter',
+      );
+    }
+
+    return const _ExtractedChoice(
+      text: '[Upstream returned an empty response. Please retry.]',
+      reasoningText: '',
+      toolCalls: <Map<String, Object?>>[],
+      finishReason: 'stop',
     );
   }
 
@@ -505,7 +544,10 @@ class OpenAiResponseMapper {
         text.trim().isEmpty &&
         reasoningText.trim().isEmpty &&
         toolCalls.isEmpty) {
-      text = _emptyResponseFallbackText(finishReason);
+      text = _emptyResponseFallbackText(
+        finishReason,
+        finishMessage: (candidate['finishMessage'] as String?)?.trim(),
+      );
     }
 
     return _ExtractedChoice(
@@ -521,18 +563,19 @@ class OpenAiResponseMapper {
   }
 
   static String _mapFinishReason(String? finishReason) {
-    switch (finishReason) {
-      case 'MAX_TOKENS':
-        return 'length';
-      case 'SAFETY':
-      case 'RECITATION':
-        return 'content_filter';
-      default:
-        return 'stop';
+    if (finishReason == 'MAX_TOKENS') {
+      return 'length';
     }
+    if (finishReason != null && _contentFilteredFinishReasons.contains(finishReason)) {
+      return 'content_filter';
+    }
+    return 'stop';
   }
 
-  static String _emptyResponseFallbackText(String finishReason) {
+  static String _emptyResponseFallbackText(String finishReason, {String? finishMessage}) {
+    if (finishMessage != null && finishMessage.isNotEmpty) {
+      return '[Upstream returned no text. $finishMessage]';
+    }
     switch (finishReason) {
       case 'length':
         return '[Upstream returned no text before reaching the token limit.]';
