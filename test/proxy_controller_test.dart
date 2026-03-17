@@ -87,6 +87,35 @@ void main() {
     expect(harness.controller.currentState.lastError, isNull);
   });
 
+  test('ignores repeated start requests while a start is already pending', () async {
+    final harness = await _ControllerHarness.create(
+      spawnIsolate: (messagePort, errorPort, exitPort) {
+        return Isolate.spawn(
+          _delayedStartCountingIsolate,
+          messagePort,
+          onError: errorPort,
+          onExit: exitPort,
+        );
+      },
+    );
+    addTearDown(harness.dispose);
+    final settings = AppSettings.defaults(
+      apiKey: 'expected-key',
+    ).copyWith(port: 0, androidBackgroundRuntime: false);
+
+    await harness.controller.configure(settings: settings, accounts: const <AccountProfile>[]);
+
+    await harness.controller.start();
+    expect(harness.controller.currentState.startPending, isTrue);
+
+    await harness.controller.start();
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+
+    expect(harness.controller.currentState.running, isTrue);
+    expect(harness.controller.currentState.requestCount, 1);
+    expect(harness.controller.currentState.startPending, isFalse);
+  });
+
   test('emits compatibility issues and proxy session summaries from isolate analytics', () async {
     final transport = _RecordingAnalyticsTransport();
     final analytics = KickAnalytics(
@@ -257,6 +286,57 @@ Future<void> _analyticsSessionIsolate(SendPort sendPort) async {
             'request_count': 3,
             'active_accounts': 2,
             'healthy_accounts': 1,
+            'last_error': null,
+          },
+        });
+        break;
+      case 'shutdown':
+        commands.close();
+        break;
+    }
+  }
+}
+
+@pragma('vm:entry-point')
+Future<void> _delayedStartCountingIsolate(SendPort sendPort) async {
+  final commands = ReceivePort();
+  var startCount = 0;
+  sendPort.send({'type': 'ready', 'port': commands.sendPort});
+  await for (final message in commands) {
+    if (message is! Map) {
+      continue;
+    }
+    switch (message['type']) {
+      case 'configure':
+        sendPort.send({
+          'type': 'status',
+          'payload': {
+            'ready': true,
+            'running': false,
+            'bound_host': '127.0.0.1',
+            'port': 3000,
+            'started_at': null,
+            'request_count': startCount,
+            'active_accounts': 0,
+            'healthy_accounts': 0,
+            'last_error': null,
+          },
+        });
+        break;
+      case 'start':
+        startCount += 1;
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        sendPort.send({
+          'type': 'status',
+          'payload': {
+            'ready': true,
+            'running': true,
+            'bound_host': '127.0.0.1',
+            'port': 3000,
+            'started_at': DateTime.now().toIso8601String(),
+            'request_count': startCount,
+            'active_accounts': 0,
+            'healthy_accounts': 0,
             'last_error': null,
           },
         });

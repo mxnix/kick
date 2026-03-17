@@ -70,13 +70,42 @@ void main() {
     expect(find.byType(AppUpdateBanner), findsNothing);
     expect(find.text('Доступно обновление'), findsNothing);
   });
+
+  testWidgets('disables the start button while proxy startup is pending', (tester) async {
+    final bootstrap = await _createBootstrap();
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap.dispose();
+    });
+
+    await tester.pumpWidget(
+      _TestApp(
+        bootstrap: bootstrap,
+        updateInfo: const AppUpdateInfo(
+          currentVersion: '1.0.2',
+          latestVersion: '1.0.2',
+          releaseUrl: 'https://example.com/releases/tag/v1.0.2',
+          hasUpdate: false,
+        ),
+        proxyState: ProxyRuntimeState.initial().copyWith(startPending: true),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final button = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(button.onPressed, isNull);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
 }
 
 class _TestApp extends StatelessWidget {
-  const _TestApp({required this.bootstrap, required this.updateInfo});
+  _TestApp({required this.bootstrap, required this.updateInfo, ProxyRuntimeState? proxyState})
+    : proxyState = proxyState ?? ProxyRuntimeState.initial();
 
   final AppBootstrap bootstrap;
   final AppUpdateInfo updateInfo;
+  final ProxyRuntimeState proxyState;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +113,7 @@ class _TestApp extends StatelessWidget {
       overrides: [
         appBootstrapProvider.overrideWithValue(bootstrap),
         clockTickerProvider.overrideWith((ref) => Stream.value(DateTime(2026, 3, 17))),
-        proxyStatusProvider.overrideWith((ref) => Stream.value(ProxyRuntimeState.initial())),
+        proxyStatusProvider.overrideWith((ref) => Stream.value(proxyState)),
         appUpdateQueryProvider.overrideWith((ref) => updateInfo),
       ],
       child: MaterialApp(

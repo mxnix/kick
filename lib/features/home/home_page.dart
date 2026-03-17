@@ -52,6 +52,7 @@ class HomePage extends ConsumerWidget {
           const SizedBox(height: 28),
           _ProxyStatusHero(
             running: proxyStatus.running,
+            startPending: proxyStatus.startPending,
             showInlineStatus: _showInlineStatusForCurrentPlatform(),
             proxyEndpoint: proxyEndpoint,
             apiKeyValue: apiKeyValue,
@@ -100,6 +101,7 @@ class HomePage extends ConsumerWidget {
 class _ProxyStatusHero extends StatelessWidget {
   const _ProxyStatusHero({
     required this.running,
+    required this.startPending,
     required this.showInlineStatus,
     required this.proxyEndpoint,
     required this.apiKeyValue,
@@ -113,6 +115,7 @@ class _ProxyStatusHero extends StatelessWidget {
   });
 
   final bool running;
+  final bool startPending;
   final bool showInlineStatus;
   final String proxyEndpoint;
   final String apiKeyValue;
@@ -122,7 +125,7 @@ class _ProxyStatusHero extends StatelessWidget {
   final String copyApiKeyTooltip;
   final VoidCallback onCopyProxyEndpoint;
   final VoidCallback? onCopyApiKey;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -193,8 +196,13 @@ class _ProxyStatusHero extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: onPressed,
-              icon: Icon(running ? Icons.pause_rounded : Icons.play_arrow_rounded),
+              onPressed: startPending ? null : onPressed,
+              icon: startPending
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(running ? Icons.pause_rounded : Icons.play_arrow_rounded),
               label: Text(running ? l10n.stopProxyButton : l10n.startProxyButton),
             ),
           ),

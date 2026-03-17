@@ -22,6 +22,7 @@ class ProxyRuntimeState {
   const ProxyRuntimeState({
     required this.ready,
     required this.running,
+    required this.startPending,
     required this.boundHost,
     required this.port,
     required this.startedAt,
@@ -35,6 +36,7 @@ class ProxyRuntimeState {
     return const ProxyRuntimeState(
       ready: false,
       running: false,
+      startPending: false,
       boundHost: '127.0.0.1',
       port: 3000,
       startedAt: null,
@@ -47,6 +49,7 @@ class ProxyRuntimeState {
 
   final bool ready;
   final bool running;
+  final bool startPending;
   final String boundHost;
   final int port;
   final DateTime? startedAt;
@@ -60,6 +63,7 @@ class ProxyRuntimeState {
   ProxyRuntimeState copyWith({
     bool? ready,
     bool? running,
+    bool? startPending,
     String? boundHost,
     int? port,
     DateTime? startedAt,
@@ -73,6 +77,7 @@ class ProxyRuntimeState {
     return ProxyRuntimeState(
       ready: ready ?? this.ready,
       running: running ?? this.running,
+      startPending: startPending ?? this.startPending,
       boundHost: boundHost ?? this.boundHost,
       port: port ?? this.port,
       startedAt: clearStartedAt ? null : (startedAt ?? this.startedAt),
@@ -87,6 +92,7 @@ class ProxyRuntimeState {
     return ProxyRuntimeState(
       ready: json['ready'] as bool? ?? false,
       running: json['running'] as bool? ?? false,
+      startPending: json['start_pending'] as bool? ?? false,
       boundHost: json['bound_host'] as String? ?? '127.0.0.1',
       port: json['port'] as int? ?? 3000,
       startedAt: DateTime.tryParse(json['started_at'] as String? ?? ''),
@@ -242,39 +248,70 @@ class KickProxyController {
   }
 
   Future<void> start() async {
-    await initialize();
-    if (_lastSettings != null && _lastSignature == null) {
-      await configure(settings: _lastSettings!, accounts: _lastAccounts);
-    }
-    _awaitingStartResult = true;
-    final settings = _lastSettings;
-    if (settings != null && await _syncExistingAndroidRuntime(settings)) {
-      _awaitingStartResult = false;
-      unawaited(
-        _analytics.trackProxyStarted(
-          allowLan: settings.allowLan,
-          activeAccounts: _currentState.activeAccounts,
-        ),
-      );
-      if (settings.androidBackgroundRuntime) {
-        await AndroidForegroundRuntime.ensureRunning();
-      }
+    if (_awaitingStartResult) {
       return;
     }
-    if (settings != null &&
-        settings.androidBackgroundRuntime &&
-        await AndroidForegroundRuntime.isRunning()) {
-      await AndroidForegroundRuntime.stopIfRunning();
-      await Future<void>.delayed(const Duration(milliseconds: 250));
+
+    _awaitingStartResult = true;
+    if (!_currentState.running) {
+      _setStartPending(true);
     }
-    _commandPort?.send({'type': 'start'});
-    if (settings?.androidBackgroundRuntime == true) {
-      await AndroidForegroundRuntime.ensureRunning();
+    var waitingForRuntimeStatus = false;
+    try {
+      await initialize();
+      if (_lastSettings != null && _lastSignature == null) {
+        await configure(settings: _lastSettings!, accounts: _lastAccounts);
+      }
+
+      final settings = _lastSettings;
+      final wasRunningBeforeSync = _currentState.running;
+      if (settings != null && await _syncExistingAndroidRuntime(settings)) {
+        _awaitingStartResult = false;
+        _setStartPending(false);
+        if (!wasRunningBeforeSync) {
+          unawaited(
+            _analytics.trackProxyStarted(
+              allowLan: settings.allowLan,
+              activeAccounts: _currentState.activeAccounts,
+            ),
+          );
+        }
+        if (settings.androidBackgroundRuntime) {
+          await AndroidForegroundRuntime.ensureRunning();
+        }
+        return;
+      }
+      if (_currentState.running) {
+        _awaitingStartResult = false;
+        _setStartPending(false);
+        if (settings?.androidBackgroundRuntime == true) {
+          await AndroidForegroundRuntime.ensureRunning();
+        }
+        return;
+      }
+      if (settings != null &&
+          settings.androidBackgroundRuntime &&
+          await AndroidForegroundRuntime.isRunning()) {
+        await AndroidForegroundRuntime.stopIfRunning();
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
+      waitingForRuntimeStatus = true;
+      _commandPort?.send({'type': 'start'});
+      if (settings?.androidBackgroundRuntime == true) {
+        await AndroidForegroundRuntime.ensureRunning();
+      }
+    } catch (_) {
+      if (!waitingForRuntimeStatus) {
+        _awaitingStartResult = false;
+        _setStartPending(false);
+      }
+      rethrow;
     }
   }
 
   Future<void> stop() async {
     _awaitingStartResult = false;
+    _setStartPending(false);
     _commandPort?.send({'type': 'stop'});
     await AndroidForegroundRuntime.stopIfRunning();
   }
@@ -331,8 +368,8 @@ class KickProxyController {
         break;
       case 'status':
         final previousState = _currentState;
-        final state = ProxyRuntimeState.fromJson(
-          (message['payload'] as Map).cast<String, Object?>(),
+        final state = _withDerivedStateFlags(
+          ProxyRuntimeState.fromJson((message['payload'] as Map).cast<String, Object?>()),
         );
         _currentState = state;
         _emitState(_currentState);
@@ -432,6 +469,7 @@ class KickProxyController {
     _currentState = _currentState.copyWith(
       ready: false,
       running: false,
+      startPending: false,
       clearStartedAt: true,
       requestCount: 0,
       lastError: failureMessage,
@@ -452,6 +490,7 @@ class KickProxyController {
     _currentState = _currentState.copyWith(
       ready: true,
       running: true,
+      startPending: false,
       boundHost: settings.allowLan ? '0.0.0.0' : settings.host,
       port: settings.port,
       activeAccounts: payload['active_accounts'] as int? ?? 0,
@@ -663,6 +702,20 @@ class KickProxyController {
       return;
     }
     _activity.add(value);
+  }
+
+  ProxyRuntimeState _withDerivedStateFlags(ProxyRuntimeState state) {
+    return state.copyWith(
+      startPending: _awaitingStartResult && !state.running && state.lastError == null,
+    );
+  }
+
+  void _setStartPending(bool value) {
+    if (_currentState.startPending == value) {
+      return;
+    }
+    _currentState = _currentState.copyWith(startPending: value);
+    _emitState(_currentState);
   }
 
   void _completeInitializationError(Object error, StackTrace stackTrace) {
