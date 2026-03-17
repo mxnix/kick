@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import '../../l10n/kick_localizations.dart';
@@ -10,6 +11,10 @@ String formatUserFacingError(KickLocalizations l10n, Object error) {
 
   if (error is StateError) {
     return formatUserFacingMessage(l10n, error.message.toString());
+  }
+
+  if (error is TimeoutException) {
+    return formatUserFacingMessage(l10n, error.message?.toString() ?? error.toString());
   }
 
   if (error is SocketException) {
@@ -47,6 +52,9 @@ String formatUserFacingMessage(KickLocalizations l10n, String rawMessage) {
   }
   if (_looksLikePortInUseError(lower)) {
     return l10n.errorPortAlreadyInUse;
+  }
+  if (lower.contains('google oauth timed out')) {
+    return l10n.errorGoogleAuthTimedOut;
   }
   if (_looksLikeGoogleAccountVerificationError(lower)) {
     return l10n.errorGoogleAccountVerificationRequired;

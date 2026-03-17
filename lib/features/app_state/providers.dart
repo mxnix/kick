@@ -8,6 +8,7 @@ import '../../analytics/kick_analytics.dart';
 import '../../app/app_version_reader.dart';
 import '../../app/bootstrap.dart';
 import '../../core/accounts/account_priority.dart';
+import '../../core/platform/android_foreground_runtime.dart';
 import '../../core/security/proxy_api_key.dart';
 import '../../data/models/account_profile.dart';
 import '../../data/models/app_log_entry.dart';
@@ -126,6 +127,7 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
     final bootstrap = ref.read(appBootstrapProvider);
     final reauthorization = existing != null;
     unawaited(bootstrap.analytics.trackAccountConnectStarted(reauthorization: reauthorization));
+    final keepAliveStarted = await _beginOAuthKeepAlive();
     try {
       final authResult = await bootstrap.oauthService.authenticate();
       final tokenRef = existing?.tokenRef ?? 'kick.oauth.${_uuid.v4()}';
@@ -166,6 +168,8 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
         ),
       );
       rethrow;
+    } finally {
+      await _endOAuthKeepAlive(keepAliveStarted);
     }
   }
 
@@ -188,6 +192,28 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
     await saveAccount(
       account.copyWith(errorCount: 0, clearCooldown: true, clearQuotaSnapshot: true),
     );
+  }
+
+  Future<bool> _beginOAuthKeepAlive() async {
+    try {
+      return await AndroidForegroundRuntime.ensureTemporaryRunning();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _endOAuthKeepAlive(bool keepAliveStarted) async {
+    if (!keepAliveStarted) {
+      return;
+    }
+
+    try {
+      if (!ref.read(proxyControllerProvider).currentState.running) {
+        await AndroidForegroundRuntime.stopIfRunning();
+      }
+    } catch (_) {
+      // Best-effort cleanup for the temporary Android foreground runtime.
+    }
   }
 }
 
@@ -297,7 +323,9 @@ class _ProxyConfigurationSyncState extends ConsumerState<ProxyConfigurationSync>
           final accounts = ref.read(accountsControllerProvider).asData?.value;
           try {
             if (settings != null && accounts != null) {
-              await ref.read(proxyControllerProvider).configure(settings: settings, accounts: accounts);
+              await ref
+                  .read(proxyControllerProvider)
+                  .configure(settings: settings, accounts: accounts);
             }
           } catch (error, stackTrace) {
             FlutterError.reportError(

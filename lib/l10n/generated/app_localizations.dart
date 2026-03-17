@@ -1154,6 +1154,12 @@ abstract class AppLocalizations {
   /// **'Сервер ответил что-то непонятное. Попробуйте ещё раз'**
   String get errorInvalidServiceResponse;
 
+  /// No description provided for @errorGoogleAuthTimedOut.
+  ///
+  /// In ru, this message translates to:
+  /// **'Авторизация Google не завершилась вовремя. Вернитесь в приложение и попробуйте снова. Если это повторяется на Android, отключите для KiCk ограничения батареи.'**
+  String get errorGoogleAuthTimedOut;
+
   /// No description provided for @errorUnknown.
   ///
   /// In ru, this message translates to:

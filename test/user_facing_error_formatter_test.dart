@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kick/core/errors/user_facing_error_formatter.dart';
 import 'package:kick/l10n/kick_localizations.dart';
@@ -70,5 +72,20 @@ void main() {
     );
 
     expect(message, l10n.errorPortAlreadyInUse);
+  });
+
+  test('maps Google OAuth timeout to a dedicated user-facing error', () {
+    final message = formatUserFacingError(l10n, TimeoutException('Google OAuth timed out.'));
+
+    expect(message, l10n.errorGoogleAuthTimedOut);
+  });
+
+  test('keeps generic network errors mapped to the network message', () {
+    final message = formatUserFacingMessage(
+      l10n,
+      'SocketException: Connection timed out while contacting googleapis.com',
+    );
+
+    expect(message, l10n.errorNetworkUnavailable);
   });
 }

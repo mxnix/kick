@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -5,6 +6,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import '../../l10n/kick_localizations.dart';
+
+const _notificationModeStorageKey = 'kick.notification_mode';
+const _notificationModePayloadKey = 'notification_mode';
+const _notificationModeProxy = 'proxy';
+const _notificationModeOAuth = 'oauth';
 
 class AndroidForegroundRuntime {
   static bool _configured = false;
@@ -44,12 +50,19 @@ class AndroidForegroundRuntime {
       return;
     }
 
+    await ensureNotificationPermission();
+    await _ensureBatteryOptimizationExemption();
+  }
+
+  static Future<void> ensureNotificationPermission() async {
+    if (!Platform.isAndroid) {
+      return;
+    }
+
     final permission = await FlutterForegroundTask.checkNotificationPermission();
     if (permission != NotificationPermission.granted) {
       await FlutterForegroundTask.requestNotificationPermission();
     }
-
-    await _ensureBatteryOptimizationExemption();
   }
 
   static Future<void> ensureRunning() async {
@@ -59,6 +72,7 @@ class AndroidForegroundRuntime {
 
     final l10n = lookupKickLocalizations();
     await ensurePermissions();
+    await _setNotificationMode(_notificationModeProxy);
     if (await isRunning()) {
       await FlutterForegroundTask.updateService(
         notificationTitle: l10n.runtimeNotificationTitle,
@@ -76,6 +90,33 @@ class AndroidForegroundRuntime {
     );
   }
 
+  static Future<bool> ensureTemporaryRunning() async {
+    if (!Platform.isAndroid) {
+      return false;
+    }
+
+    if (await isRunning()) {
+      return false;
+    }
+
+    // Keep the process prioritized while an external browser completes the
+    // loopback OAuth flow on devices that aggressively kill background apps.
+    final l10n = lookupKickLocalizations();
+    try {
+      await _setNotificationMode(_notificationModeOAuth);
+      await FlutterForegroundTask.startService(
+        serviceId: 701,
+        notificationTitle: l10n.connectGoogleAccountTitle,
+        notificationText: l10n.runtimeNotificationReturn,
+        notificationInitialRoute: '/home',
+        callback: startForegroundRuntimeCallback,
+      );
+      return true;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   static Future<bool> isRunning() async {
     if (!Platform.isAndroid) {
       return false;
@@ -91,6 +132,14 @@ class AndroidForegroundRuntime {
 
     if (await isRunning()) {
       await FlutterForegroundTask.stopService();
+    }
+    await FlutterForegroundTask.removeData(key: _notificationModeStorageKey);
+  }
+
+  static Future<void> _setNotificationMode(String mode) async {
+    await FlutterForegroundTask.saveData(key: _notificationModeStorageKey, value: mode);
+    if (await isRunning()) {
+      FlutterForegroundTask.sendDataToTask({_notificationModePayloadKey: mode});
     }
   }
 
@@ -118,23 +167,39 @@ void startForegroundRuntimeCallback() {
 }
 
 class KickForegroundTaskHandler extends TaskHandler {
+  String _notificationMode = _notificationModeProxy;
+
   @override
-  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {}
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    _notificationMode =
+        await FlutterForegroundTask.getData<String>(key: _notificationModeStorageKey) ??
+        _notificationModeProxy;
+  }
 
   @override
   void onRepeatEvent(DateTime timestamp) {
     final l10n = lookupKickLocalizations();
-    FlutterForegroundTask.updateService(
-      notificationTitle: l10n.runtimeNotificationTitle,
-      notificationText: l10n.runtimeNotificationActive,
-    );
+    final (title, text) = switch (_notificationMode) {
+      _notificationModeOAuth => (l10n.connectGoogleAccountTitle, l10n.runtimeNotificationReturn),
+      _ => (l10n.runtimeNotificationTitle, l10n.runtimeNotificationActive),
+    };
+    FlutterForegroundTask.updateService(notificationTitle: title, notificationText: text);
   }
 
   @override
   Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {}
 
   @override
-  void onReceiveData(Object data) {}
+  void onReceiveData(Object data) {
+    if (data is! Map) {
+      return;
+    }
+
+    final mode = data[_notificationModePayloadKey];
+    if (mode is String && mode.isNotEmpty) {
+      _notificationMode = mode;
+    }
+  }
 
   @override
   void onNotificationButtonPressed(String id) {}
@@ -148,17 +213,48 @@ class KickForegroundTaskHandler extends TaskHandler {
   void onNotificationDismissed() {}
 }
 
-class AndroidForegroundRuntimeScope extends StatelessWidget {
+class AndroidForegroundRuntimeScope extends StatefulWidget {
   const AndroidForegroundRuntimeScope({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  State<AndroidForegroundRuntimeScope> createState() => _AndroidForegroundRuntimeScopeState();
+}
+
+class _AndroidForegroundRuntimeScopeState extends State<AndroidForegroundRuntimeScope> {
+  bool _notificationPromptScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
     if (!Platform.isAndroid) {
-      return child;
+      return;
     }
 
-    return WithForegroundTask(child: child);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _notificationPromptScheduled) {
+        return;
+      }
+      _notificationPromptScheduled = true;
+      unawaited(_requestNotificationPermissionOnStart());
+    });
+  }
+
+  Future<void> _requestNotificationPermissionOnStart() async {
+    try {
+      await AndroidForegroundRuntime.ensureNotificationPermission();
+    } on PlatformException {
+      // Notification permission prompt at startup is best-effort.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Platform.isAndroid) {
+      return widget.child;
+    }
+
+    return WithForegroundTask(child: widget.child);
   }
 }

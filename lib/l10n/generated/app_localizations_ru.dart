@@ -583,6 +583,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorInvalidServiceResponse => 'Сервер ответил что-то непонятное. Попробуйте ещё раз';
 
   @override
+  String get errorGoogleAuthTimedOut =>
+      'Авторизация Google не завершилась вовремя. Вернитесь в приложение и попробуйте снова. Если это повторяется на Android, отключите для KiCk ограничения батареи.';
+
+  @override
   String get errorUnknown => 'Произошла неизвестная ошибка. Попробуйте снова.';
 
   @override
