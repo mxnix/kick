@@ -63,160 +63,167 @@ class _LogsPageState extends ConsumerState<LogsPage> {
             })
             .toList(growable: false);
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeading(
-              title: l10n.logsTitle,
-              subtitle: l10n.logsSubtitle,
-              trailing: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  IconButton(
-                    onPressed: filtered.isEmpty || _isExporting || _isSharing
-                        ? null
-                        : () => _exportLogs(filtered),
-                    tooltip: l10n.logsExportTooltip,
-                    icon: const Icon(Icons.download_rounded),
-                  ),
-                  IconButton(
-                    onPressed: filtered.isEmpty || _isExporting || _isSharing
-                        ? null
-                        : () => _shareLogs(filtered),
-                    tooltip: l10n.logsShareTooltip,
-                    icon: const Icon(Icons.share_rounded),
-                  ),
-                  IconButton(
-                    onPressed: () => ref.read(logsControllerProvider.notifier).refreshState(),
-                    tooltip: l10n.logsRefreshButton,
-                    icon: const Icon(Icons.refresh_rounded),
-                  ),
-                  IconButton(
-                    onPressed: logs.isEmpty ? null : _confirmClearLogs,
-                    tooltip: l10n.logsClearButton,
-                    style: IconButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.error,
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.32),
-                      ),
+        return CustomScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          slivers: [
+            SliverToBoxAdapter(
+              child: SectionHeading(
+                title: l10n.logsTitle,
+                subtitle: l10n.logsSubtitle,
+                trailing: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    IconButton(
+                      onPressed: filtered.isEmpty || _isExporting || _isSharing
+                          ? null
+                          : () => _exportLogs(filtered),
+                      tooltip: l10n.logsExportTooltip,
+                      icon: const Icon(Icons.download_rounded),
                     ),
-                    icon: const Icon(Icons.delete_sweep_rounded),
-                  ),
-                ],
+                    IconButton(
+                      onPressed: filtered.isEmpty || _isExporting || _isSharing
+                          ? null
+                          : () => _shareLogs(filtered),
+                      tooltip: l10n.logsShareTooltip,
+                      icon: const Icon(Icons.share_rounded),
+                    ),
+                    IconButton(
+                      onPressed: () => ref.read(logsControllerProvider.notifier).refreshState(),
+                      tooltip: l10n.logsRefreshButton,
+                      icon: const Icon(Icons.refresh_rounded),
+                    ),
+                    IconButton(
+                      onPressed: logs.isEmpty ? null : _confirmClearLogs,
+                      tooltip: l10n.logsClearButton,
+                      style: IconButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.32),
+                        ),
+                      ),
+                      icon: const Icon(Icons.delete_sweep_rounded),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            KickPanel(
-              tone: KickPanelTone.soft,
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      hintText: l10n.logsSearchHint,
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            SliverToBoxAdapter(
+              child: KickPanel(
+                tone: KickPanelTone.soft,
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        hintText: l10n.logsSearchHint,
+                      ),
+                      onChanged: (value) => setState(() => _query = value),
                     ),
-                    onChanged: (value) => setState(() => _query = value),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      KickBadge(
-                        label: l10n.logsTotalCount(logs.length),
-                        leading: const Icon(Icons.article_rounded),
-                      ),
-                      KickBadge(
-                        label: l10n.logsFilteredCount(filtered.length),
-                        leading: const Icon(Icons.filter_alt_rounded),
-                        emphasis: hasActiveFilters,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _LogsFilterChip(
-                        label: l10n.logsLevelAll,
-                        selected: _selectedLevel == null,
-                        onSelected: () => setState(() => _selectedLevel = null),
-                      ),
-                      _LogsFilterChip(
-                        label: l10n.logsLevelInfo,
-                        selected: _selectedLevel == AppLogLevel.info,
-                        onSelected: () => setState(() => _selectedLevel = AppLogLevel.info),
-                      ),
-                      _LogsFilterChip(
-                        label: l10n.logsLevelWarning,
-                        selected: _selectedLevel == AppLogLevel.warning,
-                        onSelected: () => setState(() => _selectedLevel = AppLogLevel.warning),
-                      ),
-                      _LogsFilterChip(
-                        label: l10n.logsLevelError,
-                        selected: _selectedLevel == AppLogLevel.error,
-                        onSelected: () => setState(() => _selectedLevel = AppLogLevel.error),
-                      ),
-                    ],
-                  ),
-                  if (categories.length > 1) ...[
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        KickBadge(
+                          label: l10n.logsTotalCount(logs.length),
+                          leading: const Icon(Icons.article_rounded),
+                        ),
+                        KickBadge(
+                          label: l10n.logsFilteredCount(filtered.length),
+                          leading: const Icon(Icons.filter_alt_rounded),
+                          emphasis: hasActiveFilters,
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 16),
-                    Text(
-                      l10n.logsCategoryFilterTitle,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
                         _LogsFilterChip(
-                          label: l10n.logsCategoryAll,
-                          selected: _selectedCategory == null,
-                          onSelected: () => setState(() => _selectedCategory = null),
+                          label: l10n.logsLevelAll,
+                          selected: _selectedLevel == null,
+                          onSelected: () => setState(() => _selectedLevel = null),
                         ),
-                        ...categories.map(
-                          (category) => _LogsFilterChip(
-                            label: category,
-                            selected: _selectedCategory == category,
-                            onSelected: () => setState(() => _selectedCategory = category),
-                          ),
+                        _LogsFilterChip(
+                          label: l10n.logsLevelInfo,
+                          selected: _selectedLevel == AppLogLevel.info,
+                          onSelected: () => setState(() => _selectedLevel = AppLogLevel.info),
+                        ),
+                        _LogsFilterChip(
+                          label: l10n.logsLevelWarning,
+                          selected: _selectedLevel == AppLogLevel.warning,
+                          onSelected: () => setState(() => _selectedLevel = AppLogLevel.warning),
+                        ),
+                        _LogsFilterChip(
+                          label: l10n.logsLevelError,
+                          selected: _selectedLevel == AppLogLevel.error,
+                          onSelected: () => setState(() => _selectedLevel = AppLogLevel.error),
                         ),
                       ],
                     ),
+                    if (categories.length > 1) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        l10n.logsCategoryFilterTitle,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _LogsFilterChip(
+                            label: l10n.logsCategoryAll,
+                            selected: _selectedCategory == null,
+                            onSelected: () => setState(() => _selectedCategory = null),
+                          ),
+                          ...categories.map(
+                            (category) => _LogsFilterChip(
+                              label: category,
+                              selected: _selectedCategory == category,
+                              onSelected: () => setState(() => _selectedCategory = category),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
             if (filtered.isEmpty)
-              SizedBox(
-                width: double.infinity,
-                child: EmptyStateCard(
-                  icon: Icons.article_rounded,
-                  title: logs.isEmpty ? l10n.logsEmptyTitle : l10n.logsFilteredEmptyTitle,
-                  message: logs.isEmpty ? null : l10n.logsFilteredEmptyMessage,
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: EmptyStateCard(
+                    icon: Icons.article_rounded,
+                    title: logs.isEmpty ? l10n.logsEmptyTitle : l10n.logsFilteredEmptyTitle,
+                    message: logs.isEmpty ? null : l10n.logsFilteredEmptyMessage,
+                  ),
                 ),
               )
             else
-              Expanded(
-                child: ListView.separated(
-                  itemCount: filtered.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final entry = filtered[index];
-                    return _LogCard(
-                      entry: entry,
-                      expandedPayload: _expandedPayloadEntries.contains(entry.id),
-                      onCopy: () => _copyLogEntry(entry),
-                      onTogglePayload: () => _togglePayload(entry.id),
-                    );
-                  },
-                ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final itemIndex = index ~/ 2;
+                  if (index.isOdd) {
+                    return const SizedBox(height: 12);
+                  }
+
+                  final entry = filtered[itemIndex];
+                  return _LogCard(
+                    entry: entry,
+                    expandedPayload: _expandedPayloadEntries.contains(entry.id),
+                    onCopy: () => _copyLogEntry(entry),
+                    onTogglePayload: () => _togglePayload(entry.id),
+                  );
+                }, childCount: filtered.length * 2 - 1),
               ),
           ],
         );
