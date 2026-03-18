@@ -80,9 +80,9 @@ class KickPanel extends StatelessWidget {
     final resolvedRadius = radius ?? context.kickTokens.panelRadius;
 
     final backgroundColor = switch (tone) {
-      KickPanelTone.soft => scheme.surfaceContainerLowest.withValues(alpha: 0.92),
+      KickPanelTone.soft => scheme.surfaceContainerLowest.withValues(alpha: 0.9),
       KickPanelTone.accent => Color.alphaBlend(
-        scheme.primary.withValues(alpha: 0.08),
+        scheme.primary.withValues(alpha: 0.12),
         scheme.surfaceContainerLow,
       ),
       KickPanelTone.outline => scheme.surfaceContainerLowest.withValues(alpha: 0.82),
@@ -91,9 +91,27 @@ class KickPanel extends StatelessWidget {
 
     final borderColor = switch (tone) {
       KickPanelTone.soft => scheme.outlineVariant.withValues(alpha: 0.34),
-      KickPanelTone.accent => scheme.primary.withValues(alpha: 0.16),
+      KickPanelTone.accent => scheme.primary.withValues(alpha: 0.2),
       KickPanelTone.outline => scheme.outlineVariant.withValues(alpha: 0.46),
       KickPanelTone.muted => scheme.outlineVariant.withValues(alpha: 0.26),
+    };
+
+    final shadows = switch (tone) {
+      KickPanelTone.accent => [
+        BoxShadow(
+          color: scheme.primary.withValues(alpha: 0.08),
+          blurRadius: 30,
+          offset: const Offset(0, 12),
+        ),
+      ],
+      KickPanelTone.soft => [
+        BoxShadow(
+          color: scheme.shadow.withValues(alpha: 0.05),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
+        ),
+      ],
+      _ => const <BoxShadow>[],
     };
 
     return AnimatedContainer(
@@ -103,6 +121,7 @@ class KickPanel extends StatelessWidget {
         color: backgroundColor,
         borderRadius: BorderRadius.circular(resolvedRadius),
         border: Border.all(color: borderColor),
+        boxShadow: shadows,
       ),
       child: Padding(padding: padding, child: child),
     );

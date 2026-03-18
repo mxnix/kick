@@ -46,6 +46,7 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
   late final TextEditingController _labelController;
   late final TextEditingController _modelsController;
   late AccountPriorityLevel _selectedPriority;
+  late bool _advancedExpanded;
 
   @override
   void initState() {
@@ -58,6 +59,10 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
     _selectedPriority = AccountPriorityLevel.fromStoredValue(
       widget.initial?.priority ?? AccountPriorityLevel.normal.storedValue,
     );
+    _advancedExpanded =
+        widget.initial != null &&
+        (_selectedPriority != AccountPriorityLevel.normal ||
+            (widget.initial?.notSupportedModels.isNotEmpty ?? false));
   }
 
   @override
@@ -71,6 +76,7 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
 
     return AlertDialog(
       icon: const Icon(Icons.account_circle_rounded),
@@ -84,6 +90,15 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(l10n.accountDialogBasicsTitle, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.accountDialogBasicsSubtitle,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _projectController,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -113,48 +128,92 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
                   decoration: InputDecoration(
                     labelText: l10n.accountNameLabel,
                     hintText: l10n.accountNameHint,
+                    helperText: l10n.accountNameHelperText,
                   ),
                 ),
-                const SizedBox(height: 14),
-                Text(l10n.priorityLabel, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 10),
-                SegmentedButton<AccountPriorityLevel>(
-                  showSelectedIcon: false,
-                  segments: [
-                    ButtonSegment(
-                      value: AccountPriorityLevel.primary,
-                      label: Text(l10n.priorityLevelPrimary),
-                    ),
-                    ButtonSegment(
-                      value: AccountPriorityLevel.normal,
-                      label: Text(l10n.priorityLevelNormal),
-                    ),
-                    ButtonSegment(
-                      value: AccountPriorityLevel.reserve,
-                      label: Text(l10n.priorityLevelReserve),
-                    ),
-                  ],
-                  selected: {_selectedPriority},
-                  onSelectionChanged: (value) {
-                    setState(() => _selectedPriority = value.first);
-                  },
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.priorityHelperText,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                const SizedBox(height: 18),
+                Container(
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.42)),
                   ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _modelsController,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    labelText: l10n.blockedModelsLabel,
-                    helperText: l10n.blockedModelsHelperText,
-                    alignLabelWithHint: true,
+                  child: ExpansionTile(
+                    initiallyExpanded: _advancedExpanded,
+                    onExpansionChanged: (value) {
+                      setState(() => _advancedExpanded = value);
+                    },
+                    tilePadding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+                    childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                    title: Text(
+                      l10n.accountDialogAdvancedTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    subtitle: Text(
+                      l10n.accountDialogAdvancedSubtitle,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.accountDialogAdvancedHint,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.priorityLabel,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SegmentedButton<AccountPriorityLevel>(
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment(
+                            value: AccountPriorityLevel.primary,
+                            label: Text(l10n.priorityLevelPrimary),
+                          ),
+                          ButtonSegment(
+                            value: AccountPriorityLevel.normal,
+                            label: Text(l10n.priorityLevelNormal),
+                          ),
+                          ButtonSegment(
+                            value: AccountPriorityLevel.reserve,
+                            label: Text(l10n.priorityLevelReserve),
+                          ),
+                        ],
+                        selected: {_selectedPriority},
+                        onSelectionChanged: (value) {
+                          setState(() => _selectedPriority = value.first);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.priorityHelperText,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _modelsController,
+                        minLines: 3,
+                        maxLines: 5,
+                        decoration: InputDecoration(
+                          labelText: l10n.blockedModelsLabel,
+                          helperText: l10n.blockedModelsHelperText,
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

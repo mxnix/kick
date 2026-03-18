@@ -164,6 +164,18 @@ abstract class AppLocalizations {
   /// **'Запустить'**
   String get startProxyButton;
 
+  /// No description provided for @openAccountsButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть окно с аккаунтами'**
+  String get openAccountsButton;
+
+  /// No description provided for @connectAccountShortButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подключить аккаунт'**
+  String get connectAccountShortButton;
+
   /// No description provided for @uptimeTitle.
   ///
   /// In ru, this message translates to:
@@ -380,6 +392,30 @@ abstract class AppLocalizations {
   /// **'Лимиты'**
   String get accountUsageOpenTooltip;
 
+  /// No description provided for @moreButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Еще'**
+  String get moreButton;
+
+  /// No description provided for @deleteAccountDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить аккаунт?'**
+  String get deleteAccountDialogTitle;
+
+  /// No description provided for @deleteAccountDialogMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Аккаунт {label} будет удален из KiCk. При необходимости его можно подключить снова позже.'**
+  String deleteAccountDialogMessage(String label);
+
+  /// No description provided for @deleteAccountConfirmButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить аккаунт'**
+  String get deleteAccountConfirmButton;
+
   /// No description provided for @accountUsageTitle.
   ///
   /// In ru, this message translates to:
@@ -409,6 +445,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Ограничен'**
   String get accountUsageStatusCoolingDown;
+
+  /// No description provided for @accountUsageStatusLowQuota.
+  ///
+  /// In ru, this message translates to:
+  /// **'Лимит заканчивается'**
+  String get accountUsageStatusLowQuota;
 
   /// No description provided for @accountUsageStatusDisabled.
   ///
@@ -535,12 +577,6 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Тип лимита: {value}'**
   String accountUsageTokenType(String value);
-
-  /// No description provided for @accountUsageRemainingPercent.
-  ///
-  /// In ru, this message translates to:
-  /// **'Осталось {value}%'**
-  String accountUsageRemainingPercent(String value);
 
   /// No description provided for @accountUsageUsedPercent.
   ///
@@ -734,6 +770,24 @@ abstract class AppLocalizations {
   /// **'Обычно 127.0.0.1'**
   String get hostHelperText;
 
+  /// No description provided for @hostRequiredError.
+  ///
+  /// In ru, this message translates to:
+  /// **'Укажите адрес хоста'**
+  String get hostRequiredError;
+
+  /// No description provided for @hostInvalidError.
+  ///
+  /// In ru, this message translates to:
+  /// **'Адрес не должен содержать пробелы'**
+  String get hostInvalidError;
+
+  /// No description provided for @hostLanDisabledError.
+  ///
+  /// In ru, this message translates to:
+  /// **'Чтобы использовать 0.0.0.0, включите доступ из локальной сети'**
+  String get hostLanDisabledError;
+
   /// No description provided for @portLabel.
   ///
   /// In ru, this message translates to:
@@ -745,6 +799,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'По умолчанию 3000'**
   String get portHelperText;
+
+  /// No description provided for @portInvalidError.
+  ///
+  /// In ru, this message translates to:
+  /// **'Укажите порт от 1 до 65535'**
+  String get portInvalidError;
 
   /// No description provided for @allowLanTitle.
   ///
@@ -781,6 +841,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Сколько раз KiCk повторит запрос после временной ошибки'**
   String get requestRetriesHelperText;
+
+  /// No description provided for @requestRetriesInvalidError.
+  ///
+  /// In ru, this message translates to:
+  /// **'Укажите число от 0 до 20'**
+  String get requestRetriesInvalidError;
 
   /// No description provided for @mark429AsUnhealthyTitle.
   ///
@@ -841,6 +907,30 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Указывайте точный ID модели, по одному на строке'**
   String get customModelsHelperText;
+
+  /// No description provided for @settingsSavingStatus.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохраняем изменения...'**
+  String get settingsSavingStatus;
+
+  /// No description provided for @settingsSavedStatus.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменения сохранены'**
+  String get settingsSavedStatus;
+
+  /// No description provided for @settingsValidationStatus.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте поля с ошибками'**
+  String get settingsValidationStatus;
+
+  /// No description provided for @settingsSaveFailedStatus.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось сохранить изменения'**
+  String get settingsSaveFailedStatus;
 
   /// No description provided for @settingsLoadErrorTitle.
   ///
@@ -962,6 +1052,60 @@ abstract class AppLocalizations {
   /// **'API-ключ скопирован'**
   String get apiKeyCopiedMessage;
 
+  /// No description provided for @homeOnboardingTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'С чего начать'**
+  String get homeOnboardingTitle;
+
+  /// No description provided for @homeOnboardingSubtitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Небольшая подсказка для первого запуска'**
+  String get homeOnboardingSubtitle;
+
+  /// No description provided for @homeOnboardingAccountsTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подключите аккаунт'**
+  String get homeOnboardingAccountsTitle;
+
+  /// No description provided for @homeOnboardingAccountsMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Без активного аккаунта KiCk не сможет обрабатывать запросы.'**
+  String get homeOnboardingAccountsMessage;
+
+  /// No description provided for @homeOnboardingEndpointTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте адрес прокси'**
+  String get homeOnboardingEndpointTitle;
+
+  /// No description provided for @homeOnboardingEndpointMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Когда все будет готово, используйте адрес {endpoint} в своем клиенте.'**
+  String homeOnboardingEndpointMessage(String endpoint);
+
+  /// No description provided for @homeOnboardingStartTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Запустите прокси'**
+  String get homeOnboardingStartTitle;
+
+  /// No description provided for @homeOnboardingStartMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'После запуска KiCk начнет принимать запросы на этом устройстве.'**
+  String get homeOnboardingStartMessage;
+
+  /// No description provided for @homeOnboardingFooter.
+  ///
+  /// In ru, this message translates to:
+  /// **'Если аккаунт уже подключен, просто включите его на экране аккаунтов и вернитесь сюда.'**
+  String get homeOnboardingFooter;
+
   /// No description provided for @apiKeyRegeneratedMessage.
   ///
   /// In ru, this message translates to:
@@ -1028,35 +1172,71 @@ abstract class AppLocalizations {
   /// **'Убрать закрепление окна'**
   String get unpinWindowTooltip;
 
-  /// No description provided for @disclaimerTitle.
+  /// No description provided for @welcomeTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Отказ от ответственности'**
-  String get disclaimerTitle;
+  /// **'Добро пожаловать в KiCk'**
+  String get welcomeTitle;
 
-  /// No description provided for @disclaimerBodyLineOne.
+  /// No description provided for @welcomeSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Программа предоставляется \"как есть\".'**
-  String get disclaimerBodyLineOne;
+  /// **'KiCk помогает запустить локальный прокси для Gemini CLI без терминала и лишних настроек.'**
+  String get welcomeSubtitle;
 
-  /// No description provided for @disclaimerBodyLineTwo.
+  /// No description provided for @welcomeStepAccountsTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Только для некоммерческого использования в образовательных и исследовательских целях.'**
-  String get disclaimerBodyLineTwo;
+  /// **'Подключите Google-аккаунт'**
+  String get welcomeStepAccountsTitle;
 
-  /// No description provided for @disclaimerLinkPrefix.
+  /// No description provided for @welcomeStepAccountsMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Подробнее:'**
-  String get disclaimerLinkPrefix;
+  /// **'Это можно сделать на экране аккаунтов. Если аккаунт уже есть, просто включите его.'**
+  String get welcomeStepAccountsMessage;
 
-  /// No description provided for @disclaimerAnalyticsConsentLabel.
+  /// No description provided for @welcomeStepHomeTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Отправлять анонимную аналитику'**
-  String get disclaimerAnalyticsConsentLabel;
+  /// **'Откройте главную'**
+  String get welcomeStepHomeTitle;
+
+  /// No description provided for @welcomeStepHomeMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'На главной всегда видны адрес прокси, API-ключ и кнопка запуска.'**
+  String get welcomeStepHomeMessage;
+
+  /// No description provided for @welcomeUsageTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Важно знать'**
+  String get welcomeUsageTitle;
+
+  /// No description provided for @welcomeUsageMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'KiCk предназначен для личного, учебного и исследовательского использования.'**
+  String get welcomeUsageMessage;
+
+  /// No description provided for @welcomeAnalyticsTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Анонимная аналитика'**
+  String get welcomeAnalyticsTitle;
+
+  /// No description provided for @welcomeAnalyticsSubtitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Помогает понять, где KiCk работает хорошо, а где его стоит улучшить.'**
+  String get welcomeAnalyticsSubtitle;
+
+  /// No description provided for @welcomeRepositoryLinkLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подробнее о проекте'**
+  String get welcomeRepositoryLinkLabel;
 
   /// No description provided for @logsTitle.
   ///
@@ -1075,6 +1255,126 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Поиск по маршруту или сообщению'**
   String get logsSearchHint;
+
+  /// No description provided for @logsRefreshButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обновить'**
+  String get logsRefreshButton;
+
+  /// No description provided for @logsClearButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Очистить'**
+  String get logsClearButton;
+
+  /// No description provided for @logsClearDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Очистить логи?'**
+  String get logsClearDialogTitle;
+
+  /// No description provided for @logsClearDialogMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Все записи будут удалены из KiCk. Это действие нельзя отменить.'**
+  String get logsClearDialogMessage;
+
+  /// No description provided for @logsClearConfirmButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Очистить'**
+  String get logsClearConfirmButton;
+
+  /// No description provided for @logsLevelAll.
+  ///
+  /// In ru, this message translates to:
+  /// **'Все уровни'**
+  String get logsLevelAll;
+
+  /// No description provided for @logsLevelInfo.
+  ///
+  /// In ru, this message translates to:
+  /// **'Инфо'**
+  String get logsLevelInfo;
+
+  /// No description provided for @logsLevelWarning.
+  ///
+  /// In ru, this message translates to:
+  /// **'Предупреждения'**
+  String get logsLevelWarning;
+
+  /// No description provided for @logsLevelError.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибки'**
+  String get logsLevelError;
+
+  /// No description provided for @logsCategoryAll.
+  ///
+  /// In ru, this message translates to:
+  /// **'Все категории'**
+  String get logsCategoryAll;
+
+  /// No description provided for @logsCategoryFilterTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Категории'**
+  String get logsCategoryFilterTitle;
+
+  /// No description provided for @logsPayloadShowButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Показать payload'**
+  String get logsPayloadShowButton;
+
+  /// No description provided for @logsPayloadHideButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Скрыть payload'**
+  String get logsPayloadHideButton;
+
+  /// No description provided for @logsCopyEntryButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Копировать'**
+  String get logsCopyEntryButton;
+
+  /// No description provided for @logsCopiedMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Запись лога скопирована'**
+  String get logsCopiedMessage;
+
+  /// No description provided for @logsFilteredEmptyTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'По текущим фильтрам ничего не найдено'**
+  String get logsFilteredEmptyTitle;
+
+  /// No description provided for @logsFilteredEmptyMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Попробуйте убрать часть фильтров или изменить поиск.'**
+  String get logsFilteredEmptyMessage;
+
+  /// No description provided for @logsEntryLevelInfo.
+  ///
+  /// In ru, this message translates to:
+  /// **'Инфо'**
+  String get logsEntryLevelInfo;
+
+  /// No description provided for @logsEntryLevelWarning.
+  ///
+  /// In ru, this message translates to:
+  /// **'Предупреждение'**
+  String get logsEntryLevelWarning;
+
+  /// No description provided for @logsEntryLevelError.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибка'**
+  String get logsEntryLevelError;
 
   /// No description provided for @logsTotalCount.
   ///
@@ -1142,6 +1442,36 @@ abstract class AppLocalizations {
   /// **'Google-аккаунт'**
   String get accountDialogTitle;
 
+  /// No description provided for @accountDialogBasicsTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Основное'**
+  String get accountDialogBasicsTitle;
+
+  /// No description provided for @accountDialogBasicsSubtitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Эти поля нужны для подключения аккаунта'**
+  String get accountDialogBasicsSubtitle;
+
+  /// No description provided for @accountDialogAdvancedTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Расширенные настройки'**
+  String get accountDialogAdvancedTitle;
+
+  /// No description provided for @accountDialogAdvancedSubtitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Приоритет и ограничения по моделям'**
+  String get accountDialogAdvancedSubtitle;
+
+  /// No description provided for @accountDialogAdvancedHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Если не хочется настраивать вручную, этот блок можно оставить как есть.'**
+  String get accountDialogAdvancedHint;
+
   /// No description provided for @projectIdLabel.
   ///
   /// In ru, this message translates to:
@@ -1183,6 +1513,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Например, основной аккаунт'**
   String get accountNameHint;
+
+  /// No description provided for @accountNameHelperText.
+  ///
+  /// In ru, this message translates to:
+  /// **'Если оставить поле пустым, KiCk подставит имя из Google.'**
+  String get accountNameHelperText;
 
   /// No description provided for @priorityLabel.
   ///

@@ -49,6 +49,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get startProxyButton => 'Запустить';
 
   @override
+  String get openAccountsButton => 'Открыть окно с аккаунтами';
+
+  @override
+  String get connectAccountShortButton => 'Подключить аккаунт';
+
+  @override
   String get uptimeTitle => 'Время работы';
 
   @override
@@ -166,6 +172,20 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountUsageOpenTooltip => 'Лимиты';
 
   @override
+  String get moreButton => 'Еще';
+
+  @override
+  String get deleteAccountDialogTitle => 'Удалить аккаунт?';
+
+  @override
+  String deleteAccountDialogMessage(String label) {
+    return 'Аккаунт $label будет удален из KiCk. При необходимости его можно подключить снова позже.';
+  }
+
+  @override
+  String get deleteAccountConfirmButton => 'Удалить аккаунт';
+
+  @override
   String get accountUsageTitle => 'Лимиты аккаунта';
 
   @override
@@ -179,6 +199,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accountUsageStatusCoolingDown => 'Ограничен';
+
+  @override
+  String get accountUsageStatusLowQuota => 'Лимит заканчивается';
 
   @override
   String get accountUsageStatusDisabled => 'Выключен';
@@ -257,11 +280,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String accountUsageTokenType(String value) {
     return 'Тип лимита: $value';
-  }
-
-  @override
-  String accountUsageRemainingPercent(String value) {
-    return 'Осталось $value%';
   }
 
   @override
@@ -366,10 +384,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String get hostHelperText => 'Обычно 127.0.0.1';
 
   @override
+  String get hostRequiredError => 'Укажите адрес хоста';
+
+  @override
+  String get hostInvalidError => 'Адрес не должен содержать пробелы';
+
+  @override
+  String get hostLanDisabledError =>
+      'Чтобы использовать 0.0.0.0, включите доступ из локальной сети';
+
+  @override
   String get portLabel => 'Порт';
 
   @override
   String get portHelperText => 'По умолчанию 3000';
+
+  @override
+  String get portInvalidError => 'Укажите порт от 1 до 65535';
 
   @override
   String get allowLanTitle => 'Доступ из локальной сети и Docker';
@@ -390,6 +421,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get requestRetriesHelperText => 'Сколько раз KiCk повторит запрос после временной ошибки';
+
+  @override
+  String get requestRetriesInvalidError => 'Укажите число от 0 до 20';
 
   @override
   String get mark429AsUnhealthyTitle => 'Временно выводить аккаунт из ротации при ошибке 429';
@@ -422,6 +456,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get customModelsHelperText => 'Указывайте точный ID модели, по одному на строке';
+
+  @override
+  String get settingsSavingStatus => 'Сохраняем изменения...';
+
+  @override
+  String get settingsSavedStatus => 'Изменения сохранены';
+
+  @override
+  String get settingsValidationStatus => 'Проверьте поля с ошибками';
+
+  @override
+  String get settingsSaveFailedStatus => 'Не удалось сохранить изменения';
 
   @override
   String get settingsLoadErrorTitle => 'Не удалось загрузить настройки';
@@ -489,6 +535,38 @@ class AppLocalizationsRu extends AppLocalizations {
   String get apiKeyCopiedMessage => 'API-ключ скопирован';
 
   @override
+  String get homeOnboardingTitle => 'С чего начать';
+
+  @override
+  String get homeOnboardingSubtitle => 'Небольшая подсказка для первого запуска';
+
+  @override
+  String get homeOnboardingAccountsTitle => 'Подключите аккаунт';
+
+  @override
+  String get homeOnboardingAccountsMessage =>
+      'Без активного аккаунта KiCk не сможет обрабатывать запросы.';
+
+  @override
+  String get homeOnboardingEndpointTitle => 'Проверьте адрес прокси';
+
+  @override
+  String homeOnboardingEndpointMessage(String endpoint) {
+    return 'Когда все будет готово, используйте адрес $endpoint в своем клиенте.';
+  }
+
+  @override
+  String get homeOnboardingStartTitle => 'Запустите прокси';
+
+  @override
+  String get homeOnboardingStartMessage =>
+      'После запуска KiCk начнет принимать запросы на этом устройстве.';
+
+  @override
+  String get homeOnboardingFooter =>
+      'Если аккаунт уже подключен, просто включите его на экране аккаунтов и вернитесь сюда.';
+
+  @override
   String get apiKeyRegeneratedMessage => 'Новый API-ключ сохранен';
 
   @override
@@ -524,20 +602,42 @@ class AppLocalizationsRu extends AppLocalizations {
   String get unpinWindowTooltip => 'Убрать закрепление окна';
 
   @override
-  String get disclaimerTitle => 'Отказ от ответственности';
+  String get welcomeTitle => 'Добро пожаловать в KiCk';
 
   @override
-  String get disclaimerBodyLineOne => 'Программа предоставляется \"как есть\".';
+  String get welcomeSubtitle =>
+      'KiCk помогает запустить локальный прокси для Gemini CLI без терминала и лишних настроек.';
 
   @override
-  String get disclaimerBodyLineTwo =>
-      'Только для некоммерческого использования в образовательных и исследовательских целях.';
+  String get welcomeStepAccountsTitle => 'Подключите Google-аккаунт';
 
   @override
-  String get disclaimerLinkPrefix => 'Подробнее:';
+  String get welcomeStepAccountsMessage =>
+      'Это можно сделать на экране аккаунтов. Если аккаунт уже есть, просто включите его.';
 
   @override
-  String get disclaimerAnalyticsConsentLabel => 'Отправлять анонимную аналитику';
+  String get welcomeStepHomeTitle => 'Откройте главную';
+
+  @override
+  String get welcomeStepHomeMessage =>
+      'На главной всегда видны адрес прокси, API-ключ и кнопка запуска.';
+
+  @override
+  String get welcomeUsageTitle => 'Важно знать';
+
+  @override
+  String get welcomeUsageMessage =>
+      'KiCk предназначен для личного, учебного и исследовательского использования.';
+
+  @override
+  String get welcomeAnalyticsTitle => 'Анонимная аналитика';
+
+  @override
+  String get welcomeAnalyticsSubtitle =>
+      'Помогает понять, где KiCk работает хорошо, а где его стоит улучшить.';
+
+  @override
+  String get welcomeRepositoryLinkLabel => 'Подробнее о проекте';
 
   @override
   String get logsTitle => 'Логи';
@@ -547,6 +647,67 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get logsSearchHint => 'Поиск по маршруту или сообщению';
+
+  @override
+  String get logsRefreshButton => 'Обновить';
+
+  @override
+  String get logsClearButton => 'Очистить';
+
+  @override
+  String get logsClearDialogTitle => 'Очистить логи?';
+
+  @override
+  String get logsClearDialogMessage =>
+      'Все записи будут удалены из KiCk. Это действие нельзя отменить.';
+
+  @override
+  String get logsClearConfirmButton => 'Очистить';
+
+  @override
+  String get logsLevelAll => 'Все уровни';
+
+  @override
+  String get logsLevelInfo => 'Инфо';
+
+  @override
+  String get logsLevelWarning => 'Предупреждения';
+
+  @override
+  String get logsLevelError => 'Ошибки';
+
+  @override
+  String get logsCategoryAll => 'Все категории';
+
+  @override
+  String get logsCategoryFilterTitle => 'Категории';
+
+  @override
+  String get logsPayloadShowButton => 'Показать payload';
+
+  @override
+  String get logsPayloadHideButton => 'Скрыть payload';
+
+  @override
+  String get logsCopyEntryButton => 'Копировать';
+
+  @override
+  String get logsCopiedMessage => 'Запись лога скопирована';
+
+  @override
+  String get logsFilteredEmptyTitle => 'По текущим фильтрам ничего не найдено';
+
+  @override
+  String get logsFilteredEmptyMessage => 'Попробуйте убрать часть фильтров или изменить поиск.';
+
+  @override
+  String get logsEntryLevelInfo => 'Инфо';
+
+  @override
+  String get logsEntryLevelWarning => 'Предупреждение';
+
+  @override
+  String get logsEntryLevelError => 'Ошибка';
 
   @override
   String logsTotalCount(int count) {
@@ -592,6 +753,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountDialogTitle => 'Google-аккаунт';
 
   @override
+  String get accountDialogBasicsTitle => 'Основное';
+
+  @override
+  String get accountDialogBasicsSubtitle => 'Эти поля нужны для подключения аккаунта';
+
+  @override
+  String get accountDialogAdvancedTitle => 'Расширенные настройки';
+
+  @override
+  String get accountDialogAdvancedSubtitle => 'Приоритет и ограничения по моделям';
+
+  @override
+  String get accountDialogAdvancedHint =>
+      'Если не хочется настраивать вручную, этот блок можно оставить как есть.';
+
+  @override
   String get projectIdLabel => 'PROJECT_ID';
 
   @override
@@ -611,6 +788,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accountNameHint => 'Например, основной аккаунт';
+
+  @override
+  String get accountNameHelperText => 'Если оставить поле пустым, KiCk подставит имя из Google.';
 
   @override
   String get priorityLabel => 'Приоритет';

@@ -76,7 +76,7 @@ class AccountsPage extends ConsumerWidget {
         );
       },
       error: (error, stackTrace) => EmptyStateCard(
-        icon: Icons.error_outline_rounded,
+        icon: Icons.error_rounded,
         title: l10n.accountsLoadErrorTitle,
         message: formatUserFacingError(l10n, error),
       ),
@@ -121,7 +121,7 @@ class _AccountCard extends ConsumerWidget {
         ? l10n.accountCoolingDownStatus
         : l10n.accountReadyStatus;
     final statusIcon = !account.enabled
-        ? Icons.pause_circle_outline_rounded
+        ? Icons.pause_circle_rounded
         : account.isCoolingDown
         ? Icons.schedule_rounded
         : Icons.check_circle_rounded;
@@ -174,7 +174,7 @@ class _AccountCard extends ConsumerWidget {
             children: [
               KickBadge(
                 label: l10n.projectIdChip(account.projectId),
-                leading: const Icon(Icons.badge_outlined),
+                leading: const Icon(Icons.badge_rounded),
               ),
               KickBadge(
                 label: l10n.priorityChip(priorityLabel),
@@ -214,7 +214,7 @@ class _AccountCard extends ConsumerWidget {
             runSpacing: 8,
             children: [
               _AccountActionButton(
-                icon: Icons.edit_outlined,
+                icon: Icons.edit_rounded,
                 label: l10n.editButton,
                 onPressed: () async {
                   final draft = await showAccountEditorDialog(
@@ -238,50 +238,17 @@ class _AccountCard extends ConsumerWidget {
                 },
               ),
               _AccountActionButton(
-                icon: Icons.manage_accounts_outlined,
-                label: l10n.reauthorizeButton,
-                onPressed: () async {
-                  final draft = await showAccountEditorDialog(
-                    context,
-                    initial: account,
-                    title: l10n.reauthorizeAccountTitle,
-                  );
-                  if (!context.mounted || draft == null) {
-                    return;
-                  }
-                  await _connectGoogleAccount(
-                    context,
-                    ref,
-                    existing: account,
-                    projectId: draft.projectId,
-                    label: draft.label.isEmpty ? account.label : draft.label,
-                    priority: draft.priority,
-                    notSupportedModels: draft.notSupportedModels,
-                  );
-                },
-              ),
-              _AccountActionButton(
-                icon: Icons.fact_check_outlined,
-                label: l10n.accountProjectCheckButton,
-                onPressed: () => _diagnoseProject(context, ref, account),
-              ),
-              _AccountActionButton(
-                icon: account.isCoolingDown ? Icons.lock_open_rounded : Icons.restart_alt_rounded,
-                label: resetLabel,
-                onPressed: () => ref.read(accountsControllerProvider.notifier).resetHealth(account),
-              ),
-              _AccountActionButton(
                 icon: Icons.query_stats_rounded,
                 label: l10n.accountUsageOpenTooltip,
                 onPressed: () =>
                     context.pushNamed('account-usage', pathParameters: {'accountId': account.id}),
               ),
-              _AccountActionButton(
-                icon: Icons.delete_outline_rounded,
-                label: l10n.deleteTooltip,
-                destructive: true,
-                onPressed: () =>
-                    ref.read(accountsControllerProvider.notifier).deleteAccount(account),
+              _AccountMoreActionsButton(
+                label: l10n.moreButton,
+                resetLabel: resetLabel,
+                onSelected: (action) {
+                  unawaited(_handleAccountMenuAction(context, ref, account, action));
+                },
               ),
             ],
           ),
@@ -289,6 +256,79 @@ class _AccountCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+enum _AccountMenuAction { reauthorize, diagnose, reset, delete }
+
+Future<void> _handleAccountMenuAction(
+  BuildContext context,
+  WidgetRef ref,
+  AccountProfile account,
+  _AccountMenuAction action,
+) async {
+  switch (action) {
+    case _AccountMenuAction.reauthorize:
+      final draft = await showAccountEditorDialog(
+        context,
+        initial: account,
+        title: context.l10n.reauthorizeAccountTitle,
+      );
+      if (!context.mounted || draft == null) {
+        return;
+      }
+      await _connectGoogleAccount(
+        context,
+        ref,
+        existing: account,
+        projectId: draft.projectId,
+        label: draft.label.isEmpty ? account.label : draft.label,
+        priority: draft.priority,
+        notSupportedModels: draft.notSupportedModels,
+      );
+      return;
+    case _AccountMenuAction.diagnose:
+      await _diagnoseProject(context, ref, account);
+      return;
+    case _AccountMenuAction.reset:
+      await ref.read(accountsControllerProvider.notifier).resetHealth(account);
+      return;
+    case _AccountMenuAction.delete:
+      final shouldDelete = await _confirmDeleteAccount(context, account);
+      if (!context.mounted || !shouldDelete) {
+        return;
+      }
+      await ref.read(accountsControllerProvider.notifier).deleteAccount(account);
+      return;
+  }
+}
+
+Future<bool> _confirmDeleteAccount(BuildContext context, AccountProfile account) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        icon: const Icon(Icons.delete_rounded),
+        title: Text(context.l10n.deleteAccountDialogTitle),
+        content: Text(context.l10n.deleteAccountDialogMessage(account.label)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.l10n.cancelButton),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.l10n.deleteAccountConfirmButton),
+          ),
+        ],
+      );
+    },
+  );
+
+  return confirmed == true;
 }
 
 class _AccountAvatar extends StatelessWidget {
@@ -433,7 +473,7 @@ Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfil
   await showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      icon: const Icon(Icons.error_outline_rounded),
+      icon: const Icon(Icons.error_rounded),
       title: Text(l10n.accountProjectCheckFailureTitle),
       content: Text(formatUserFacingError(l10n, failure!)),
       actions: [
@@ -494,37 +534,101 @@ Future<void> _openErrorAction(BuildContext context, String url) async {
 }
 
 class _AccountActionButton extends StatelessWidget {
-  const _AccountActionButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-    this.destructive = false,
-  });
+  const _AccountActionButton({required this.icon, required this.label, required this.onPressed});
 
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
-  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final foreground = destructive ? scheme.error : scheme.onSurface;
-    final border = destructive
-        ? scheme.error.withValues(alpha: 0.22)
-        : scheme.outlineVariant.withValues(alpha: 0.72);
 
     return OutlinedButton.icon(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        foregroundColor: foreground,
-        side: BorderSide(color: border),
+        foregroundColor: scheme.onSurface,
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.72)),
         visualDensity: VisualDensity.compact,
       ),
       icon: Icon(icon, size: 18),
       label: Text(label),
+    );
+  }
+}
+
+class _AccountMoreActionsButton extends StatelessWidget {
+  const _AccountMoreActionsButton({
+    required this.label,
+    required this.resetLabel,
+    required this.onSelected,
+  });
+
+  final String label;
+  final String resetLabel;
+  final ValueChanged<_AccountMenuAction> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+
+    return MenuAnchor(
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(scheme.surfaceContainerHigh),
+        surfaceTintColor: WidgetStatePropertyAll(scheme.surfaceTint),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        ),
+        side: WidgetStatePropertyAll(
+          BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.42)),
+        ),
+      ),
+      menuChildren: [
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.manage_accounts_rounded, size: 18),
+          onPressed: () => onSelected(_AccountMenuAction.reauthorize),
+          child: Text(l10n.reauthorizeButton),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.fact_check_rounded, size: 18),
+          onPressed: () => onSelected(_AccountMenuAction.diagnose),
+          child: Text(l10n.accountProjectCheckButton),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.restart_alt_rounded, size: 18),
+          onPressed: () => onSelected(_AccountMenuAction.reset),
+          child: Text(resetLabel),
+        ),
+        MenuItemButton(
+          leadingIcon: Icon(Icons.delete_rounded, size: 18, color: scheme.error),
+          style: ButtonStyle(foregroundColor: WidgetStatePropertyAll(scheme.error)),
+          onPressed: () => onSelected(_AccountMenuAction.delete),
+          child: Text(l10n.deleteTooltip),
+        ),
+      ],
+      builder: (context, controller, child) {
+        return OutlinedButton.icon(
+          onPressed: () {
+            if (controller.isOpen) {
+              controller.close();
+            } else {
+              controller.open();
+            }
+          },
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            foregroundColor: scheme.onSurface,
+            side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.72)),
+            visualDensity: VisualDensity.compact,
+          ),
+          icon: const Icon(Icons.more_horiz_rounded, size: 18),
+          label: Text(label),
+        );
+      },
     );
   }
 }

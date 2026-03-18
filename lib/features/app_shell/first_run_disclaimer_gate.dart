@@ -74,9 +74,7 @@ class _FirstRunDisclaimerGateState extends ConsumerState<FirstRunDisclaimerGate>
             ),
           );
       if (analyticsConsent == true) {
-        unawaited(
-          ref.read(analyticsProvider).trackDisclaimerAccepted(analyticsEnabled: true),
-        );
+        unawaited(ref.read(analyticsProvider).trackDisclaimerAccepted(analyticsEnabled: true));
       }
     } finally {
       _dialogInProgress = false;
@@ -100,46 +98,93 @@ class _FirstRunDisclaimerDialogState extends State<_FirstRunDisclaimerDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return PopScope(
       canPop: false,
       child: AlertDialog(
-        title: Text(l10n.disclaimerTitle),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
+        scrollable: true,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        icon: const Icon(Icons.waving_hand_rounded),
+        title: Text(l10n.welcomeTitle),
+        content: SizedBox(
+          width: 460,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.disclaimerBodyLineOne, style: textTheme.bodyLarge),
-              const SizedBox(height: 8),
-              Text(l10n.disclaimerBodyLineTwo, style: textTheme.bodyLarge),
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: _openRepositoryLink,
-                borderRadius: BorderRadius.circular(6),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text(
-                    l10n.disclaimerLinkPrefix,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      decoration: TextDecoration.underline,
+              Text(
+                l10n.welcomeSubtitle,
+                style: textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 18),
+              const _WelcomeStepTile(
+                icon: Icons.person_add_alt_1_rounded,
+                titleKey: _WelcomeStepTitle.accounts,
+                messageKey: _WelcomeStepMessage.accounts,
+              ),
+              const SizedBox(height: 10),
+              const _WelcomeStepTile(
+                icon: Icons.home_rounded,
+                titleKey: _WelcomeStepTitle.home,
+                messageKey: _WelcomeStepMessage.home,
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.34)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.welcomeUsageTitle, style: textTheme.titleMedium),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.welcomeUsageMessage,
+                      style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    TextButton.icon(
+                      onPressed: _openRepositoryLink,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                      label: Text(l10n.welcomeRepositoryLinkLabel),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 18),
-              CheckboxListTile(
-                value: _analyticsConsentEnabled,
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                title: Text(l10n.disclaimerAnalyticsConsentLabel),
-                onChanged: (value) {
-                  setState(() {
-                    _analyticsConsentEnabled = value ?? false;
-                  });
-                },
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.34)),
+                ),
+                child: CheckboxListTile(
+                  value: _analyticsConsentEnabled,
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  visualDensity: VisualDensity.compact,
+                  title: Text(l10n.welcomeAnalyticsTitle),
+                  subtitle: Text(l10n.welcomeAnalyticsSubtitle),
+                  onChanged: (value) {
+                    setState(() {
+                      _analyticsConsentEnabled = value ?? false;
+                    });
+                  },
+                ),
               ),
             ],
           ),
@@ -158,5 +203,71 @@ class _FirstRunDisclaimerDialogState extends State<_FirstRunDisclaimerDialog> {
 
   Future<void> _openRepositoryLink() async {
     await launchUrl(Uri.parse(kickRepositoryUrl), mode: LaunchMode.externalApplication);
+  }
+}
+
+enum _WelcomeStepTitle { accounts, home }
+
+enum _WelcomeStepMessage { accounts, home }
+
+class _WelcomeStepTile extends StatelessWidget {
+  const _WelcomeStepTile({required this.icon, required this.titleKey, required this.messageKey});
+
+  final IconData icon;
+  final _WelcomeStepTitle titleKey;
+  final _WelcomeStepMessage messageKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final title = switch (titleKey) {
+      _WelcomeStepTitle.accounts => l10n.welcomeStepAccountsTitle,
+      _WelcomeStepTitle.home => l10n.welcomeStepHomeTitle,
+    };
+    final message = switch (messageKey) {
+      _WelcomeStepMessage.accounts => l10n.welcomeStepAccountsMessage,
+      _WelcomeStepMessage.home => l10n.welcomeStepHomeMessage,
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.34)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 18, color: scheme.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

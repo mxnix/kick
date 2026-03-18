@@ -71,6 +71,31 @@ void main() {
     expect(find.text('Доступно обновление'), findsNothing);
   });
 
+  testWidgets('shows onboarding when there are no active accounts', (tester) async {
+    final bootstrap = await _createBootstrap();
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap.dispose();
+    });
+
+    await tester.pumpWidget(
+      _TestApp(
+        bootstrap: bootstrap,
+        updateInfo: const AppUpdateInfo(
+          currentVersion: '1.0.2',
+          latestVersion: '1.0.2',
+          releaseUrl: 'https://example.com/releases/tag/v1.0.2',
+          hasUpdate: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Подключить аккаунт'), findsOneWidget);
+    expect(find.text('С чего начать'), findsOneWidget);
+  });
+
   testWidgets('disables the start button while proxy startup is pending', (tester) async {
     final bootstrap = await _createBootstrap();
     addTearDown(() async {

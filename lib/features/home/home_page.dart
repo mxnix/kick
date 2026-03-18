@@ -25,7 +25,9 @@ class HomePage extends ConsumerWidget {
     final accounts = ref.watch(accountsControllerProvider).asData?.value;
     final updateInfo = ref.watch(appUpdateQueryProvider).asData?.value;
 
+    final totalAccounts = accounts?.length ?? 0;
     final activeAccounts = accounts?.where((item) => item.enabled).length ?? 0;
+    final showAccountSetup = !proxyStatus.running && accounts != null && activeAccounts == 0;
     final uptimeText = proxyStatus.uptime == null
         ? l10n.uptimeNotStarted
         : l10n.uptimeValue(
@@ -43,10 +45,16 @@ class HomePage extends ConsumerWidget {
         : settings.apiKeyRequired
         ? _maskSecret(settings.apiKey)
         : l10n.apiKeyDisabledValue;
+    final primaryActionLabel = showAccountSetup
+        ? (totalAccounts == 0 ? l10n.connectAccountShortButton : l10n.openAccountsButton)
+        : (proxyStatus.running ? l10n.stopProxyButton : l10n.startProxyButton);
+    final primaryActionIcon = showAccountSetup
+        ? (totalAccounts == 0 ? Icons.person_add_alt_1_rounded : Icons.groups_2_rounded)
+        : (proxyStatus.running ? Icons.pause_rounded : Icons.play_arrow_rounded);
 
     return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SectionHeading(title: l10n.homeTitle),
           const SizedBox(height: 28),
@@ -65,7 +73,14 @@ class HomePage extends ConsumerWidget {
             onCopyApiKey: settings == null || !settings.apiKeyRequired
                 ? null
                 : () => _copyText(context, settings.apiKey, l10n.apiKeyCopiedMessage),
-            onPressed: () async {
+            primaryActionLabel: primaryActionLabel,
+            primaryActionIcon: primaryActionIcon,
+            onPrimaryAction: () async {
+              if (showAccountSetup) {
+                context.go('/accounts');
+                return;
+              }
+
               if (proxyStatus.running) {
                 await ref.read(proxyControllerProvider).stop();
               } else {
@@ -76,6 +91,10 @@ class HomePage extends ConsumerWidget {
               }
             },
           ),
+          if (showAccountSetup) ...[
+            const SizedBox(height: 20),
+            _HomeOnboardingCard(proxyEndpoint: proxyEndpoint),
+          ],
           if (updateInfo?.hasUpdate == true) ...[
             const SizedBox(height: 20),
             AppUpdateBanner(updateInfo: updateInfo!),
@@ -83,7 +102,7 @@ class HomePage extends ConsumerWidget {
           if (proxyStatus.lastError != null) ...[
             const SizedBox(height: 20),
             EmptyStateCard(
-              icon: Icons.error_outline_rounded,
+              icon: Icons.error_rounded,
               title: l10n.lastErrorTitle,
               message: formatUserFacingMessage(l10n, proxyStatus.lastError!),
               action: TextButton(
@@ -111,7 +130,9 @@ class _ProxyStatusHero extends StatelessWidget {
     required this.copyApiKeyTooltip,
     required this.onCopyProxyEndpoint,
     required this.onCopyApiKey,
-    required this.onPressed,
+    required this.primaryActionLabel,
+    required this.primaryActionIcon,
+    required this.onPrimaryAction,
   });
 
   final bool running;
@@ -125,7 +146,9 @@ class _ProxyStatusHero extends StatelessWidget {
   final String copyApiKeyTooltip;
   final VoidCallback onCopyProxyEndpoint;
   final VoidCallback? onCopyApiKey;
-  final VoidCallback? onPressed;
+  final String primaryActionLabel;
+  final IconData primaryActionIcon;
+  final VoidCallback? onPrimaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -181,10 +204,7 @@ class _ProxyStatusHero extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              KickBadge(
-                label: activeAccountsText,
-                leading: const Icon(Icons.people_outline_rounded),
-              ),
+              KickBadge(label: activeAccountsText, leading: const Icon(Icons.groups_2_rounded)),
               KickBadge(
                 label: '${l10n.uptimeTitle}: $uptimeText',
                 leading: const Icon(Icons.schedule_rounded),
@@ -196,14 +216,139 @@ class _ProxyStatusHero extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: startPending ? null : onPressed,
+              onPressed: startPending ? null : onPrimaryAction,
               icon: startPending
                   ? const SizedBox.square(
                       dimension: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Icon(running ? Icons.pause_rounded : Icons.play_arrow_rounded),
-              label: Text(running ? l10n.stopProxyButton : l10n.startProxyButton),
+                  : Icon(primaryActionIcon),
+              label: Text(primaryActionLabel),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeOnboardingCard extends StatelessWidget {
+  const _HomeOnboardingCard({required this.proxyEndpoint});
+
+  final String proxyEndpoint;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+
+    return KickPanel(
+      tone: KickPanelTone.accent,
+      radius: 32,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.homeOnboardingTitle, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 6),
+          Text(
+            l10n.homeOnboardingSubtitle,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 18),
+          _OnboardingStep(
+            number: 1,
+            title: l10n.homeOnboardingAccountsTitle,
+            message: l10n.homeOnboardingAccountsMessage,
+            icon: Icons.person_add_alt_1_rounded,
+          ),
+          const SizedBox(height: 12),
+          _OnboardingStep(
+            number: 2,
+            title: l10n.homeOnboardingEndpointTitle,
+            message: l10n.homeOnboardingEndpointMessage(proxyEndpoint),
+            icon: Icons.link_rounded,
+          ),
+          const SizedBox(height: 12),
+          _OnboardingStep(
+            number: 3,
+            title: l10n.homeOnboardingStartTitle,
+            message: l10n.homeOnboardingStartMessage,
+            icon: Icons.rocket_launch_rounded,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.homeOnboardingFooter,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnboardingStep extends StatelessWidget {
+  const _OnboardingStep({
+    required this.number,
+    required this.title,
+    required this.message,
+    required this.icon,
+  });
+
+  final int number;
+  final String title;
+  final String message;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest.withValues(alpha: 0.86),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.34)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Center(
+              child: Text(
+                '$number',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(color: scheme.primary),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  message,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ],
             ),
           ),
         ],

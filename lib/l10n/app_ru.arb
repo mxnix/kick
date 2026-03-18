@@ -29,6 +29,8 @@
   },
   "stopProxyButton": "Остановить",
   "startProxyButton": "Запустить",
+  "openAccountsButton": "Открыть окно с аккаунтами",
+  "connectAccountShortButton": "Подключить аккаунт",
   "uptimeTitle": "Время работы",
   "uptimeNotStarted": "Еще не запущен",
   "uptimeValue": "{hours} ч {minutes} мин {seconds} сек",
@@ -99,11 +101,23 @@
   "clearCooldownAction": "Снять паузу",
   "deleteTooltip": "Удалить",
   "accountUsageOpenTooltip": "Лимиты",
+  "moreButton": "Еще",
+  "deleteAccountDialogTitle": "Удалить аккаунт?",
+  "deleteAccountDialogMessage": "Аккаунт {label} будет удален из KiCk. При необходимости его можно подключить снова позже.",
+  "@deleteAccountDialogMessage": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAccountConfirmButton": "Удалить аккаунт",
   "accountUsageTitle": "Лимиты аккаунта",
   "accountUsageProviderLabel": "Авторизация Gemini CLI (OAuth)",
   "accountUsageRefreshTooltip": "Обновить",
   "accountUsageStatusHealthy": "Доступен",
   "accountUsageStatusCoolingDown": "Ограничен",
+  "accountUsageStatusLowQuota": "Лимит заканчивается",
   "accountUsageStatusDisabled": "Выключен",
   "accountQuotaWarningStatus": "Лимит заканчивается",
   "accountUsageLoadErrorTitle": "Не удалось загрузить данные по лимитам",
@@ -174,14 +188,6 @@
       }
     }
   },
-  "accountUsageRemainingPercent": "Осталось {value}%",
-  "@accountUsageRemainingPercent": {
-    "placeholders": {
-      "value": {
-        "type": "String"
-      }
-    }
-  },
   "accountUsageUsedPercent": "Израсходовано {value}%",
   "@accountUsageUsedPercent": {
     "placeholders": {
@@ -221,14 +227,19 @@
   "settingsModelsSectionSummary": "Пользовательские ID моделей",
   "hostLabel": "Хост",
   "hostHelperText": "Обычно 127.0.0.1",
+  "hostRequiredError": "Укажите адрес хоста",
+  "hostInvalidError": "Адрес не должен содержать пробелы",
+  "hostLanDisabledError": "Чтобы использовать 0.0.0.0, включите доступ из локальной сети",
   "portLabel": "Порт",
   "portHelperText": "По умолчанию 3000",
+  "portInvalidError": "Укажите порт от 1 до 65535",
   "allowLanTitle": "Доступ из локальной сети и Docker",
   "allowLanSubtitle": "Прокси будет слушать 0.0.0.0 и станет доступен из локальной сети и контейнеров",
   "androidBackgroundRuntimeTitle": "Работа в фоне на Android",
   "androidBackgroundRuntimeSubtitle": "Нужно, чтобы прокси не останавливался при сворачивании приложения",
   "requestRetriesLabel": "Количество повторов запросов к Google",
   "requestRetriesHelperText": "Сколько раз KiCk повторит запрос после временной ошибки",
+  "requestRetriesInvalidError": "Укажите число от 0 до 20",
   "mark429AsUnhealthyTitle": "Временно выводить аккаунт из ротации при ошибке 429",
   "mark429AsUnhealthySubtitle": "После ошибки 429 KiCk пометит аккаунт как временно недоступный и переключится на другой",
   "loggingLabel": "Логирование",
@@ -239,6 +250,10 @@
   "unsafeRawLoggingSubtitle": "Сохраняет содержимое запросов и ответов. Включайте только для отладки!",
   "customModelsLabel": "Пользовательские ID моделей",
   "customModelsHelperText": "Указывайте точный ID модели, по одному на строке",
+  "settingsSavingStatus": "Сохраняем изменения...",
+  "settingsSavedStatus": "Изменения сохранены",
+  "settingsValidationStatus": "Проверьте поля с ошибками",
+  "settingsSaveFailedStatus": "Не удалось сохранить изменения",
   "settingsLoadErrorTitle": "Не удалось загрузить настройки",
   "aboutTitle": "О программе",
   "aboutMenuSubtitle": "Версия, обновления и аналитика",
@@ -276,6 +291,22 @@
   "proxyEndpointCopiedMessage": "Адрес прокси скопирован",
   "copyApiKeyTooltip": "Скопировать API-ключ",
   "apiKeyCopiedMessage": "API-ключ скопирован",
+  "homeOnboardingTitle": "С чего начать",
+  "homeOnboardingSubtitle": "Небольшая подсказка для первого запуска",
+  "homeOnboardingAccountsTitle": "Подключите аккаунт",
+  "homeOnboardingAccountsMessage": "Без активного аккаунта KiCk не сможет обрабатывать запросы.",
+  "homeOnboardingEndpointTitle": "Проверьте адрес прокси",
+  "homeOnboardingEndpointMessage": "Когда все будет готово, используйте адрес {endpoint} в своем клиенте.",
+  "@homeOnboardingEndpointMessage": {
+    "placeholders": {
+      "endpoint": {
+        "type": "String"
+      }
+    }
+  },
+  "homeOnboardingStartTitle": "Запустите прокси",
+  "homeOnboardingStartMessage": "После запуска KiCk начнет принимать запросы на этом устройстве.",
+  "homeOnboardingFooter": "Если аккаунт уже подключен, просто включите его на экране аккаунтов и вернитесь сюда.",
   "apiKeyRegeneratedMessage": "Новый API-ключ сохранен",
   "regenerateApiKeyAction": "Создать новый API-ключ",
   "regenerateApiKeyDialogTitle": "Создать новый API-ключ?",
@@ -287,14 +318,40 @@
   "noActiveAccountsWarning": "Нет активных аккаунтов. Прокси запустится, но не сможет обрабатывать запросы, пока вы не добавите или не включите хотя бы один аккаунт.",
   "pinWindowTooltip": "Закрепить окно поверх остальных",
   "unpinWindowTooltip": "Убрать закрепление окна",
-  "disclaimerTitle": "Отказ от ответственности",
-  "disclaimerBodyLineOne": "Программа предоставляется \"как есть\".",
-  "disclaimerBodyLineTwo": "Только для некоммерческого использования в образовательных и исследовательских целях.",
-  "disclaimerLinkPrefix": "Подробнее:",
-  "disclaimerAnalyticsConsentLabel": "Отправлять анонимную аналитику",
+  "welcomeTitle": "Добро пожаловать в KiCk",
+  "welcomeSubtitle": "KiCk помогает запустить локальный прокси для Gemini CLI без терминала и лишних настроек.",
+  "welcomeStepAccountsTitle": "Подключите Google-аккаунт",
+  "welcomeStepAccountsMessage": "Это можно сделать на экране аккаунтов. Если аккаунт уже есть, просто включите его.",
+  "welcomeStepHomeTitle": "Откройте главную",
+  "welcomeStepHomeMessage": "На главной всегда видны адрес прокси, API-ключ и кнопка запуска.",
+  "welcomeUsageTitle": "Важно знать",
+  "welcomeUsageMessage": "KiCk предназначен для личного, учебного и исследовательского использования.",
+  "welcomeAnalyticsTitle": "Анонимная аналитика",
+  "welcomeAnalyticsSubtitle": "Помогает понять, где KiCk работает хорошо, а где его стоит улучшить.",
+  "welcomeRepositoryLinkLabel": "Подробнее о проекте",
   "logsTitle": "Логи",
   "logsSubtitle": "История запросов и ошибок",
   "logsSearchHint": "Поиск по маршруту или сообщению",
+  "logsRefreshButton": "Обновить",
+  "logsClearButton": "Очистить",
+  "logsClearDialogTitle": "Очистить логи?",
+  "logsClearDialogMessage": "Все записи будут удалены из KiCk. Это действие нельзя отменить.",
+  "logsClearConfirmButton": "Очистить",
+  "logsLevelAll": "Все уровни",
+  "logsLevelInfo": "Инфо",
+  "logsLevelWarning": "Предупреждения",
+  "logsLevelError": "Ошибки",
+  "logsCategoryAll": "Все категории",
+  "logsCategoryFilterTitle": "Категории",
+  "logsPayloadShowButton": "Показать payload",
+  "logsPayloadHideButton": "Скрыть payload",
+  "logsCopyEntryButton": "Копировать",
+  "logsCopiedMessage": "Запись лога скопирована",
+  "logsFilteredEmptyTitle": "По текущим фильтрам ничего не найдено",
+  "logsFilteredEmptyMessage": "Попробуйте убрать часть фильтров или изменить поиск.",
+  "logsEntryLevelInfo": "Инфо",
+  "logsEntryLevelWarning": "Предупреждение",
+  "logsEntryLevelError": "Ошибка",
   "logsTotalCount": "Всего: {count}",
   "@logsTotalCount": {
     "placeholders": {
@@ -341,6 +398,11 @@
     }
   },
   "accountDialogTitle": "Google-аккаунт",
+  "accountDialogBasicsTitle": "Основное",
+  "accountDialogBasicsSubtitle": "Эти поля нужны для подключения аккаунта",
+  "accountDialogAdvancedTitle": "Расширенные настройки",
+  "accountDialogAdvancedSubtitle": "Приоритет и ограничения по моделям",
+  "accountDialogAdvancedHint": "Если не хочется настраивать вручную, этот блок можно оставить как есть.",
   "projectIdLabel": "PROJECT_ID",
   "projectIdHint": "my-google-cloud-project",
   "projectIdConsoleLinkLabel": "Где посмотреть ID проекта",
@@ -348,6 +410,7 @@
   "projectIdLookupFailedMessage": "Не удалось открыть Google Cloud Console.",
   "accountNameLabel": "Название аккаунта",
   "accountNameHint": "Например, основной аккаунт",
+  "accountNameHelperText": "Если оставить поле пустым, KiCk подставит имя из Google.",
   "priorityLabel": "Приоритет",
   "priorityHelperText": "Сначала используются основные аккаунты. Аккаунты с одинаковым приоритетом чередуются.",
   "priorityLevelPrimary": "Основной",

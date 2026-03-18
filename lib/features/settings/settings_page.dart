@@ -22,6 +22,8 @@ class SettingsPage extends ConsumerStatefulWidget {
   ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
+enum _SettingsSaveState { saving, saved, validationError, error }
+
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _hostController = TextEditingController();
   final _portController = TextEditingController();
@@ -46,9 +48,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isHydrating = false;
   bool _saveInFlight = false;
   bool _mark429AsUnhealthy = false;
+  _SettingsSaveState _saveState = _SettingsSaveState.saved;
+  String? _saveErrorMessage;
+  bool _showSaveStatus = false;
   AppSettings? _syncedSettings;
   AppSettings? _queuedSettings;
   Timer? _saveDebounce;
+  Timer? _saveStatusHideTimer;
 
   @override
   void initState() {
@@ -64,6 +70,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   void dispose() {
     _saveDebounce?.cancel();
+    _saveStatusHideTimer?.cancel();
     _hostController.dispose();
     _portController.dispose();
     _apiKeyController.dispose();
@@ -85,12 +92,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         if (!_initialized) {
           _applySettings(settings);
         }
+        final hostError = _hostValidationError(l10n);
+        final portError = _portValidationError(l10n);
+        final requestRetriesError = _requestRetriesValidationError(l10n);
 
         return SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SectionHeading(title: l10n.settingsTitle, subtitle: l10n.settingsSubtitle),
+              SectionHeading(
+                title: l10n.settingsTitle,
+                subtitle: l10n.settingsSubtitle,
+                trailing: _showSaveStatus
+                    ? _SettingsSaveBadge(state: _saveState, errorMessage: _saveErrorMessage)
+                    : null,
+              ),
               const SizedBox(height: 24),
               _SettingsSection(
                 title: l10n.settingsAppearanceSectionTitle,
@@ -110,7 +126,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ButtonSegment(
                           value: ThemeMode.system,
                           label: Text(l10n.themeModeSystem),
-                          icon: const Icon(Icons.phone_android_rounded),
+                          icon: const Icon(Icons.brightness_auto_rounded),
                         ),
                         ButtonSegment(
                           value: ThemeMode.light,
@@ -178,7 +194,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     if (isWindowsPlatform) ...[
                       const SizedBox(height: 18),
                       _SettingInfoCard(
-                        icon: Icons.inbox_rounded,
+                        icon: Icons.desktop_windows_rounded,
                         title: l10n.windowsTrayTitle,
                         subtitle: l10n.windowsTraySubtitle,
                       ),
@@ -211,6 +227,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       decoration: InputDecoration(
                         labelText: l10n.hostLabel,
                         helperText: l10n.hostHelperText,
+                        errorText: hostError,
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -220,6 +237,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       decoration: InputDecoration(
                         labelText: l10n.portLabel,
                         helperText: l10n.portHelperText.isEmpty ? null : l10n.portHelperText,
+                        errorText: portError,
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -254,6 +272,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         helperText: l10n.requestRetriesHelperText.isEmpty
                             ? null
                             : l10n.requestRetriesHelperText,
+                        errorText: requestRetriesError,
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -344,7 +363,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               _SettingsNavigationTile(
                 title: l10n.aboutTitle,
                 subtitle: l10n.aboutMenuSubtitle,
-                icon: Icons.info_outline_rounded,
+                icon: Icons.info_rounded,
                 onTap: () => context.push('/settings/about'),
               ),
             ],
@@ -352,7 +371,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         );
       },
       error: (error, stackTrace) => EmptyStateCard(
-        icon: Icons.error_outline_rounded,
+        icon: Icons.error_rounded,
         title: l10n.settingsLoadErrorTitle,
         message: formatUserFacingError(l10n, error),
       ),
@@ -376,6 +395,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _windowsLaunchAtStartup = settings.windowsLaunchAtStartup;
     _mark429AsUnhealthy = settings.mark429AsUnhealthy;
     _unsafeRawLoggingEnabled = settings.unsafeRawLoggingEnabled;
+    _saveState = _SettingsSaveState.saved;
+    _saveErrorMessage = null;
+    _showSaveStatus = false;
     _initialized = true;
     _isHydrating = false;
   }
@@ -384,11 +406,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (!_initialized || _isHydrating) {
       return;
     }
+    if (_hasBlockingValidationErrors(context.l10n)) {
+      _saveDebounce?.cancel();
+      _presentSaveStatus(_SettingsSaveState.validationError);
+      return;
+    }
+    setState(() {});
     _scheduleSave();
   }
 
   void _scheduleSave() {
     _saveDebounce?.cancel();
+    _presentSaveStatus(_SettingsSaveState.saving);
     _saveDebounce = Timer(const Duration(milliseconds: 450), () {
       unawaited(_persistSettings());
     });
@@ -396,10 +425,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   void _saveImmediately() {
     _saveDebounce?.cancel();
+    if (_hasBlockingValidationErrors(context.l10n)) {
+      _presentSaveStatus(_SettingsSaveState.validationError);
+      return;
+    }
+    _presentSaveStatus(_SettingsSaveState.saving);
     unawaited(_persistSettings());
   }
 
   Future<void> _persistSettings() async {
+    final l10n = context.l10n;
     final currentSettings = _syncedSettings ?? ref.read(settingsControllerProvider).asData?.value;
     if (currentSettings == null) {
       return;
@@ -408,12 +443,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final updated = currentSettings.copyWith(
       themeMode: _themeMode,
       useDynamicColor: _useDynamicColor,
-      host: _hostController.text.trim().isEmpty ? '127.0.0.1' : _hostController.text.trim(),
-      port: int.tryParse(_portController.text.trim()) ?? 3000,
+      host: _hostController.text.trim(),
+      port: int.parse(_portController.text.trim()),
       allowLan: _allowLan,
       androidBackgroundRuntime: _androidBackgroundRuntime,
       windowsLaunchAtStartup: _windowsLaunchAtStartup,
-      requestMaxRetries: int.tryParse(_requestRetriesController.text.trim()) ?? 10,
+      requestMaxRetries: int.parse(_requestRetriesController.text.trim()),
       mark429AsUnhealthy: _mark429AsUnhealthy,
       loggingVerbosity: _verbosity,
       unsafeRawLoggingEnabled: _unsafeRawLoggingEnabled,
@@ -429,6 +464,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
 
     if (_settingsEqual(currentSettings, updated)) {
+      if (mounted) {
+        setState(() {
+          _showSaveStatus = false;
+        });
+      }
       return;
     }
 
@@ -445,6 +485,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         await ref.read(settingsControllerProvider.notifier).save(nextSettings);
         _syncedSettings = nextSettings;
       }
+      _presentSaveStatus(_SettingsSaveState.saved, hideAfter: const Duration(seconds: 2));
+    } catch (error) {
+      _presentSaveStatus(
+        _SettingsSaveState.error,
+        errorMessage: formatUserFacingError(l10n, error),
+      );
     } finally {
       _saveInFlight = false;
     }
@@ -487,10 +533,73 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (!mounted) {
       return;
     }
+    _presentSaveStatus(_SettingsSaveState.saved, hideAfter: const Duration(seconds: 2));
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(content: Text(l10n.apiKeyRegeneratedMessage)));
+  }
+
+  void _presentSaveStatus(_SettingsSaveState state, {String? errorMessage, Duration? hideAfter}) {
+    _saveStatusHideTimer?.cancel();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _saveState = state;
+      _saveErrorMessage = errorMessage;
+      _showSaveStatus = true;
+    });
+
+    if (hideAfter != null) {
+      _saveStatusHideTimer = Timer(hideAfter, () {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _showSaveStatus = false;
+        });
+      });
+    }
+  }
+
+  String? _hostValidationError(KickLocalizations l10n) {
+    final value = _hostController.text.trim();
+    if (value.isEmpty) {
+      return l10n.hostRequiredError;
+    }
+    if (RegExp(r'\s').hasMatch(value)) {
+      return l10n.hostInvalidError;
+    }
+    if (value == '0.0.0.0' && !_allowLan) {
+      return l10n.hostLanDisabledError;
+    }
+    return null;
+  }
+
+  String? _portValidationError(KickLocalizations l10n) {
+    final value = _portController.text.trim();
+    final parsed = int.tryParse(value);
+    if (parsed == null || parsed < 1 || parsed > 65535) {
+      return l10n.portInvalidError;
+    }
+    return null;
+  }
+
+  String? _requestRetriesValidationError(KickLocalizations l10n) {
+    final value = _requestRetriesController.text.trim();
+    final parsed = int.tryParse(value);
+    if (parsed == null || parsed < 0 || parsed > 20) {
+      return l10n.requestRetriesInvalidError;
+    }
+    return null;
+  }
+
+  bool _hasBlockingValidationErrors(KickLocalizations l10n) {
+    return _hostValidationError(l10n) != null ||
+        _portValidationError(l10n) != null ||
+        _requestRetriesValidationError(l10n) != null;
   }
 
   bool _settingsEqual(AppSettings left, AppSettings right) {
@@ -616,6 +725,61 @@ class _SettingsSection extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _SettingsSaveBadge extends StatelessWidget {
+  const _SettingsSaveBadge({required this.state, this.errorMessage});
+
+  final _SettingsSaveState state;
+  final String? errorMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+
+    final (label, icon, color) = switch (state) {
+      _SettingsSaveState.saving => (l10n.settingsSavingStatus, Icons.sync_rounded, scheme.primary),
+      _SettingsSaveState.saved => (
+        l10n.settingsSavedStatus,
+        Icons.check_circle_rounded,
+        scheme.primary,
+      ),
+      _SettingsSaveState.validationError => (
+        l10n.settingsValidationStatus,
+        Icons.error_rounded,
+        scheme.error,
+      ),
+      _SettingsSaveState.error => (
+        l10n.settingsSaveFailedStatus,
+        Icons.cloud_off_rounded,
+        scheme.error,
+      ),
+    };
+
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(color.withValues(alpha: 0.12), scheme.surfaceContainerLow),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: color)),
+        ],
+      ),
+    );
+
+    if (state != _SettingsSaveState.error || errorMessage == null || errorMessage!.isEmpty) {
+      return badge;
+    }
+
+    return Tooltip(message: errorMessage!, child: badge);
   }
 }
 

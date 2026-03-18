@@ -83,7 +83,7 @@ class AccountUsagePage extends ConsumerWidget {
         title: l10n.accountUsageTitle,
         subtitle: l10n.accountUsageMissingSubtitle,
         child: EmptyStateCard(
-          icon: Icons.error_outline_rounded,
+          icon: Icons.error_rounded,
           title: l10n.accountsLoadErrorTitle,
           message: formatUserFacingError(l10n, error),
         ),
@@ -131,7 +131,7 @@ class _UsageHeader extends StatelessWidget {
 
     return Row(
       children: [
-        IconButton(
+        IconButton.filledTonal(
           onPressed: () => context.pop(),
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           icon: const Icon(Icons.arrow_back_rounded),
@@ -157,7 +157,7 @@ class _UsageHeader extends StatelessWidget {
           ),
         ),
         if (onRefresh != null)
-          IconButton(
+          IconButton.filledTonal(
             onPressed: () => onRefresh!(),
             tooltip: l10n.accountUsageRefreshTooltip,
             icon: const Icon(Icons.refresh_rounded),
@@ -179,7 +179,7 @@ class _UsageAccountCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final hasQuotaPressure = account.lastQuotaSnapshot?.trim().isNotEmpty == true;
     final statusIcon = !account.enabled
-        ? Icons.pause_circle_outline_rounded
+        ? Icons.pause_circle_rounded
         : account.isCoolingDown
         ? Icons.schedule_rounded
         : hasQuotaPressure
@@ -190,7 +190,7 @@ class _UsageAccountCard extends StatelessWidget {
         : account.isCoolingDown
         ? l10n.accountUsageStatusCoolingDown
         : hasQuotaPressure
-        ? l10n.accountUsageStatusCoolingDown
+        ? l10n.accountUsageStatusLowQuota
         : l10n.accountUsageStatusHealthy;
     final statusTint = !account.enabled
         ? scheme.onSurfaceVariant
@@ -241,7 +241,7 @@ class _UsageAccountCard extends StatelessWidget {
             children: [
               KickBadge(
                 label: l10n.projectIdChip(account.projectId),
-                leading: const Icon(Icons.badge_outlined),
+                leading: const Icon(Icons.badge_rounded),
               ),
               KickBadge(
                 label: l10n.priorityChip(accountPriorityLabel(l10n, account.priority)),
@@ -260,51 +260,10 @@ class _UsageAccountCard extends StatelessWidget {
           ],
           if (usage != null) ...[
             const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLow.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(context.kickTokens.panelRadius - 10),
-                border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.22)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.accountUsageLastUpdated(_formatDateTime(l10n, usage!.fetchedAt)),
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      KickBadge(
-                        label: l10n.accountUsageModelCount(usage!.buckets.length),
-                        leading: const Icon(Icons.layers_outlined),
-                      ),
-                      KickBadge(
-                        label: l10n.accountUsageHealthyCount(usage!.healthyBucketCount),
-                        leading: const Icon(Icons.verified_rounded),
-                        tint: scheme.primary,
-                      ),
-                      if (usage!.lowQuotaBucketCount > 0)
-                        KickBadge(
-                          label: l10n.accountUsageAttentionCount(usage!.lowQuotaBucketCount),
-                          leading: const Icon(Icons.query_stats_rounded),
-                          tint: scheme.tertiary,
-                        ),
-                      if (usage!.criticalBucketCount > 0)
-                        KickBadge(
-                          label: l10n.accountUsageCriticalCount(usage!.criticalBucketCount),
-                          leading: const Icon(Icons.warning_amber_rounded),
-                          tint: scheme.error,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
+            KickBadge(
+              label: l10n.accountUsageLastUpdated(_formatDateTime(l10n, usage!.fetchedAt)),
+              leading: const Icon(Icons.update_rounded),
+              emphasis: true,
             ),
           ],
         ],
@@ -402,6 +361,8 @@ class _UsageBucketCard extends StatelessWidget {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     final remaining = bucket.remainingPercent;
+    final health = bucket.health;
+    final tint = _usageHealthTint(context, health);
 
     return KickPanel(
       tone: KickPanelTone.soft,
@@ -420,6 +381,12 @@ class _UsageBucketCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
+              KickBadge(
+                label: _usageHealthLabel(l10n, health),
+                leading: Icon(_usageHealthIcon(health), size: 16),
+                tint: tint,
+                emphasis: true,
+              ),
               if (bucket.tokenType.isNotEmpty)
                 KickBadge(
                   label: l10n.accountUsageTokenType(bucket.tokenType),
@@ -532,7 +499,7 @@ class _UsageErrorCard extends StatelessWidget {
     final l10n = context.l10n;
 
     return EmptyStateCard(
-      icon: Icons.error_outline_rounded,
+      icon: Icons.error_rounded,
       title: l10n.accountUsageLoadErrorTitle,
       message: message,
       action: Wrap(
@@ -593,7 +560,39 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-String _formatUsageValue(double value) => value.toStringAsFixed(2);
+String _usageHealthLabel(KickLocalizations l10n, GeminiUsageBucketHealth health) {
+  return switch (health) {
+    GeminiUsageBucketHealth.healthy => l10n.accountUsageBucketHealthy,
+    GeminiUsageBucketHealth.low => l10n.accountUsageBucketLow,
+    GeminiUsageBucketHealth.critical => l10n.accountUsageBucketCritical,
+  };
+}
+
+IconData _usageHealthIcon(GeminiUsageBucketHealth health) {
+  return switch (health) {
+    GeminiUsageBucketHealth.healthy => Icons.verified_rounded,
+    GeminiUsageBucketHealth.low => Icons.query_stats_rounded,
+    GeminiUsageBucketHealth.critical => Icons.warning_amber_rounded,
+  };
+}
+
+Color _usageHealthTint(BuildContext context, GeminiUsageBucketHealth health) {
+  final scheme = Theme.of(context).colorScheme;
+
+  return switch (health) {
+    GeminiUsageBucketHealth.healthy => scheme.primary,
+    GeminiUsageBucketHealth.low => scheme.tertiary,
+    GeminiUsageBucketHealth.critical => scheme.error,
+  };
+}
+
+String _formatUsageValue(double value) {
+  final rounded = value.roundToDouble();
+  if ((value - rounded).abs() < 0.05) {
+    return rounded.toStringAsFixed(0);
+  }
+  return value.toStringAsFixed(1);
+}
 
 String _formatDateTime(KickLocalizations l10n, DateTime value) {
   return DateFormat('dd/MM/yyyy, HH:mm', l10n.localeName).format(value);

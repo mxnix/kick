@@ -57,7 +57,7 @@ class AboutPage extends ConsumerWidget {
         ),
       ),
       error: (error, stackTrace) => EmptyStateCard(
-        icon: Icons.error_outline_rounded,
+        icon: Icons.error_rounded,
         title: l10n.settingsLoadErrorTitle,
         message: formatUserFacingError(l10n, error),
       ),
@@ -150,9 +150,7 @@ class _AboutActionCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: OutlinedButton.icon(
               onPressed: onPressed,
-              icon: Icon(
-                onPressed == null ? Icons.hourglass_top_rounded : Icons.open_in_new_rounded,
-              ),
+              icon: Icon(onPressed == null ? Icons.hourglass_top_rounded : Icons.refresh_rounded),
               label: Text(actionLabel),
             ),
           ),
@@ -171,7 +169,11 @@ class _AboutHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back_rounded)),
+        IconButton.filledTonal(
+          onPressed: () => context.pop(),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
         const SizedBox(width: 8),
         Text(title, style: Theme.of(context).textTheme.headlineLarge),
       ],
@@ -222,7 +224,7 @@ class _AboutHeroCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     KickBadge(
                       label: versionLabel,
-                      leading: const Icon(Icons.sell_rounded),
+                      leading: const Icon(Icons.new_releases_rounded),
                       emphasis: true,
                     ),
                   ],

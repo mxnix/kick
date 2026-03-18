@@ -18,26 +18,26 @@ class AppShell extends StatelessWidget {
       _ShellDestination(
         route: '/home',
         label: l10n.navHome,
-        icon: const Icon(Icons.home_outlined),
+        icon: const Icon(Icons.home_rounded),
         selectedIcon: const Icon(Icons.home_rounded),
       ),
       _ShellDestination(
         route: '/accounts',
         label: l10n.navAccounts,
-        icon: const Icon(Icons.group_outlined),
-        selectedIcon: const Icon(Icons.group_rounded),
+        icon: const Icon(Icons.groups_2_rounded),
+        selectedIcon: const Icon(Icons.groups_2_rounded),
       ),
       _ShellDestination(
         route: '/settings',
         label: l10n.navSettings,
-        icon: const Icon(Icons.tune_outlined),
+        icon: const Icon(Icons.tune_rounded),
         selectedIcon: const Icon(Icons.tune_rounded),
       ),
       _ShellDestination(
         route: '/logs',
         label: l10n.navLogs,
-        icon: const Icon(Icons.receipt_long_outlined),
-        selectedIcon: const Icon(Icons.receipt_long_rounded),
+        icon: const Icon(Icons.article_rounded),
+        selectedIcon: const Icon(Icons.article_rounded),
       ),
     ];
 

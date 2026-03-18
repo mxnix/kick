@@ -196,7 +196,7 @@ class _BootstrapErrorBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return EmptyStateCard(
-      icon: Icons.error_outline_rounded,
+      icon: Icons.error_rounded,
       title: context.l10n.appTitle,
       message: formatUserFacingError(context.l10n, error),
     );
