@@ -1406,6 +1406,12 @@ abstract class AppLocalizations {
   /// **'Сохранить логи в файл'**
   String get logsExportTooltip;
 
+  /// No description provided for @logsExportDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Куда сохранить логи?'**
+  String get logsExportDialogTitle;
+
   /// No description provided for @logsShareTooltip.
   ///
   /// In ru, this message translates to:

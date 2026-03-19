@@ -371,6 +371,7 @@
   "logsEmptyTitle": "Логи пусты",
   "logsLoadErrorTitle": "Не удалось загрузить логи",
   "logsExportTooltip": "Сохранить логи в файл",
+  "logsExportDialogTitle": "Куда сохранить логи?",
   "logsShareTooltip": "Поделиться логами",
   "logsNothingToExportMessage": "Нет логов для сохранения",
   "logsExportedMessage": "Логи сохранены в файл {fileName}",

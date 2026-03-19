@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kick/analytics/android_background_session_tracker.dart';
@@ -14,6 +16,7 @@ void main() {
     final service = LogExportService(
       exportDirectoryResolver: () async => tempDirectory,
       shareCallback: (_) async => ShareResult.unavailable,
+      useNativeSaveDialog: false,
     );
 
     final result = await service.export([
@@ -39,8 +42,13 @@ void main() {
       ),
     ]);
 
-    final contents = await result.file.readAsString();
-    expect(result.file.existsSync(), isTrue);
+    expect(result, isNotNull);
+
+    final exportedFile = result!.file;
+    expect(exportedFile, isNotNull);
+
+    final contents = await exportedFile!.readAsString();
+    expect(exportedFile.existsSync(), isTrue);
     expect(contents, contains('KiCk log export'));
     expect(contents, contains('Diagnostics summary'));
     expect(contents, contains('Levels: info=2'));
@@ -60,6 +68,79 @@ void main() {
     expect(contents, contains('[Removed from export for safety]'));
     expect(contents, isNot(contains('"content":"Hello"')));
     expect(contents, isNot(contains('qwerty123@gmail.com')));
+  });
+
+  test('uses the native save dialog callback when enabled', () async {
+    String? capturedDialogTitle;
+    String? capturedFileName;
+    Uint8List? capturedBytes;
+
+    final service = LogExportService(
+      exportDirectoryResolver: () async => Directory.systemTemp,
+      shareCallback: (_) async => ShareResult.unavailable,
+      useNativeSaveDialog: true,
+      saveFileCallback: ({
+        required String fileName,
+        required Uint8List bytes,
+        String? dialogTitle,
+      }) async {
+        capturedDialogTitle = dialogTitle;
+        capturedFileName = fileName;
+        capturedBytes = bytes;
+        return 'content://com.android.externalstorage.documents/document/'
+            'primary%3ADownload%2Fkick-logs-custom.log';
+      },
+    );
+
+    final result = await service.export(
+      [
+        AppLogEntry(
+          id: '1',
+          timestamp: DateTime.utc(2026, 3, 15, 17),
+          level: AppLogLevel.error,
+          category: 'chat.completions',
+          route: '/v1/chat/completions',
+          message: 'Response completed',
+          maskedPayload: '{"preview":"ok"}',
+        ),
+      ],
+      dialogTitle: 'Куда сохранить логи?',
+    );
+
+    expect(result, isNotNull);
+    expect(result!.file, isNull);
+    expect(result.fileName, 'kick-logs-custom.log');
+    expect(capturedDialogTitle, 'Куда сохранить логи?');
+    expect(capturedFileName, startsWith('kick-logs-'));
+    expect(capturedFileName, endsWith('.log'));
+    expect(utf8.decode(capturedBytes!), contains('KiCk log export'));
+  });
+
+  test('returns null when the native save dialog is canceled', () async {
+    final service = LogExportService(
+      exportDirectoryResolver: () async => Directory.systemTemp,
+      shareCallback: (_) async => ShareResult.unavailable,
+      useNativeSaveDialog: true,
+      saveFileCallback: ({
+        required String fileName,
+        required Uint8List bytes,
+        String? dialogTitle,
+      }) async => null,
+    );
+
+    final result = await service.export([
+      AppLogEntry(
+        id: '1',
+        timestamp: DateTime.utc(2026, 3, 15, 17),
+        level: AppLogLevel.error,
+        category: 'chat.completions',
+        route: '/v1/chat/completions',
+        message: 'Response completed',
+        maskedPayload: '{"preview":"ok"}',
+      ),
+    ]);
+
+    expect(result, isNull);
   });
 
   test('shares the exported log file through the configured callback', () async {
@@ -87,11 +168,13 @@ void main() {
       ),
     ]);
 
-    expect(result.file.existsSync(), isTrue);
+    final sharedFile = result.file;
+    expect(sharedFile, isNotNull);
+    expect(sharedFile!.existsSync(), isTrue);
     expect(sharedParams, isNotNull);
     expect(sharedParams?.files, isNotNull);
     expect(sharedParams?.files, hasLength(1));
-    expect(sharedParams?.files?.single.path, result.file.path);
+    expect(sharedParams?.files?.single.path, sharedFile.path);
     expect(sharedParams?.subject, 'KiCk logs');
   });
 }

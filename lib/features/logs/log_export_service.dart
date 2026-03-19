@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -11,44 +13,74 @@ import '../../data/models/app_log_entry.dart';
 
 typedef LogExportDirectoryResolver = Future<Directory> Function();
 typedef LogShareCallback = Future<ShareResult> Function(ShareParams params);
+typedef LogSaveFileCallback =
+    Future<String?> Function({
+      required String fileName,
+      required Uint8List bytes,
+      String? dialogTitle,
+    });
 
 class LogExportResult {
-  const LogExportResult({required this.file, required this.contents});
+  const LogExportResult({required this.fileName, required this.contents, this.file});
 
-  final File file;
+  final String fileName;
   final String contents;
+  final File? file;
 }
 
 class LogExportService {
   LogExportService({
     LogExportDirectoryResolver? exportDirectoryResolver,
     LogShareCallback? shareCallback,
+    LogSaveFileCallback? saveFileCallback,
+    bool? useNativeSaveDialog,
   }) : _exportDirectoryResolver = exportDirectoryResolver ?? _defaultExportDirectory,
-       _shareCallback = shareCallback ?? _defaultShare;
+       _shareCallback = shareCallback ?? _defaultShare,
+       _saveFileCallback = saveFileCallback ?? _defaultSaveFile,
+       _useNativeSaveDialog = useNativeSaveDialog ?? (Platform.isAndroid || Platform.isWindows);
 
   final LogExportDirectoryResolver _exportDirectoryResolver;
   final LogShareCallback _shareCallback;
+  final LogSaveFileCallback _saveFileCallback;
+  final bool _useNativeSaveDialog;
 
-  Future<LogExportResult> export(List<AppLogEntry> entries) async {
+  Future<LogExportResult?> export(List<AppLogEntry> entries, {String? dialogTitle}) async {
     if (entries.isEmpty) {
       throw StateError('No log entries available for export.');
     }
 
-    final directory = await _exportDirectoryResolver();
-    await directory.create(recursive: true);
-
-    final file = File(p.join(directory.path, _buildFileName()));
     final contents = format(entries);
-    await file.writeAsString(contents, flush: true);
-    return LogExportResult(file: file, contents: contents);
+    final fileName = _buildFileName();
+
+    if (_useNativeSaveDialog) {
+      final savedLocation = await _saveFileCallback(
+        dialogTitle: dialogTitle,
+        fileName: fileName,
+        bytes: Uint8List.fromList(utf8.encode(contents)),
+      );
+      if (savedLocation == null) {
+        return null;
+      }
+
+      return LogExportResult(
+        fileName: _extractFileName(savedLocation, fallback: fileName),
+        contents: contents,
+      );
+    }
+
+    return _writeExportFile(fileName: fileName, contents: contents);
   }
 
   Future<LogExportResult> share(List<AppLogEntry> entries) async {
-    final result = await export(entries);
+    if (entries.isEmpty) {
+      throw StateError('No log entries available for export.');
+    }
+
+    final result = await _writeExportFile(fileName: _buildFileName(), contents: format(entries));
     await _shareCallback(
       ShareParams(
         files: [
-          XFile(result.file.path, name: p.basename(result.file.path), mimeType: 'text/plain'),
+          XFile(result.file!.path, name: result.fileName, mimeType: 'text/plain'),
         ],
         subject: 'KiCk logs',
         text: 'KiCk log export',
@@ -106,6 +138,18 @@ class LogExportService {
     return 'kick-logs-$timestamp.log';
   }
 
+  Future<LogExportResult> _writeExportFile({
+    required String fileName,
+    required String contents,
+  }) async {
+    final directory = await _exportDirectoryResolver();
+    await directory.create(recursive: true);
+
+    final file = File(p.join(directory.path, fileName));
+    await file.writeAsString(contents, flush: true);
+    return LogExportResult(fileName: fileName, contents: contents, file: file);
+  }
+
   static Future<Directory> _defaultExportDirectory() async {
     if (Platform.isAndroid) {
       final externalDirectory = await getExternalStorageDirectory();
@@ -125,6 +169,44 @@ class LogExportService {
 
   static Future<ShareResult> _defaultShare(ShareParams params) {
     return SharePlus.instance.share(params);
+  }
+
+  static Future<String?> _defaultSaveFile({
+    required String fileName,
+    required Uint8List bytes,
+    String? dialogTitle,
+  }) {
+    return FilePicker.platform.saveFile(
+      dialogTitle: dialogTitle,
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: const ['log'],
+      bytes: bytes,
+      lockParentWindow: Platform.isWindows,
+    );
+  }
+
+  static String _extractFileName(String savedLocation, {required String fallback}) {
+    final decodedLocation = Uri.decodeFull(savedLocation);
+    final decodedBaseName = p.basename(decodedLocation);
+    if (_isUsefulFileName(decodedBaseName)) {
+      return decodedBaseName;
+    }
+
+    final uri = Uri.tryParse(savedLocation);
+    if (uri != null && uri.pathSegments.isNotEmpty) {
+      final lastSegment = Uri.decodeComponent(uri.pathSegments.last);
+      final uriBaseName = p.basename(lastSegment);
+      if (_isUsefulFileName(uriBaseName)) {
+        return uriBaseName;
+      }
+    }
+
+    return fallback;
+  }
+
+  static bool _isUsefulFileName(String candidate) {
+    return candidate.isNotEmpty && candidate != '.' && candidate != '/' && candidate != '\\';
   }
 
   String _formatDiagnosticsSummary(List<AppLogEntry> entries) {

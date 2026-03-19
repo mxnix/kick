@@ -729,6 +729,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get logsExportTooltip => 'Сохранить логи в файл';
 
   @override
+  String get logsExportDialogTitle => 'Куда сохранить логи?';
+
+  @override
   String get logsShareTooltip => 'Поделиться логами';
 
   @override

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart' as p;
 
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../core/logging/log_sanitizer.dart';
@@ -246,11 +245,16 @@ class _LogsPageState extends ConsumerState<LogsPage> {
 
     setState(() => _isExporting = true);
     try {
-      final result = await ref.read(logExportServiceProvider).export(entries);
+      final result = await ref
+          .read(logExportServiceProvider)
+          .export(entries, dialogTitle: l10n.logsExportDialogTitle);
       if (!mounted) {
         return;
       }
-      _showSnackBar(l10n.logsExportedMessage(p.basename(result.file.path)));
+      if (result == null) {
+        return;
+      }
+      _showSnackBar(l10n.logsExportedMessage(result.fileName));
     } catch (error) {
       if (!mounted) {
         return;
