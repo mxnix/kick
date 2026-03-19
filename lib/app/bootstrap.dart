@@ -20,6 +20,7 @@ import '../data/repositories/settings_repository.dart';
 import '../observability/glitchtip.dart';
 import '../proxy/engine/proxy_controller.dart';
 import '../proxy/gemini/gemini_oauth_service.dart';
+import '../proxy/gemini/gemini_play_telemetry_service.dart';
 
 final appBootstrapProvider = Provider<AppBootstrap>(
   (ref) => throw UnimplementedError('Bootstrap must be provided before runApp.'),
@@ -115,7 +116,9 @@ Future<AppBootstrap> initializeAppBootstrap() async {
     unawaited(
       _warmBootstrapServices(
         analytics: analytics,
+        initialAccounts: initialAccounts,
         logsRepository: logsRepository,
+        playTelemetryInstallationIdPath: p.join(supportDirectory.path, '.gemini', 'installation_id'),
         proxyController: proxyController,
         clearRawPayload: !effectiveSettings.unsafeRawLoggingEnabled,
         timings: timings,
@@ -149,7 +152,9 @@ Future<AppBootstrap> initializeAppBootstrap() async {
 
 Future<void> _warmBootstrapServices({
   required KickAnalytics analytics,
+  required List<AccountProfile> initialAccounts,
   required LogsRepository logsRepository,
+  required String playTelemetryInstallationIdPath,
   required KickProxyController proxyController,
   required bool clearRawPayload,
   required _BootstrapTimings timings,
@@ -201,6 +206,27 @@ Future<void> _warmBootstrapServices({
         tags: const <String, String>{'stage': 'analytics_tracked'},
       ),
     );
+  }
+
+  final playTelemetry = GeminiPlayTelemetryService(
+    installationIdPath: playTelemetryInstallationIdPath,
+  );
+  try {
+    await playTelemetry.sendSessionTelemetryOnce(accounts: initialAccounts);
+    timings.mark('play_telemetry_sent');
+  } catch (error, stackTrace) {
+    _debugBootstrapFailure('play_telemetry_sent', error, stackTrace);
+    unawaited(
+      captureGlitchTipException(
+        error: error,
+        stackTrace: stackTrace,
+        source: 'bootstrap_warmup',
+        message: 'Bootstrap warmup stage failed',
+        tags: const <String, String>{'stage': 'play_telemetry_sent'},
+      ),
+    );
+  } finally {
+    playTelemetry.dispose();
   }
 }
 

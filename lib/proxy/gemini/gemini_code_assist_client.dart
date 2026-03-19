@@ -4,12 +4,14 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 import '../../data/models/oauth_tokens.dart';
 import '../account_pool/account_pool.dart';
 import '../model_catalog.dart';
 import '../openai/openai_request_parser.dart';
 import 'gemini_auth_constants.dart';
+import 'gemini_client_fingerprint.dart';
 
 enum GeminiGatewayFailureKind { auth, quota, capacity, unsupportedModel, invalidRequest, unknown }
 
@@ -285,11 +287,15 @@ class GeminiCodeAssistClient {
     required Future<void> Function(ProxyRuntimeAccount account, OAuthTokens tokens) onTokensUpdated,
     http.Client? httpClient,
     Future<void> Function(Duration delay)? wait,
+    String Function()? createSessionId,
+    bool warmupEnabled = false,
     GeminiRetryPolicy retryPolicy = const GeminiRetryPolicy(),
     Duration requestTimeout = const Duration(seconds: 45),
   }) : _onTokensUpdated = onTokensUpdated,
        _http = httpClient ?? http.Client(),
        _wait = wait ?? _defaultWait,
+       _createSessionId = createSessionId ?? const Uuid().v4,
+       _warmupEnabled = warmupEnabled,
        _retryPolicy = retryPolicy.normalized(),
        _requestTimeout = requestTimeout > Duration.zero
            ? requestTimeout
@@ -298,9 +304,11 @@ class GeminiCodeAssistClient {
   final Future<void> Function(ProxyRuntimeAccount account, OAuthTokens tokens) _onTokensUpdated;
   final http.Client _http;
   final Future<void> Function(Duration delay) _wait;
+  final String Function() _createSessionId;
+  final bool _warmupEnabled;
   GeminiRetryPolicy _retryPolicy;
   final Duration _requestTimeout;
-  int _promptSequence = 0;
+  final Set<String> _warmupAttemptedKeys = <String>{};
 
   void updateRetryPolicy(GeminiRetryPolicy retryPolicy) {
     _retryPolicy = retryPolicy.normalized();
@@ -313,13 +321,15 @@ class GeminiCodeAssistClient {
   }) async {
     await _ensureFreshTokens(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
+    _scheduleWarmupIfNeeded(account: account, headerModel: resolvedModel);
     final baseRequestBody = _buildRequestBody(request, resolvedModel: resolvedModel);
+    final sessionState = _createSessionState(baseRequestBody);
     return _generateWithContinuation(
       account: account,
       model: resolvedModel,
       projectId: account.projectId,
-      requestId: request.requestId,
       baseRequestBody: baseRequestBody,
+      sessionState: sessionState,
       onRetry: onRetry,
     );
   }
@@ -331,7 +341,9 @@ class GeminiCodeAssistClient {
   }) async {
     await _ensureFreshTokens(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
+    _scheduleWarmupIfNeeded(account: account, headerModel: resolvedModel);
     final baseRequestBody = _buildRequestBody(request, resolvedModel: resolvedModel);
+    final sessionState = _createSessionState(baseRequestBody);
     StreamIterator<Map<String, Object?>>? payloadIterator;
     var canceled = false;
     final controller = StreamController<Map<String, Object?>>(
@@ -359,8 +371,8 @@ class GeminiCodeAssistClient {
                 accessToken: account.tokens.accessToken,
                 model: resolvedModel,
                 projectId: account.projectId,
-                promptSeed: request.requestId,
                 requestBody: currentRequestBody,
+                sessionState: sessionState,
               ),
               onRetry: onRetry,
             );
@@ -434,8 +446,8 @@ class GeminiCodeAssistClient {
     required ProxyRuntimeAccount account,
     required String model,
     required String projectId,
-    required String requestId,
     required Map<String, Object?> baseRequestBody,
+    required _CodeAssistSessionState sessionState,
     void Function(GeminiRetryEvent event)? onRetry,
   }) async {
     var currentRequestBody = baseRequestBody;
@@ -450,8 +462,8 @@ class GeminiCodeAssistClient {
           accessToken: account.tokens.accessToken,
           model: model,
           projectId: projectId,
-          promptSeed: requestId,
           requestBody: currentRequestBody,
+          sessionState: sessionState,
         ),
         onRetry: onRetry,
       );
@@ -496,7 +508,7 @@ class GeminiCodeAssistClient {
     UnifiedPromptRequest request, {
     required String resolvedModel,
   }) {
-    final sessionId = _buildCodeAssistSessionId(request.requestId);
+    final sessionId = _createSessionId();
     final contents = <Map<String, Object?>>[];
     for (final turn in request.turns) {
       final role = turn.role == 'assistant' ? 'model' : 'user';
@@ -708,16 +720,76 @@ class GeminiCodeAssistClient {
     );
   }
 
+  void _scheduleWarmupIfNeeded({
+    required ProxyRuntimeAccount account,
+    required String headerModel,
+  }) {
+    if (!_warmupEnabled) {
+      return;
+    }
+    final key = _warmupKey(account);
+    if (!_warmupAttemptedKeys.add(key)) {
+      return;
+    }
+    final warmupRequests = <Future<void>>[
+      _postWarmupRequest(
+        method: 'loadCodeAssist',
+        accessToken: account.tokens.accessToken,
+        headerModel: headerModel,
+        body: {
+          'metadata': {
+            'ideType': geminiCodeAssistIdeType,
+            'platform': geminiCodeAssistPlatformUnspecified,
+            'pluginType': geminiCodeAssistPluginType,
+          },
+        },
+      ),
+      _postWarmupRequest(
+        method: 'listExperiments',
+        accessToken: account.tokens.accessToken,
+        headerModel: headerModel,
+        body: {
+          'project': account.projectId,
+          'metadata': buildCodeAssistClientMetadata(account.projectId),
+        },
+      ),
+    ];
+    unawaited(
+      Future.wait(
+        warmupRequests.map(
+          (warmup) => warmup.catchError((_) {
+            return;
+          }),
+        ),
+      ),
+    );
+  }
+
   Uri _methodUri(String method) {
     return Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion:$method');
   }
 
   Map<String, String> _headers(String accessToken, {required String model}) {
-    return {
-      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
-      HttpHeaders.contentTypeHeader: 'application/json',
-      HttpHeaders.userAgentHeader: _buildGeminiCliUserAgent(model),
-    };
+    return buildGeminiCodeAssistHeaders(accessToken: accessToken, model: model);
+  }
+
+  Future<void> _postWarmupRequest({
+    required String method,
+    required String accessToken,
+    required String headerModel,
+    required Map<String, Object?> body,
+  }) async {
+    final response = await _runWithRequestTimeout(
+      () => _http.post(
+        _methodUri(method),
+        headers: _headers(accessToken, model: headerModel),
+        body: jsonEncode(body),
+      ),
+      'Gemini warmup request',
+    );
+    if (response.statusCode >= 400) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
   }
 
   Map<String, Object?> _decodeResponse(http.Response response) {
@@ -740,8 +812,8 @@ class GeminiCodeAssistClient {
     required String accessToken,
     required String model,
     required String projectId,
-    required String promptSeed,
     required Map<String, Object?> requestBody,
+    required _CodeAssistSessionState sessionState,
   }) async {
     final response = await _runWithRequestTimeout(
       () => _http.post(
@@ -751,8 +823,8 @@ class GeminiCodeAssistClient {
           _buildRequestEnvelope(
             model: model,
             projectId: projectId,
-            promptSeed: promptSeed,
             requestBody: requestBody,
+            sessionState: sessionState,
           ),
         ),
       ),
@@ -765,21 +837,27 @@ class GeminiCodeAssistClient {
     required String accessToken,
     required String model,
     required String projectId,
-    required String promptSeed,
     required Map<String, Object?> requestBody,
+    required _CodeAssistSessionState sessionState,
   }) async {
     final httpRequest =
         http.Request(
             'POST',
             _methodUri('streamGenerateContent').replace(queryParameters: {'alt': 'sse'}),
           )
-          ..headers.addAll(_headers(accessToken, model: model))
+          ..headers.addAll(
+            buildGeminiCodeAssistHeaders(
+              accessToken: accessToken,
+              model: model,
+              accept: '*/*',
+            ),
+          )
           ..body = jsonEncode(
             _buildRequestEnvelope(
               model: model,
               projectId: projectId,
-              promptSeed: promptSeed,
               requestBody: requestBody,
+              sessionState: sessionState,
             ),
           );
     final response = await _runWithRequestTimeout(
@@ -1009,13 +1087,13 @@ class GeminiCodeAssistClient {
   Map<String, Object?> _buildRequestEnvelope({
     required String model,
     required String projectId,
-    required String promptSeed,
     required Map<String, Object?> requestBody,
+    required _CodeAssistSessionState sessionState,
   }) {
     final existingSessionId = (requestBody['session_id'] as String?)?.trim();
     final sessionId = existingSessionId?.isNotEmpty == true
         ? existingSessionId!
-        : _buildCodeAssistSessionId(promptSeed);
+        : sessionState.sessionId;
     final normalizedRequest = _deepCopyJsonMap(requestBody)..['session_id'] = sessionId;
 
     return {
@@ -1023,16 +1101,19 @@ class GeminiCodeAssistClient {
       'project': projectId,
       'user_prompt_id': _buildCodeAssistPromptId(
         sessionId,
-        promptSeed,
-        sequence: _nextPromptSequence(),
+        turnIndex: sessionState.nextTurnIndex(),
       ),
       'request': normalizedRequest,
     };
   }
 
-  int _nextPromptSequence() {
-    _promptSequence += 1;
-    return _promptSequence;
+  _CodeAssistSessionState _createSessionState(Map<String, Object?> requestBody) {
+    final existingSessionId = (requestBody['session_id'] as String?)?.trim();
+    final sessionId = existingSessionId?.isNotEmpty == true
+        ? existingSessionId!
+        : _createSessionId();
+    requestBody['session_id'] = sessionId;
+    return _CodeAssistSessionState(sessionId);
   }
 
   Map<String, Object?> _buildContinuationRequestBody({
@@ -1428,24 +1509,22 @@ Map<String, Object?> _deepCopyJsonMap(Map<String, Object?> source) {
   return <String, Object?>{};
 }
 
-String _buildCodeAssistSessionId(String requestId) {
-  final normalized = requestId.trim();
-  return normalized.isEmpty ? 'session-unknown' : 'session-$normalized';
+String _buildCodeAssistPromptId(String sessionId, {required int turnIndex}) {
+  return '$sessionId########$turnIndex';
 }
 
-String _buildCodeAssistPromptId(String sessionId, String requestId, {int? sequence}) {
-  final normalized = requestId.trim();
-  final seed = normalized.isEmpty ? '${DateTime.now().millisecondsSinceEpoch}' : normalized;
-  if (sequence == null || sequence <= 1) {
-    return '$sessionId########$seed';
-  }
-  return '$sessionId########${seed}_$sequence';
+String _warmupKey(ProxyRuntimeAccount account) {
+  final accountId = account.id.trim().isEmpty ? account.tokenRef : account.id;
+  return '$accountId:${account.projectId}';
 }
 
-String _buildGeminiCliUserAgent(String model) {
-  final resolvedModel = model.trim().isEmpty ? 'unknown' : model.trim();
-  final operatingSystem = Platform.operatingSystem;
-  return '$geminiCodeAssistUserAgentPrefix/$resolvedModel ($operatingSystem)';
+final class _CodeAssistSessionState {
+  _CodeAssistSessionState(this.sessionId);
+
+  final String sessionId;
+  int _turnCounter = 0;
+
+  int nextTurnIndex() => _turnCounter++;
 }
 
 String _buildContinuationPrompt(String accumulatedText) {

@@ -44,6 +44,7 @@ class _ProxyIsolateHost {
             'payload': {'token_ref': account.tokenRef, 'tokens': tokens.toJson()},
           });
         },
+        warmupEnabled: true,
       );
 
   final SendPort _sendPort;

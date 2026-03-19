@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
+import 'package:kick/proxy/gemini/gemini_auth_constants.dart';
 import 'package:kick/proxy/gemini/gemini_code_assist_client.dart';
 import 'package:kick/proxy/gemini/gemini_project_diagnostics_service.dart';
 
@@ -41,7 +42,7 @@ void main() {
     scope: null,
   );
 
-  test('sends a cheap generateContent probe for project diagnostics', () async {
+  test('uses retrieveUserQuota for project diagnostics', () async {
     Map<String, Object?>? requestBody;
     Map<String, String>? requestHeaders;
 
@@ -49,6 +50,7 @@ void main() {
       readTokens: (_) async => activeTokens(),
       refreshTokens: (tokens) async => tokens,
       persistTokens: (_, tokens) async {},
+      createDiagnosticId: () => '87f1ce57-30fe-4c1a-bb46-9fc68395ed86',
       httpClient: QueueHttpClient([
         (request) async {
           requestHeaders = request.headers;
@@ -56,20 +58,14 @@ void main() {
               jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
           return http.Response(
             jsonEncode({
-              'response': {
-                'candidates': [
-                  {
-                    'content': {
-                      'parts': [
-                        {'text': 'ok'},
-                      ],
-                    },
-                    'finishReason': 'STOP',
-                  },
-                ],
-                'modelVersion': 'gemini-2.5-flash',
-                'responseId': 'response-1',
-              },
+              'buckets': [
+                {
+                  'modelId': 'gemini-2.5-flash',
+                  'remainingFraction': 0.97,
+                  'resetTime': '2026-03-16T13:56:00Z',
+                  'tokenType': 'REQUESTS',
+                },
+              ],
               'traceId': 'trace-1',
             }),
             200,
@@ -80,18 +76,20 @@ void main() {
 
     final snapshot = await service.diagnose(sampleAccount());
 
-    expect(snapshot.modelId, GeminiProjectDiagnosticsService.probeModelId);
-    expect(snapshot.modelVersion, 'gemini-2.5-flash');
-    expect(snapshot.responseId, 'response-1');
+    expect(snapshot.modelId, GeminiProjectDiagnosticsService.probeHeaderModelId);
+    expect(snapshot.modelVersion, isNull);
+    expect(snapshot.responseId, '87f1ce57-30fe-4c1a-bb46-9fc68395ed86');
     expect(snapshot.traceId, 'trace-1');
-    expect(snapshot.probeText, 'ok');
+    expect(snapshot.probeText, isNull);
     expect(requestHeaders?[HttpHeaders.authorizationHeader], 'Bearer access-token');
-    expect(requestBody?['project'], 'project-1');
-    expect(requestBody?['model'], GeminiProjectDiagnosticsService.probeModelId);
+    expect(requestHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
     expect(
-      (((requestBody?['request'] as Map?)?['generationConfig'] as Map?)?['responseModalities']),
-      ['TEXT'],
+      requestHeaders?[HttpHeaders.userAgentHeader],
+      contains('/${GeminiProjectDiagnosticsService.probeHeaderModelId} '),
     );
+    expect(requestHeaders?[HttpHeaders.acceptHeader], 'application/json');
+    expect(requestBody?['project'], 'project-1');
+    expect(requestBody, {'project': 'project-1'});
   });
 
   test('refreshes expired tokens before project diagnostics request', () async {
@@ -107,17 +105,12 @@ void main() {
           seenTokens.add(request.headers[HttpHeaders.authorizationHeader] ?? '');
           return http.Response(
             jsonEncode({
-              'response': {
-                'candidates': [
-                  {
-                    'content': {
-                      'parts': [
-                        {'text': 'ok'},
-                      ],
-                    },
-                  },
-                ],
-              },
+              'buckets': [
+                {
+                  'modelId': 'gemini-2.5-flash',
+                  'remainingFraction': 0.82,
+                },
+              ],
             }),
             200,
           );
@@ -158,17 +151,12 @@ void main() {
           seenTokens.add(request.headers[HttpHeaders.authorizationHeader] ?? '');
           return http.Response(
             jsonEncode({
-              'response': {
-                'candidates': [
-                  {
-                    'content': {
-                      'parts': [
-                        {'text': 'ok'},
-                      ],
-                    },
-                  },
-                ],
-              },
+              'buckets': [
+                {
+                  'modelId': 'gemini-2.5-flash',
+                  'remainingFraction': 0.82,
+                },
+              ],
             }),
             200,
           );
@@ -183,7 +171,7 @@ void main() {
     expect(seenTokens, ['Bearer stale-token', 'Bearer renewed-token']);
   });
 
-  test('surfaces project configuration failures from the probe', () async {
+  test('surfaces project configuration failures from the quota probe', () async {
     final service = GeminiProjectDiagnosticsService(
       readTokens: (_) async => activeTokens(accessToken: 'active-token'),
       refreshTokens: (tokens) async => activeTokens(accessToken: 'unexpected-refresh'),

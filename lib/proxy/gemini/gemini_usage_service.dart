@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../../data/models/account_profile.dart';
 import '../../data/models/oauth_tokens.dart';
 import 'gemini_auth_constants.dart';
+import 'gemini_client_fingerprint.dart';
 import 'gemini_code_assist_client.dart';
 import 'gemini_usage_models.dart';
 
@@ -55,12 +56,11 @@ class GeminiUsageService {
   Future<GeminiUsageSnapshot> _requestUsage(AccountProfile account, OAuthTokens tokens) async {
     final response = await _http.post(
       Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion:retrieveUserQuota'),
-      headers: {
-        HttpHeaders.authorizationHeader: '${tokens.tokenType} ${tokens.accessToken}',
-        HttpHeaders.contentTypeHeader: 'application/json',
-        HttpHeaders.userAgentHeader:
-            '$geminiCodeAssistUserAgentPrefix/usage-query (${Platform.operatingSystem})',
-      },
+      headers: buildGeminiCodeAssistHeaders(
+        accessToken: tokens.accessToken,
+        model: geminiCodeAssistAuxiliaryHeaderModel,
+        tokenType: tokens.tokenType,
+      ),
       body: jsonEncode({'project': account.projectId}),
     );
 

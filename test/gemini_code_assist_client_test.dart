@@ -1,16 +1,48 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/account_pool/account_pool.dart';
+import 'package:kick/proxy/gemini/gemini_auth_constants.dart';
 import 'package:kick/proxy/gemini/gemini_code_assist_client.dart';
 import 'package:kick/proxy/openai/openai_request_parser.dart';
 import 'package:kick/proxy/openai/openai_response_mapper.dart';
 
 void main() {
+  String expectedMetadataPlatform() {
+    final expectedPlatform = Platform.isWindows
+        ? 'win32'
+        : Platform.isMacOS
+        ? 'darwin'
+        : Platform.operatingSystem;
+    final currentAbi = Abi.current().toString();
+    final separatorIndex = currentAbi.indexOf('_');
+    final expectedArchitecture = separatorIndex == -1 || separatorIndex == currentAbi.length - 1
+        ? currentAbi
+        : currentAbi.substring(separatorIndex + 1);
+
+    if (expectedPlatform == 'darwin' && expectedArchitecture == 'x64') {
+      return 'DARWIN_AMD64';
+    }
+    if (expectedPlatform == 'darwin' && expectedArchitecture == 'arm64') {
+      return 'DARWIN_ARM64';
+    }
+    if (expectedPlatform == 'linux' && expectedArchitecture == 'x64') {
+      return 'LINUX_AMD64';
+    }
+    if (expectedPlatform == 'linux' && expectedArchitecture == 'arm64') {
+      return 'LINUX_ARM64';
+    }
+    if (expectedPlatform == 'win32' && expectedArchitecture == 'x64') {
+      return 'WINDOWS_AMD64';
+    }
+    return 'PLATFORM_UNSPECIFIED';
+  }
+
   ProxyRuntimeAccount sampleAccount() => ProxyRuntimeAccount(
     id: 'account-1',
     label: 'Primary',
@@ -71,12 +103,14 @@ void main() {
     );
   }
 
-  test('builds Code Assist prompt identifiers from request id', () async {
+  test('builds Code Assist session and prompt identifiers', () async {
     Map<String, Object?>? capturedBody;
     Map<String, String>? capturedHeaders;
+    const sessionId = '11111111-1111-4111-8111-111111111111';
 
     final client = GeminiCodeAssistClient(
       onTokensUpdated: (account, tokens) async {},
+      createSessionId: () => sessionId,
       httpClient: QueueHttpClient([
         (request) async {
           capturedHeaders = request.headers;
@@ -107,14 +141,206 @@ void main() {
       request: sampleRequest(requestId: 'abc123'),
     );
 
-    expect(capturedBody?['user_prompt_id'], 'session-abc123########abc123');
+    expect(capturedBody?['user_prompt_id'], '$sessionId########0');
     final nestedRequest = (capturedBody?['request'] as Map?)?.cast<String, Object?>();
-    expect(nestedRequest?['session_id'], 'session-abc123');
+    expect(nestedRequest?['session_id'], sessionId);
     expect(capturedBody?['project'], 'project-1');
+    final expectedPlatform = Platform.isWindows
+        ? 'win32'
+        : Platform.isMacOS
+        ? 'darwin'
+        : Platform.operatingSystem;
+    final currentAbi = Abi.current().toString();
+    final separatorIndex = currentAbi.indexOf('_');
+    final expectedArchitecture = separatorIndex == -1 || separatorIndex == currentAbi.length - 1
+        ? currentAbi
+        : currentAbi.substring(separatorIndex + 1);
     expect(
       capturedHeaders?[HttpHeaders.userAgentHeader],
-      contains('GeminiCLI/compatible/gemini-2.5-pro'),
+      '$geminiCodeAssistUserAgentPrefix/gemini-2.5-pro '
+      '($expectedPlatform; $expectedArchitecture) '
+      '$geminiCodeAssistNodeJsUserAgentSuffix',
     );
+    expect(capturedBody?.containsKey('metadata'), isFalse);
+    expect(capturedHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
+  });
+
+  test('starts the prompt turn counter from zero for each new session', () async {
+    final capturedBodies = <Map<String, Object?>>[];
+    final sessionIds = <String>[
+      '44444444-4444-4444-8444-444444444444',
+      '55555555-5555-4555-8555-555555555555',
+    ];
+    var sessionIndex = 0;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      createSessionId: () => sessionIds[sessionIndex++],
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBodies.add(
+            jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>,
+          );
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+        (request) async {
+          capturedBodies.add(
+            jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>,
+          );
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(requestId: 'first'),
+    );
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(requestId: 'second'),
+    );
+
+    expect(capturedBodies, hasLength(2));
+    expect(capturedBodies[0]['user_prompt_id'], '${sessionIds[0]}########0');
+    expect(capturedBodies[1]['user_prompt_id'], '${sessionIds[1]}########0');
+    expect(((capturedBodies[0]['request'] as Map)['session_id']), sessionIds[0]);
+    expect(((capturedBodies[1]['request'] as Map)['session_id']), sessionIds[1]);
+  });
+
+  test('sends warmup choreography once before the first generate request', () async {
+    final seenPaths = <String>[];
+    final seenBodies = <Map<String, Object?>>[];
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      warmupEnabled: true,
+      httpClient: QueueHttpClient([
+        (request) async {
+          seenPaths.add(request.url.path);
+          seenBodies.add(
+            jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>,
+          );
+          return http.Response('{}', 200);
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          seenBodies.add(
+            jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>,
+          );
+          return http.Response('{}', 200);
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          seenBodies.add(
+            jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>,
+          );
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'Hi'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          seenBodies.add(
+            jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>,
+          );
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'Again'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(requestId: 'warmup-1'),
+    );
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(requestId: 'warmup-2'),
+    );
+
+    expect(seenPaths, [
+      '/v1internal:loadCodeAssist',
+      '/v1internal:listExperiments',
+      '/v1internal:generateContent',
+      '/v1internal:generateContent',
+    ]);
+
+    expect((seenBodies[0]['metadata'] as Map?)?.cast<String, Object?>(), {
+      'ideType': geminiCodeAssistIdeType,
+      'platform': geminiCodeAssistPlatformUnspecified,
+      'pluginType': geminiCodeAssistPluginType,
+    });
+
+    expect(seenBodies[1]['project'], 'project-1');
+    expect((seenBodies[1]['metadata'] as Map?)?.cast<String, Object?>(), {
+      'ideName': geminiCodeAssistIdeName,
+      'pluginType': geminiCodeAssistPluginType,
+      'ideVersion': geminiCodeAssistCliVersion,
+      'platform': expectedMetadataPlatform(),
+      'updateChannel': geminiCodeAssistUpdateChannel,
+      'duetProject': 'project-1',
+    });
+
+    expect(seenBodies[2]['model'], 'gemini-2.5-pro');
+    expect(seenBodies[3]['model'], 'gemini-2.5-pro');
   });
 
   test('fails fast when the Gemini request times out', () async {
@@ -1336,8 +1562,10 @@ void main() {
 
   test('continues unary generation when Gemini stops on max tokens', () async {
     final seenBodies = <Map<String, Object?>>[];
+    const sessionId = '22222222-2222-4222-8222-222222222222';
     final client = GeminiCodeAssistClient(
       onTokensUpdated: (account, tokens) async {},
+      createSessionId: () => sessionId,
       httpClient: QueueHttpClient([
         (request) async {
           seenBodies.add(
@@ -1400,8 +1628,12 @@ void main() {
     expect(seenBodies, hasLength(2));
     final continuationContents = (((seenBodies[1]['request'] as Map)['contents']) as List)
         .cast<Map>();
-    expect(seenBodies[0]['user_prompt_id'], 'session-req123########req123');
-    expect(seenBodies[1]['user_prompt_id'], 'session-req123########req123_2');
+    expect(((seenBodies[0]['request'] as Map)['session_id']), sessionId);
+    expect(((seenBodies[1]['request'] as Map)['session_id']), sessionId);
+    expect(seenBodies[0].containsKey('metadata'), isFalse);
+    expect(seenBodies[1].containsKey('metadata'), isFalse);
+    expect(seenBodies[0]['user_prompt_id'], '$sessionId########0');
+    expect(seenBodies[1]['user_prompt_id'], '$sessionId########1');
     expect(continuationContents[1]['role'], 'model');
     expect(((continuationContents[1]['parts'] as List).single as Map)['text'], 'Hello');
     expect(
@@ -1412,8 +1644,10 @@ void main() {
 
   test('continues streaming generation when Gemini stops on max tokens', () async {
     final seenBodies = <Map<String, Object?>>[];
+    const sessionId = '33333333-3333-4333-8333-333333333333';
     final client = GeminiCodeAssistClient(
       onTokensUpdated: (account, tokens) async {},
+      createSessionId: () => sessionId,
       httpClient: QueueHttpClient([
         (request) async {
           seenBodies.add(
@@ -1465,8 +1699,10 @@ void main() {
     expect(seenBodies, hasLength(2));
     final continuationContents = (((seenBodies[1]['request'] as Map)['contents']) as List)
         .cast<Map>();
-    expect(seenBodies[0]['user_prompt_id'], 'session-req123########req123');
-    expect(seenBodies[1]['user_prompt_id'], 'session-req123########req123_2');
+    expect(((seenBodies[0]['request'] as Map)['session_id']), sessionId);
+    expect(((seenBodies[1]['request'] as Map)['session_id']), sessionId);
+    expect(seenBodies[0]['user_prompt_id'], '$sessionId########0');
+    expect(seenBodies[1]['user_prompt_id'], '$sessionId########1');
     expect(
       ((continuationContents[2]['parts'] as List).single as Map)['text'],
       contains('Please continue from where you left off.'),
