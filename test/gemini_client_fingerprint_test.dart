@@ -29,16 +29,12 @@ void main() {
     expect(
       buildGeminiCliUserAgent('gemini-2.5-pro'),
       '$geminiCodeAssistUserAgentPrefix/$geminiCodeAssistCliVersion/gemini-2.5-pro '
-      '(${expectedPlatform()}; ${expectedArchitecture()}; $geminiCodeAssistUserAgentSurface) '
-      '$geminiCodeAssistNodeJsUserAgentSuffix',
+      '(${expectedPlatform()}; ${expectedArchitecture()}; $geminiCodeAssistUserAgentSurface)',
     );
   });
 
   test('uses the provided surface in the Gemini CLI user agent', () {
-    expect(
-      buildGeminiCliUserAgent('gemini-2.5-pro', surface: 'vscode'),
-      contains('; vscode) $geminiCodeAssistNodeJsUserAgentSuffix'),
-    );
+    expect(buildGeminiCliUserAgent('gemini-2.5-pro', surface: 'vscode'), endsWith('; vscode)'));
   });
 
   test('supports dynamic Gemini CLI prefixes from client names', () {
@@ -75,5 +71,13 @@ void main() {
     expect(headers[HttpHeaders.acceptHeader], 'application/json');
     expect(headers['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
     expect(headers['x-gemini-api-privileged-user-id'], 'install-123');
+  });
+
+  test('detects vscode and explicit surface overrides from environment', () {
+    expect(determineGeminiCliSurface(environment: const {'TERM_PROGRAM': 'vscode'}), 'vscode');
+    expect(
+      determineGeminiCliSurface(environment: const {'GEMINI_CLI_SURFACE': 'my-tool'}),
+      'my-tool',
+    );
   });
 }

@@ -30,8 +30,7 @@ String buildGeminiCliUserAgent(
     clientPrefix: clientPrefix,
   );
   return '$resolvedPrefix/$geminiCodeAssistCliVersion/$resolvedModel '
-      '(${nodeStylePlatform()}; ${nodeStyleArchitecture()}; $resolvedSurface) '
-      '$geminiCodeAssistNodeJsUserAgentSuffix';
+      '(${nodeStylePlatform()}; ${nodeStyleArchitecture()}; $resolvedSurface)';
 }
 
 String buildGeminiCliUserAgentPrefix({String? clientName, String? clientPrefix}) {
@@ -66,7 +65,7 @@ Map<String, String> buildGeminiCodeAssistHeaders({
     HttpHeaders.contentTypeHeader: 'application/json',
     HttpHeaders.userAgentHeader: buildGeminiCliUserAgent(
       model,
-      surface: surface,
+      surface: surface ?? determineGeminiCliSurface(),
       clientName: clientName,
       clientPrefix: clientPrefix,
     ),
@@ -74,6 +73,66 @@ Map<String, String> buildGeminiCodeAssistHeaders({
     'x-goog-api-client': geminiCodeAssistGoogApiClientHeader,
     'x-gemini-api-privileged-user-id': privilegedUserId,
   };
+}
+
+String determineGeminiCliSurface({Map<String, String>? environment}) {
+  final env = environment ?? Platform.environment;
+  final customSurface =
+      _normalizeUserAgentValue(env['GEMINI_CLI_SURFACE']) ??
+      _normalizeUserAgentValue(env['SURFACE']);
+  if (customSurface != null) {
+    return customSurface;
+  }
+
+  if (env.containsKey('ANTIGRAVITY_CLI_ALIAS')) {
+    return 'antigravity';
+  }
+  if (env.containsKey('__COG_BASHRC_SOURCED')) {
+    return 'devin';
+  }
+  if (env.containsKey('REPLIT_USER')) {
+    return 'replit';
+  }
+  if (env.containsKey('CURSOR_TRACE_ID')) {
+    return 'cursor';
+  }
+  if (env.containsKey('CODESPACES')) {
+    return 'codespaces';
+  }
+  if (env.containsKey('EDITOR_IN_CLOUD_SHELL') || env.containsKey('CLOUD_SHELL')) {
+    return 'cloudshell';
+  }
+  if (env['TERM_PRODUCT'] == 'Trae') {
+    return 'trae';
+  }
+  if (env.containsKey('MONOSPACE_ENV')) {
+    return 'firebasestudio';
+  }
+  if (env['POSITRON'] == '1') {
+    return 'positron';
+  }
+  if (env['TERM_PROGRAM'] == 'sublime') {
+    return 'sublimetext';
+  }
+  if (env.containsKey('ZED_SESSION_ID') || env['TERM_PROGRAM'] == 'Zed') {
+    return 'zed';
+  }
+  if (env.containsKey('XCODE_VERSION_ACTUAL')) {
+    return 'xcode';
+  }
+
+  final terminalEmulator = env['TERMINAL_EMULATOR']?.toLowerCase();
+  if (terminalEmulator?.contains('jetbrains') == true) {
+    return 'jetbrains';
+  }
+  if (env['TERM_PROGRAM'] == 'vscode') {
+    return 'vscode';
+  }
+  if (env.containsKey('GITHUB_SHA')) {
+    return 'GitHub';
+  }
+
+  return geminiCodeAssistUserAgentSurface;
 }
 
 String codeAssistClientMetadataPlatform() {

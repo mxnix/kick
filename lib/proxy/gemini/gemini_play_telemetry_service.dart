@@ -225,7 +225,7 @@ class GeminiPlayTelemetryService {
 
   List<Map<String, Object?>> _baseMetadata() {
     return <Map<String, Object?>>[
-      _eventValue(_TelemetryMetadataKey.surface, geminiPlayTelemetrySurface),
+      _eventValue(_TelemetryMetadataKey.surface, determineGeminiCliSurface()),
       _eventValue(_TelemetryMetadataKey.version, geminiCodeAssistCliVersion),
       _eventValue(_TelemetryMetadataKey.gitCommitHash, geminiCodeAssistCliGitCommitHash),
       _eventValue(_TelemetryMetadataKey.os, nodeStylePlatform()),

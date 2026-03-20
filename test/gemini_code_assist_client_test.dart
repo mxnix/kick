@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/account_pool/account_pool.dart';
 import 'package:kick/proxy/gemini/gemini_auth_constants.dart';
+import 'package:kick/proxy/gemini/gemini_client_fingerprint.dart';
 import 'package:kick/proxy/gemini/gemini_code_assist_client.dart';
 import 'package:kick/proxy/gemini/gemini_installation_identity.dart';
 import 'package:kick/proxy/openai/openai_request_parser.dart';
@@ -160,8 +161,7 @@ void main() {
     expect(
       capturedHeaders?[HttpHeaders.userAgentHeader],
       '$geminiCodeAssistUserAgentPrefix/$geminiCodeAssistCliVersion/gemini-2.5-pro '
-      '($expectedPlatform; $expectedArchitecture; $geminiCodeAssistUserAgentSurface) '
-      '$geminiCodeAssistNodeJsUserAgentSuffix',
+      '($expectedPlatform; $expectedArchitecture; ${determineGeminiCliSurface()})',
     );
     expect(capturedBody?.containsKey('metadata'), isFalse);
     expect(capturedHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);

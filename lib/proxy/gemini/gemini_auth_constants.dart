@@ -8,9 +8,6 @@ const geminiCodeAssistCliGitCommitHash = '49a86550c';
 const geminiCodeAssistUserAgentPrefix = 'GeminiCLI';
 const geminiCodeAssistUserAgentSurface = 'terminal';
 const geminiCodeAssistNodeRuntimeVersion = '25.8.0';
-const geminiCodeAssistNodeJsClientVersion = '9.15.1';
-const geminiCodeAssistNodeJsUserAgentSuffix =
-    'google-api-nodejs-client/$geminiCodeAssistNodeJsClientVersion';
 const geminiCodeAssistGoogApiClientHeader = 'gl-node/$geminiCodeAssistNodeRuntimeVersion';
 const geminiCodeAssistAuxiliaryHeaderModel = 'gemini-3-flash-preview';
 const geminiCodeAssistIdeName = 'IDE_UNSPECIFIED';
@@ -25,7 +22,6 @@ const geminiPlayTelemetryConsoleType = 'GEMINI_CLI';
 const geminiPlayTelemetryApplicationId = 102;
 const geminiPlayTelemetryStartSessionModel = 'auto-gemini-3';
 const geminiPlayTelemetryEmbeddingModel = 'gemini-embedding-001';
-const geminiPlayTelemetrySurface = 'SURFACE_NOT_SET';
 const geminiPlayTelemetryApprovalMode = 'default';
 const geminiOAuthScopes = <String>[
   'https://www.googleapis.com/auth/cloud-platform',
