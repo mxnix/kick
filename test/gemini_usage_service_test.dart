@@ -7,6 +7,7 @@ import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/gemini/gemini_auth_constants.dart';
 import 'package:kick/proxy/gemini/gemini_code_assist_client.dart';
+import 'package:kick/proxy/gemini/gemini_installation_identity.dart';
 import 'package:kick/proxy/gemini/gemini_usage_models.dart';
 import 'package:kick/proxy/gemini/gemini_usage_service.dart';
 
@@ -111,6 +112,7 @@ void main() {
       readTokens: (_) async => expiredTokens(),
       refreshTokens: (tokens) async => activeTokens(accessToken: 'fresh-token'),
       persistTokens: (_, tokens) async => persisted.add(tokens),
+      privilegedUserIdLoader: GeminiInstallationIdLoader(createUuid: () => 'privileged-user-usage'),
       httpClient: QueueHttpClient([
         (request) async {
           requestHeaders = request.headers;
@@ -139,6 +141,7 @@ void main() {
     expect(requestHeaders?[HttpHeaders.authorizationHeader], 'Bearer fresh-token');
     expect(requestHeaders?[HttpHeaders.acceptHeader], 'application/json');
     expect(requestHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
+    expect(requestHeaders?['x-gemini-api-privileged-user-id'], 'privileged-user-usage');
     expect(
       requestHeaders?[HttpHeaders.userAgentHeader],
       contains('/$geminiCodeAssistAuxiliaryHeaderModel '),

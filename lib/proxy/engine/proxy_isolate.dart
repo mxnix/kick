@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/logging/log_sanitizer.dart';
 import '../account_pool/account_pool.dart';
 import '../gemini/gemini_code_assist_client.dart';
+import '../gemini/gemini_installation_identity.dart';
 import '../model_catalog.dart';
 import '../openai/openai_request_parser.dart';
 import '../openai/openai_response_mapper.dart';
@@ -36,22 +37,29 @@ Future<void> proxyIsolateMain(SendPort sendPort) async {
 }
 
 class _ProxyIsolateHost {
-  _ProxyIsolateHost(this._sendPort)
-    : _client = GeminiCodeAssistClient(
-        onTokensUpdated: (account, tokens) async {
-          _sendPort.send({
-            'type': 'token_updated',
-            'payload': {'token_ref': account.tokenRef, 'tokens': tokens.toJson()},
-          });
-        },
-        warmupEnabled: true,
-      );
+  _ProxyIsolateHost(this._sendPort) {
+    _privilegedUserIdLoader = GeminiInstallationIdLoader(
+      installationIdPathProvider: () => _geminiInstallationIdPath,
+    );
+    _client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {
+        _sendPort.send({
+          'type': 'token_updated',
+          'payload': {'token_ref': account.tokenRef, 'tokens': tokens.toJson()},
+        });
+      },
+      privilegedUserIdLoader: _privilegedUserIdLoader,
+      warmupEnabled: true,
+    );
+  }
 
   final SendPort _sendPort;
-  final GeminiCodeAssistClient _client;
+  late final GeminiInstallationIdLoader _privilegedUserIdLoader;
+  late final GeminiCodeAssistClient _client;
   final _uuid = const Uuid();
 
   Map<String, Object?>? _settings;
+  String? _geminiInstallationIdPath;
   ModelCatalog _catalog = ModelCatalog(customModels: const []);
   GeminiAccountPool _pool = GeminiAccountPool(<ProxyRuntimeAccount>[]);
   HttpServer? _server;
@@ -69,6 +77,7 @@ class _ProxyIsolateHost {
             (message['payload'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
         final previousSettings = _settings;
         _settings = (payload['settings'] as Map?)?.cast<String, Object?>();
+        _geminiInstallationIdPath = payload['gemini_installation_id_path'] as String?;
         final accounts = ((payload['accounts'] as List?) ?? const [])
             .whereType<Map>()
             .map((item) => ProxyRuntimeAccount.fromJson(item.cast<String, Object?>()))

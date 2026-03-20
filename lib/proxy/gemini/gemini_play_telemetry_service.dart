@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../../data/models/account_profile.dart';
 import 'gemini_auth_constants.dart';
 import 'gemini_client_fingerprint.dart';
+import 'gemini_installation_identity.dart';
 
 typedef GeminiPlayTelemetryClock = DateTime Function();
 
@@ -21,7 +22,10 @@ class GeminiPlayTelemetryService {
   }) : _http = httpClient ?? http.Client(),
        _createUuid = createUuid ?? const Uuid().v4,
        _clock = clock ?? DateTime.now,
-       _installationIdPath = installationIdPath,
+       _installationIdLoader = GeminiInstallationIdLoader(
+         installationIdPathProvider: () => installationIdPath,
+         createUuid: createUuid,
+       ),
        _requestTimeout = requestTimeout > Duration.zero
            ? requestTimeout
            : const Duration(seconds: 10);
@@ -29,7 +33,7 @@ class GeminiPlayTelemetryService {
   final http.Client _http;
   final String Function() _createUuid;
   final GeminiPlayTelemetryClock _clock;
-  final String? _installationIdPath;
+  final GeminiInstallationIdLoader _installationIdLoader;
   final Duration _requestTimeout;
 
   Future<void>? _pendingSend;
@@ -47,15 +51,18 @@ class GeminiPlayTelemetryService {
       return Future<void>.value();
     }
 
-    return _pendingSend ??= _send(
-      accounts: accounts,
-      startSessionModel: startSessionModel,
-      apiRequestModel: apiRequestModel,
-    ).then((_) {
-      _sent = true;
-    }).whenComplete(() {
-      _pendingSend = null;
-    });
+    return _pendingSend ??=
+        _send(
+              accounts: accounts,
+              startSessionModel: startSessionModel,
+              apiRequestModel: apiRequestModel,
+            )
+            .then((_) {
+              _sent = true;
+            })
+            .whenComplete(() {
+              _pendingSend = null;
+            });
   }
 
   void dispose() {
@@ -177,7 +184,10 @@ class GeminiPlayTelemetryService {
   List<Map<String, Object?>> _startSessionMetadata(String startSessionModel) {
     return <Map<String, Object?>>[
       _eventValue(_TelemetryMetadataKey.startSessionModel, startSessionModel),
-      _eventValue(_TelemetryMetadataKey.startSessionEmbeddingModel, geminiPlayTelemetryEmbeddingModel),
+      _eventValue(
+        _TelemetryMetadataKey.startSessionEmbeddingModel,
+        geminiPlayTelemetryEmbeddingModel,
+      ),
       _eventValue(_TelemetryMetadataKey.startSessionSandboxEnabled, 'false'),
       _eventValue(_TelemetryMetadataKey.startSessionCoreTools, ''),
       _eventValue(_TelemetryMetadataKey.startSessionApprovalMode, geminiPlayTelemetryApprovalMode),
@@ -237,25 +247,7 @@ class GeminiPlayTelemetryService {
   }
 
   Future<String> _loadOrCreateInstallationId() async {
-    final installationIdPath = _installationIdPath;
-    if (installationIdPath == null || installationIdPath.trim().isEmpty) {
-      return _createUuid();
-    }
-
-    final file = File(installationIdPath);
-    try {
-      final existing = (await file.readAsString()).trim();
-      if (existing.isNotEmpty) {
-        return existing;
-      }
-    } on FileSystemException {
-      // Fall through and create a new identifier.
-    }
-
-    final created = _createUuid();
-    await file.parent.create(recursive: true);
-    await file.writeAsString(created, flush: true);
-    return created;
+    return _installationIdLoader.load();
   }
 
   static const String _defaultUserSettingsJson =

@@ -36,6 +36,7 @@ class AppBootstrap {
     required this.oauthService,
     required this.analytics,
     required this.proxyController,
+    this.geminiInstallationIdPath = '',
     required this.initialSettings,
     required this.initialAccounts,
   });
@@ -48,6 +49,7 @@ class AppBootstrap {
   final GeminiOAuthService oauthService;
   final KickAnalytics analytics;
   final KickProxyController proxyController;
+  final String geminiInstallationIdPath;
   final AppSettings initialSettings;
   final List<AccountProfile> initialAccounts;
 
@@ -104,10 +106,12 @@ Future<AppBootstrap> initializeAppBootstrap() async {
     final initialAccounts = await accountsRepository.readAll();
     timings.mark('accounts_ready');
     final analytics = KickAnalytics(trackingAllowed: analyticsTrackingAllowed(effectiveSettings));
+    final geminiInstallationIdPath = p.join(supportDirectory.path, '.gemini', 'installation_id');
 
     final proxyController = KickProxyController(
       accountsRepository: accountsRepository,
       analytics: analytics,
+      geminiInstallationIdPath: geminiInstallationIdPath,
       logsRepository: logsRepository,
       secretStore: secretStore,
     );
@@ -118,7 +122,7 @@ Future<AppBootstrap> initializeAppBootstrap() async {
         analytics: analytics,
         initialAccounts: initialAccounts,
         logsRepository: logsRepository,
-        playTelemetryInstallationIdPath: p.join(supportDirectory.path, '.gemini', 'installation_id'),
+        playTelemetryInstallationIdPath: geminiInstallationIdPath,
         proxyController: proxyController,
         clearRawPayload: !effectiveSettings.unsafeRawLoggingEnabled,
         timings: timings,
@@ -134,6 +138,7 @@ Future<AppBootstrap> initializeAppBootstrap() async {
       oauthService: oauthService,
       analytics: analytics,
       proxyController: proxyController,
+      geminiInstallationIdPath: geminiInstallationIdPath,
       initialSettings: effectiveSettings,
       initialAccounts: initialAccounts,
     );

@@ -15,6 +15,7 @@ import '../../data/models/account_profile.dart';
 import '../../data/models/app_log_entry.dart';
 import '../../data/models/app_settings.dart';
 import '../../proxy/engine/proxy_controller.dart';
+import '../../proxy/gemini/gemini_installation_identity.dart';
 import '../../proxy/gemini/gemini_oauth_service.dart';
 import '../../proxy/gemini/gemini_project_diagnostics_service.dart';
 import '../../proxy/gemini/gemini_usage_models.dart';
@@ -48,10 +49,14 @@ final oauthServiceProvider = Provider<GeminiOAuthService>(
 
 final geminiUsageServiceProvider = Provider<GeminiUsageService>((ref) {
   final oauthService = ref.watch(oauthServiceProvider);
+  final bootstrap = ref.watch(appBootstrapProvider);
   final service = GeminiUsageService(
     readTokens: oauthService.readTokens,
     refreshTokens: oauthService.refreshTokens,
     persistTokens: oauthService.persistTokens,
+    privilegedUserIdLoader: GeminiInstallationIdLoader(
+      installationIdPathProvider: () => bootstrap.geminiInstallationIdPath,
+    ),
   );
   ref.onDispose(service.dispose);
   return service;
@@ -59,10 +64,14 @@ final geminiUsageServiceProvider = Provider<GeminiUsageService>((ref) {
 
 final geminiProjectDiagnosticsServiceProvider = Provider<GeminiProjectDiagnosticsService>((ref) {
   final oauthService = ref.watch(oauthServiceProvider);
+  final bootstrap = ref.watch(appBootstrapProvider);
   final service = GeminiProjectDiagnosticsService(
     readTokens: oauthService.readTokens,
     refreshTokens: oauthService.refreshTokens,
     persistTokens: oauthService.persistTokens,
+    privilegedUserIdLoader: GeminiInstallationIdLoader(
+      installationIdPathProvider: () => bootstrap.geminiInstallationIdPath,
+    ),
   );
   ref.onDispose(service.dispose);
   return service;

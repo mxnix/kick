@@ -9,6 +9,7 @@ import '../../data/models/oauth_tokens.dart';
 import 'gemini_auth_constants.dart';
 import 'gemini_client_fingerprint.dart';
 import 'gemini_code_assist_client.dart';
+import 'gemini_installation_identity.dart';
 
 class GeminiProjectDiagnosticSnapshot {
   const GeminiProjectDiagnosticSnapshot({
@@ -33,11 +34,13 @@ class GeminiProjectDiagnosticsService {
     required Future<OAuthTokens?> Function(String tokenRef) readTokens,
     required Future<OAuthTokens> Function(OAuthTokens tokens) refreshTokens,
     required Future<void> Function(String tokenRef, OAuthTokens tokens) persistTokens,
+    GeminiInstallationIdLoader? privilegedUserIdLoader,
     http.Client? httpClient,
     String Function()? createDiagnosticId,
   }) : _readTokens = readTokens,
        _refreshTokens = refreshTokens,
        _persistTokens = persistTokens,
+       _privilegedUserIdLoader = privilegedUserIdLoader ?? GeminiInstallationIdLoader(),
        _http = httpClient ?? http.Client(),
        _createDiagnosticId = createDiagnosticId ?? const Uuid().v4;
 
@@ -47,6 +50,7 @@ class GeminiProjectDiagnosticsService {
   final Future<OAuthTokens?> Function(String tokenRef) _readTokens;
   final Future<OAuthTokens> Function(OAuthTokens tokens) _refreshTokens;
   final Future<void> Function(String tokenRef, OAuthTokens tokens) _persistTokens;
+  final GeminiInstallationIdLoader _privilegedUserIdLoader;
   final http.Client _http;
   final String Function() _createDiagnosticId;
 
@@ -82,11 +86,13 @@ class GeminiProjectDiagnosticsService {
     OAuthTokens tokens,
   ) async {
     final diagnosticId = _createDiagnosticId();
+    final privilegedUserId = await _privilegedUserIdLoader.load();
     final response = await _http.post(
       Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion:$probeMethodId'),
       headers: buildGeminiCodeAssistHeaders(
         accessToken: tokens.accessToken,
         model: probeHeaderModelId,
+        privilegedUserId: privilegedUserId,
         tokenType: tokens.tokenType,
       ),
       body: jsonEncode({'project': account.projectId}),

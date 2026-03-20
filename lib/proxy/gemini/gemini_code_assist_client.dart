@@ -12,6 +12,7 @@ import '../model_catalog.dart';
 import '../openai/openai_request_parser.dart';
 import 'gemini_auth_constants.dart';
 import 'gemini_client_fingerprint.dart';
+import 'gemini_installation_identity.dart';
 
 enum GeminiGatewayFailureKind { auth, quota, capacity, unsupportedModel, invalidRequest, unknown }
 
@@ -288,6 +289,7 @@ class GeminiCodeAssistClient {
     http.Client? httpClient,
     Future<void> Function(Duration delay)? wait,
     String Function()? createSessionId,
+    GeminiInstallationIdLoader? privilegedUserIdLoader,
     bool warmupEnabled = false,
     GeminiRetryPolicy retryPolicy = const GeminiRetryPolicy(),
     Duration requestTimeout = const Duration(seconds: 45),
@@ -295,6 +297,7 @@ class GeminiCodeAssistClient {
        _http = httpClient ?? http.Client(),
        _wait = wait ?? _defaultWait,
        _createSessionId = createSessionId ?? const Uuid().v4,
+       _privilegedUserIdLoader = privilegedUserIdLoader ?? GeminiInstallationIdLoader(),
        _warmupEnabled = warmupEnabled,
        _retryPolicy = retryPolicy.normalized(),
        _requestTimeout = requestTimeout > Duration.zero
@@ -305,6 +308,7 @@ class GeminiCodeAssistClient {
   final http.Client _http;
   final Future<void> Function(Duration delay) _wait;
   final String Function() _createSessionId;
+  final GeminiInstallationIdLoader _privilegedUserIdLoader;
   final bool _warmupEnabled;
   GeminiRetryPolicy _retryPolicy;
   final Duration _requestTimeout;
@@ -769,8 +773,12 @@ class GeminiCodeAssistClient {
     return Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion:$method');
   }
 
-  Map<String, String> _headers(String accessToken, {required String model}) {
-    return buildGeminiCodeAssistHeaders(accessToken: accessToken, model: model);
+  Future<Map<String, String>> _headers(String accessToken, {required String model}) async {
+    return buildGeminiCodeAssistHeaders(
+      accessToken: accessToken,
+      model: model,
+      privilegedUserId: await _privilegedUserIdLoader.load(),
+    );
   }
 
   Future<void> _postWarmupRequest({
@@ -780,9 +788,9 @@ class GeminiCodeAssistClient {
     required Map<String, Object?> body,
   }) async {
     final response = await _runWithRequestTimeout(
-      () => _http.post(
+      () async => _http.post(
         _methodUri(method),
-        headers: _headers(accessToken, model: headerModel),
+        headers: await _headers(accessToken, model: headerModel),
         body: jsonEncode(body),
       ),
       'Gemini warmup request',
@@ -816,9 +824,9 @@ class GeminiCodeAssistClient {
     required _CodeAssistSessionState sessionState,
   }) async {
     final response = await _runWithRequestTimeout(
-      () => _http.post(
+      () async => _http.post(
         _methodUri('generateContent'),
-        headers: _headers(accessToken, model: model),
+        headers: await _headers(accessToken, model: model),
         body: jsonEncode(
           _buildRequestEnvelope(
             model: model,
@@ -840,18 +848,13 @@ class GeminiCodeAssistClient {
     required Map<String, Object?> requestBody,
     required _CodeAssistSessionState sessionState,
   }) async {
+    final headers = await _headers(accessToken, model: model);
     final httpRequest =
         http.Request(
             'POST',
             _methodUri('streamGenerateContent').replace(queryParameters: {'alt': 'sse'}),
           )
-          ..headers.addAll(
-            buildGeminiCodeAssistHeaders(
-              accessToken: accessToken,
-              model: model,
-              accept: '*/*',
-            ),
-          )
+          ..headers.addAll(<String, String>{...headers, HttpHeaders.acceptHeader: '*/*'})
           ..body = jsonEncode(
             _buildRequestEnvelope(
               model: model,

@@ -54,6 +54,7 @@ String buildGeminiCliUserAgentPrefix({String? clientName, String? clientPrefix})
 Map<String, String> buildGeminiCodeAssistHeaders({
   required String accessToken,
   required String model,
+  required String privilegedUserId,
   String tokenType = 'Bearer',
   String accept = 'application/json',
   String? surface,
@@ -71,6 +72,7 @@ Map<String, String> buildGeminiCodeAssistHeaders({
     ),
     HttpHeaders.acceptHeader: accept,
     'x-goog-api-client': geminiCodeAssistGoogApiClientHeader,
+    'x-gemini-api-privileged-user-id': privilegedUserId,
   };
 }
 

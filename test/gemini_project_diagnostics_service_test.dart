@@ -7,6 +7,7 @@ import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/gemini/gemini_auth_constants.dart';
 import 'package:kick/proxy/gemini/gemini_code_assist_client.dart';
+import 'package:kick/proxy/gemini/gemini_installation_identity.dart';
 import 'package:kick/proxy/gemini/gemini_project_diagnostics_service.dart';
 
 void main() {
@@ -51,6 +52,9 @@ void main() {
       refreshTokens: (tokens) async => tokens,
       persistTokens: (_, tokens) async {},
       createDiagnosticId: () => '87f1ce57-30fe-4c1a-bb46-9fc68395ed86',
+      privilegedUserIdLoader: GeminiInstallationIdLoader(
+        createUuid: () => 'privileged-user-diagnostics',
+      ),
       httpClient: QueueHttpClient([
         (request) async {
           requestHeaders = request.headers;
@@ -83,6 +87,7 @@ void main() {
     expect(snapshot.probeText, isNull);
     expect(requestHeaders?[HttpHeaders.authorizationHeader], 'Bearer access-token');
     expect(requestHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
+    expect(requestHeaders?['x-gemini-api-privileged-user-id'], 'privileged-user-diagnostics');
     expect(
       requestHeaders?[HttpHeaders.userAgentHeader],
       contains('/${GeminiProjectDiagnosticsService.probeHeaderModelId} '),
@@ -106,10 +111,7 @@ void main() {
           return http.Response(
             jsonEncode({
               'buckets': [
-                {
-                  'modelId': 'gemini-2.5-flash',
-                  'remainingFraction': 0.82,
-                },
+                {'modelId': 'gemini-2.5-flash', 'remainingFraction': 0.82},
               ],
             }),
             200,
@@ -152,10 +154,7 @@ void main() {
           return http.Response(
             jsonEncode({
               'buckets': [
-                {
-                  'modelId': 'gemini-2.5-flash',
-                  'remainingFraction': 0.82,
-                },
+                {'modelId': 'gemini-2.5-flash', 'remainingFraction': 0.82},
               ],
             }),
             200,

@@ -8,6 +8,7 @@ import '../../data/models/oauth_tokens.dart';
 import 'gemini_auth_constants.dart';
 import 'gemini_client_fingerprint.dart';
 import 'gemini_code_assist_client.dart';
+import 'gemini_installation_identity.dart';
 import 'gemini_usage_models.dart';
 
 class GeminiUsageService {
@@ -15,15 +16,18 @@ class GeminiUsageService {
     required Future<OAuthTokens?> Function(String tokenRef) readTokens,
     required Future<OAuthTokens> Function(OAuthTokens tokens) refreshTokens,
     required Future<void> Function(String tokenRef, OAuthTokens tokens) persistTokens,
+    GeminiInstallationIdLoader? privilegedUserIdLoader,
     http.Client? httpClient,
   }) : _readTokens = readTokens,
        _refreshTokens = refreshTokens,
        _persistTokens = persistTokens,
+       _privilegedUserIdLoader = privilegedUserIdLoader ?? GeminiInstallationIdLoader(),
        _http = httpClient ?? http.Client();
 
   final Future<OAuthTokens?> Function(String tokenRef) _readTokens;
   final Future<OAuthTokens> Function(OAuthTokens tokens) _refreshTokens;
   final Future<void> Function(String tokenRef, OAuthTokens tokens) _persistTokens;
+  final GeminiInstallationIdLoader _privilegedUserIdLoader;
   final http.Client _http;
 
   Future<GeminiUsageSnapshot> fetchUsage(AccountProfile account) async {
@@ -54,11 +58,13 @@ class GeminiUsageService {
   }
 
   Future<GeminiUsageSnapshot> _requestUsage(AccountProfile account, OAuthTokens tokens) async {
+    final privilegedUserId = await _privilegedUserIdLoader.load();
     final response = await _http.post(
       Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion:retrieveUserQuota'),
       headers: buildGeminiCodeAssistHeaders(
         accessToken: tokens.accessToken,
         model: geminiCodeAssistAuxiliaryHeaderModel,
+        privilegedUserId: privilegedUserId,
         tokenType: tokens.tokenType,
       ),
       body: jsonEncode({'project': account.projectId}),

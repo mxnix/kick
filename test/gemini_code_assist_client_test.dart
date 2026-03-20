@@ -9,6 +9,7 @@ import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/account_pool/account_pool.dart';
 import 'package:kick/proxy/gemini/gemini_auth_constants.dart';
 import 'package:kick/proxy/gemini/gemini_code_assist_client.dart';
+import 'package:kick/proxy/gemini/gemini_installation_identity.dart';
 import 'package:kick/proxy/openai/openai_request_parser.dart';
 import 'package:kick/proxy/openai/openai_response_mapper.dart';
 
@@ -111,6 +112,7 @@ void main() {
     final client = GeminiCodeAssistClient(
       onTokensUpdated: (account, tokens) async {},
       createSessionId: () => sessionId,
+      privilegedUserIdLoader: GeminiInstallationIdLoader(createUuid: () => 'privileged-user-1'),
       httpClient: QueueHttpClient([
         (request) async {
           capturedHeaders = request.headers;
@@ -163,6 +165,7 @@ void main() {
     );
     expect(capturedBody?.containsKey('metadata'), isFalse);
     expect(capturedHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
+    expect(capturedHeaders?['x-gemini-api-privileged-user-id'], 'privileged-user-1');
   });
 
   test('starts the prompt turn counter from zero for each new session', () async {

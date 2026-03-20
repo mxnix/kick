@@ -129,17 +129,20 @@ class KickProxyController {
   KickProxyController({
     required AccountsRepository accountsRepository,
     required KickAnalytics analytics,
+    String geminiInstallationIdPath = '',
     required LogsRepository logsRepository,
     required SecretStore secretStore,
     ProxyIsolateSpawner? spawnIsolate,
   }) : _accountsRepository = accountsRepository,
        _analytics = analytics,
+       _geminiInstallationIdPath = geminiInstallationIdPath,
        _logsRepository = logsRepository,
        _secretStore = secretStore,
        _spawnIsolate = spawnIsolate ?? _defaultSpawnIsolate;
 
   final AccountsRepository _accountsRepository;
   final KickAnalytics _analytics;
+  final String _geminiInstallationIdPath;
   final LogsRepository _logsRepository;
   final SecretStore _secretStore;
   final ProxyIsolateSpawner _spawnIsolate;
@@ -223,6 +226,7 @@ class KickProxyController {
     }
 
     final payload = {
+      'gemini_installation_id_path': _geminiInstallationIdPath,
       'settings': {
         'api_key': settings.apiKey,
         'api_key_required': settings.apiKeyRequired,
