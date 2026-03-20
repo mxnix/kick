@@ -221,15 +221,17 @@ Future<void> _warmBootstrapServices({
     timings.mark('play_telemetry_sent');
   } catch (error, stackTrace) {
     _debugBootstrapFailure('play_telemetry_sent', error, stackTrace);
-    unawaited(
-      captureGlitchTipException(
-        error: error,
-        stackTrace: stackTrace,
-        source: 'bootstrap_warmup',
-        message: 'Bootstrap warmup stage failed',
-        tags: const <String, String>{'stage': 'play_telemetry_sent'},
-      ),
-    );
+    if (!isExpectedGeminiPlayTelemetryFailure(error)) {
+      unawaited(
+        captureGlitchTipException(
+          error: error,
+          stackTrace: stackTrace,
+          source: 'bootstrap_warmup',
+          message: 'Bootstrap warmup stage failed',
+          tags: const <String, String>{'stage': 'play_telemetry_sent'},
+        ),
+      );
+    }
   } finally {
     playTelemetry.dispose();
   }

@@ -256,6 +256,18 @@ class GeminiPlayTelemetryService {
       '"planEnabled":false,"trackerEnabled":false}';
 }
 
+bool isExpectedGeminiPlayTelemetryFailure(Object error) {
+  return switch (error) {
+    TimeoutException _ => true,
+    SocketException _ => true,
+    HandshakeException _ => true,
+    TlsException _ => true,
+    HttpException _ => true,
+    http.ClientException _ => true,
+    _ => false,
+  };
+}
+
 abstract final class _TelemetryMetadataKey {
   static const int startSessionModel = 1;
   static const int startSessionEmbeddingModel = 2;

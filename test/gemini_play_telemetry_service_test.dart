@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -124,6 +125,29 @@ void main() {
     expect(capturedEvents[0]['client_install_id'], '22222222-2222-4222-8222-222222222222');
     expect(capturedEvents[0].containsKey('client_email'), isFalse);
     expect(capturedEvents[1]['client_install_id'], '22222222-2222-4222-8222-222222222222');
+  });
+
+  test('classifies transient play telemetry failures as expected', () {
+    expect(isExpectedGeminiPlayTelemetryFailure(TimeoutException('request timed out')), isTrue);
+    expect(
+      isExpectedGeminiPlayTelemetryFailure(
+        const SocketException('Failed host lookup: play.googleapis.com'),
+      ),
+      isTrue,
+    );
+    expect(
+      isExpectedGeminiPlayTelemetryFailure(
+        http.ClientException('Connection closed before full header was received.'),
+      ),
+      isTrue,
+    );
+    expect(
+      isExpectedGeminiPlayTelemetryFailure(
+        const HttpException('Gemini play telemetry request failed with status 503.'),
+      ),
+      isTrue,
+    );
+    expect(isExpectedGeminiPlayTelemetryFailure(const FormatException('bad payload')), isFalse);
   });
 }
 

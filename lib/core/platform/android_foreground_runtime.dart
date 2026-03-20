@@ -50,18 +50,32 @@ class AndroidForegroundRuntime {
       return;
     }
 
-    await ensureNotificationPermission();
-    await _ensureBatteryOptimizationExemption();
-  }
-
-  static Future<void> ensureNotificationPermission() async {
-    if (!Platform.isAndroid) {
+    final permission = await ensureNotificationPermission();
+    if (permission != NotificationPermission.granted) {
       return;
     }
 
+    await _ensureBatteryOptimizationExemption();
+  }
+
+  static Future<NotificationPermission> ensureNotificationPermission() async {
+    if (!Platform.isAndroid) {
+      return NotificationPermission.granted;
+    }
+
     final permission = await FlutterForegroundTask.checkNotificationPermission();
-    if (permission != NotificationPermission.granted) {
-      await FlutterForegroundTask.requestNotificationPermission();
+    if (permission == NotificationPermission.granted ||
+        permission == NotificationPermission.permanently_denied) {
+      return permission;
+    }
+
+    try {
+      return await FlutterForegroundTask.requestNotificationPermission();
+    } on PlatformException catch (error) {
+      if (isExpectedAndroidNotificationPermissionCancellation(error)) {
+        return NotificationPermission.denied;
+      }
+      rethrow;
     }
   }
 
@@ -72,6 +86,10 @@ class AndroidForegroundRuntime {
 
     final l10n = lookupKickLocalizations();
     await ensurePermissions();
+    if (await FlutterForegroundTask.checkNotificationPermission() !=
+        NotificationPermission.granted) {
+      return;
+    }
     await _setNotificationMode(_notificationModeProxy);
     if (await isRunning()) {
       await FlutterForegroundTask.updateService(
@@ -96,6 +114,10 @@ class AndroidForegroundRuntime {
     }
 
     if (await isRunning()) {
+      return false;
+    }
+
+    if (await ensureNotificationPermission() != NotificationPermission.granted) {
       return false;
     }
 
@@ -257,4 +279,15 @@ class _AndroidForegroundRuntimeScopeState extends State<AndroidForegroundRuntime
 
     return WithForegroundTask(child: widget.child);
   }
+}
+
+bool isExpectedAndroidNotificationPermissionCancellation(PlatformException error) {
+  final code = error.code.trim().toLowerCase();
+  if (code.contains('permissionrequestcancelledexception')) {
+    return true;
+  }
+
+  final message = error.message?.trim().toLowerCase() ?? '';
+  return message.contains('permission request dialog was closed') ||
+      message.contains('request was cancelled');
 }
