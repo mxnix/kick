@@ -1138,7 +1138,7 @@ class _ProxyIsolateHost {
     _RequestRetryTracker? tracker,
   }) async {
     final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
-    if (verbosity != 'verbose' || tracker == null) {
+    if (verbosity == 'quiet' || tracker == null) {
       return;
     }
 
@@ -1147,12 +1147,19 @@ class _ProxyIsolateHost {
       'payload': {
         'id': _uuid.v4(),
         'timestamp': DateTime.now().toIso8601String(),
-        'level': 'info',
+        'level': 'warning',
         'category': category,
         'route': route,
-        'message': 'Retry scheduled',
-        'masked_payload': jsonEncode(tracker.toAttemptPayload(request: request, event: event)),
-        'raw_payload': null,
+        'message': 'Retry scheduled after request failure',
+        'masked_payload': jsonEncode({
+          ...tracker.toAttemptPayload(request: request, event: event),
+          'error_message': LogSanitizer.sanitizeText(event.error.message),
+          if (event.error.sanitizedResponseBody != null)
+            'upstream_response': event.error.sanitizedResponseBody,
+        }),
+        'raw_payload': verbosity == 'verbose' && _unsafeRawLoggingEnabled
+            ? event.error.rawResponseBody
+            : null,
       },
     });
   }
@@ -1165,7 +1172,7 @@ class _ProxyIsolateHost {
     _RequestRetryTracker? tracker,
   }) async {
     final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
-    if (verbosity != 'verbose' || tracker == null) {
+    if (verbosity == 'quiet' || tracker == null) {
       return;
     }
 
@@ -1174,14 +1181,18 @@ class _ProxyIsolateHost {
       'payload': {
         'id': _uuid.v4(),
         'timestamp': DateTime.now().toIso8601String(),
-        'level': 'info',
+        'level': 'warning',
         'category': category,
         'route': route,
-        'message': 'Retrying with another account',
-        'masked_payload': jsonEncode(
-          tracker.toAccountFailoverPayload(request: request, error: error),
-        ),
-        'raw_payload': null,
+        'message': 'Retrying with another account after request failure',
+        'masked_payload': jsonEncode({
+          ...tracker.toAccountFailoverPayload(request: request, error: error),
+          'error_message': LogSanitizer.sanitizeText(error.message),
+          if (error.sanitizedResponseBody != null) 'upstream_response': error.sanitizedResponseBody,
+        }),
+        'raw_payload': verbosity == 'verbose' && _unsafeRawLoggingEnabled
+            ? error.rawResponseBody
+            : null,
       },
     });
   }
