@@ -47,6 +47,7 @@ migrate_working_dir/
 /android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 **/*.jks
 **/*.keystore
+android/build/reports/problems/*
 
 # Apple platforms
 **/ios/Flutter/.last_build_id
@@ -64,3 +65,4 @@ migrate_working_dir/
 # Symbolication and obfuscation
 app.*.symbols
 app.*.map.json
+
