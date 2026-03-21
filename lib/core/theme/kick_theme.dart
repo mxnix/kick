@@ -462,79 +462,16 @@ class KickThemeData {
 }
 
 class KickSchemes {
-  static const light = ColorScheme(
-    brightness: Brightness.light,
-    primary: Color(0xff50653e),
-    onPrimary: Color(0xffffffff),
-    primaryContainer: Color(0xffd3e8bc),
-    onPrimaryContainer: Color(0xff394b2a),
-    secondary: Color(0xff7a6144),
-    onSecondary: Color(0xffffffff),
-    secondaryContainer: Color(0xffffddb8),
-    onSecondaryContainer: Color(0xff61492d),
-    tertiary: Color(0xff6a5d2f),
-    onTertiary: Color(0xffffffff),
-    tertiaryContainer: Color(0xfff4e29b),
-    onTertiaryContainer: Color(0xff51461a),
-    error: Color(0xffba1a1a),
-    onError: Color(0xffffffff),
-    errorContainer: Color(0xffffdad6),
-    onErrorContainer: Color(0xff93000a),
-    surface: Color(0xfffbfaf2),
-    onSurface: Color(0xff21201b),
-    onSurfaceVariant: Color(0xff5a584f),
-    outline: Color(0xff8b887d),
-    outlineVariant: Color(0xffddd9cc),
-    shadow: Color(0xff000000),
-    scrim: Color(0xff000000),
-    inverseSurface: Color(0xff31302a),
-    onInverseSurface: Color(0xfff4f0e6),
-    inversePrimary: Color(0xffb8cea1),
-    surfaceTint: Color(0xff50653e),
-    surfaceDim: Color(0xffddd9d0),
-    surfaceBright: Color(0xfffbfaf2),
-    surfaceContainerLowest: Color(0xffffffff),
-    surfaceContainerLow: Color(0xfff6f3e8),
-    surfaceContainer: Color(0xfff0ede3),
-    surfaceContainerHigh: Color(0xffebe7dd),
-    surfaceContainerHighest: Color(0xffe5e2d7),
-  );
+  static const fallbackSeedColor = Color(0xff6b86a8);
 
-  static const dark = ColorScheme(
-    brightness: Brightness.dark,
-    primary: Color(0xffb8cea1),
-    onPrimary: Color(0xff223016),
-    primaryContainer: Color(0xff394b2a),
-    onPrimaryContainer: Color(0xffd3e8bc),
-    secondary: Color(0xffebc79f),
-    onSecondary: Color(0xff46311a),
-    secondaryContainer: Color(0xff61492d),
-    onSecondaryContainer: Color(0xffffddb8),
-    tertiary: Color(0xffd7c686),
-    onTertiary: Color(0xff393005),
-    tertiaryContainer: Color(0xff51461a),
-    onTertiaryContainer: Color(0xfff4e29b),
-    error: Color(0xffffb4ab),
-    onError: Color(0xff690005),
-    errorContainer: Color(0xff93000a),
-    onErrorContainer: Color(0xffffdad6),
-    surface: Color(0xff171813),
-    onSurface: Color(0xffe6e3d8),
-    onSurfaceVariant: Color(0xffc7c3b7),
-    outline: Color(0xff928f84),
-    outlineVariant: Color(0xff47483f),
-    shadow: Color(0xff000000),
-    scrim: Color(0xff000000),
-    inverseSurface: Color(0xffe6e3d8),
-    onInverseSurface: Color(0xff2c2d27),
-    inversePrimary: Color(0xff50653e),
-    surfaceTint: Color(0xffb8cea1),
-    surfaceDim: Color(0xff171813),
-    surfaceBright: Color(0xff3a3b34),
-    surfaceContainerLowest: Color(0xff11120d),
-    surfaceContainerLow: Color(0xff1d1e19),
-    surfaceContainer: Color(0xff21221d),
-    surfaceContainerHigh: Color(0xff2b2c27),
-    surfaceContainerHighest: Color(0xff363731),
-  );
+  static final light = _fallbackScheme(Brightness.light);
+  static final dark = _fallbackScheme(Brightness.dark);
+
+  static ColorScheme _fallbackScheme(Brightness brightness) {
+    return ColorScheme.fromSeed(
+      seedColor: fallbackSeedColor,
+      brightness: brightness,
+      dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
+    );
+  }
 }
