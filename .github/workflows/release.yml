@@ -191,6 +191,8 @@ jobs:
     name: Build Android release artifacts
     runs-on: ubuntu-latest
     needs: metadata
+    env:
+      HAS_SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
 
     steps:
       - name: Checkout repository
@@ -308,12 +310,12 @@ jobs:
           flutter "${flutter_args[@]}"
 
       - name: Install Sentry CLI
-        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        if: ${{ env.HAS_SENTRY_AUTH_TOKEN == 'true' }}
         shell: bash
         run: curl -sL https://sentry.io/get-cli/ | bash
 
       - name: Upload Android debug files to GlitchTip
-        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
+        if: ${{ env.HAS_SENTRY_AUTH_TOKEN == 'true' }}
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_URL: https://app.glitchtip.com/
