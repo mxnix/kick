@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:drift/native.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:kick/analytics/kick_analytics.dart';
 import 'package:kick/data/app_database.dart';
 import 'package:kick/data/models/account_profile.dart';
@@ -12,6 +11,9 @@ import 'package:kick/data/repositories/accounts_repository.dart';
 import 'package:kick/data/repositories/logs_repository.dart';
 import 'package:kick/data/repositories/secret_store.dart';
 import 'package:kick/proxy/engine/proxy_controller.dart';
+import 'package:test/test.dart';
+
+import 'support/real_http_client.dart';
 
 void main() {
   test('initialize can recover after the isolate exits before ready', () async {
@@ -75,14 +77,20 @@ void main() {
     await harness.controller.start();
     final state = await runningState.timeout(const Duration(seconds: 2));
 
-    final client = HttpClient();
-    addTearDown(() => client.close(force: true));
-    final request = await client.getUrl(Uri.http('127.0.0.1:${state.port}', '/v1/models'));
-    request.headers.set(HttpHeaders.authorizationHeader, 'Bearer wrong-key');
-    final response = await request.close();
-    await response.drain();
+    await runWithRealHttpClient(() async {
+      final client = HttpClient();
+      try {
+        final request = await client.getUrl(Uri.http('127.0.0.1:${state.port}', '/v1/models'));
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer wrong-key');
+        final response = await request.close();
+        await response.drain();
 
-    expect(response.statusCode, HttpStatus.unauthorized);
+        expect(response.statusCode, HttpStatus.unauthorized);
+      } finally {
+        client.close(force: true);
+      }
+    });
+
     await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(harness.controller.currentState.lastError, isNull);
   });

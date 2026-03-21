@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/data/repositories/secret_store.dart';
 import 'package:kick/proxy/gemini/gemini_oauth_service.dart';
+import 'package:test/test.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'support/real_http_client.dart';
 
 void main() {
   OAuthTokens sampleTokens({String accessToken = 'access-token'}) => OAuthTokens(
@@ -113,14 +115,20 @@ void main() {
     await expectLater(service.authenticate(), throwsA(isA<TimeoutException>()));
     expect(redirectUri, isNotNull);
 
-    final client = HttpClient();
-    addTearDown(client.close);
-    await expectLater(() async {
-      final request = await client.getUrl(
-        redirectUri!.replace(queryParameters: {'state': 's', 'code': 'c'}),
-      );
-      await request.close();
-    }(), throwsA(isA<SocketException>()));
+    await expectLater(
+      runWithRealHttpClient(() async {
+        final client = HttpClient();
+        try {
+          final request = await client.getUrl(
+            redirectUri!.replace(queryParameters: {'state': 's', 'code': 'c'}),
+          );
+          await request.close();
+        } finally {
+          client.close(force: true);
+        }
+      }),
+      throwsA(isA<SocketException>()),
+    );
   });
 
   test('times out stalled token refresh requests', () async {
@@ -172,20 +180,22 @@ Future<void> _simulateCallback({required Uri redirectUri, required String state}
 }
 
 Future<_ResponseSnapshot> _fetchUri(Uri uri, {bool followRedirects = true}) async {
-  final client = HttpClient();
-  try {
-    final request = await client.getUrl(uri);
-    request.followRedirects = followRedirects;
-    final response = await request.close();
-    final body = await utf8.decoder.bind(response).join();
-    return _ResponseSnapshot(
-      statusCode: response.statusCode,
-      body: body,
-      location: response.headers.value(HttpHeaders.locationHeader),
-    );
-  } finally {
-    client.close(force: true);
-  }
+  return runWithRealHttpClient(() async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(uri);
+      request.followRedirects = followRedirects;
+      final response = await request.close();
+      final body = await utf8.decoder.bind(response).join();
+      return _ResponseSnapshot(
+        statusCode: response.statusCode,
+        body: body,
+        location: response.headers.value(HttpHeaders.locationHeader),
+      );
+    } finally {
+      client.close(force: true);
+    }
+  });
 }
 
 class _ResponseSnapshot {
