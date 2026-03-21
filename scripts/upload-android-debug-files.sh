@@ -43,6 +43,8 @@ fi
 sentry-cli \
   --url "$SENTRY_URL" \
   --auth-token "$SENTRY_AUTH_TOKEN" \
-  --org "$SENTRY_ORG" \
-  --project "$SENTRY_PROJECT" \
-  debug-files upload --wait "$temp_dir"
+  debug-files upload \
+  --wait \
+  -o "$SENTRY_ORG" \
+  -p "$SENTRY_PROJECT" \
+  "$temp_dir"
