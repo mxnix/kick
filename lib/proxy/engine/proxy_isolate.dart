@@ -216,6 +216,9 @@ class _ProxyIsolateHost {
           'payload': {'token_ref': account.tokenRef, 'tokens': tokens.toJson()},
         });
       },
+      onProjectIdResolved: (account, projectId) async {
+        await _publishAccounts();
+      },
       privilegedUserIdLoader: _privilegedUserIdLoader,
       warmupEnabled: true,
     );

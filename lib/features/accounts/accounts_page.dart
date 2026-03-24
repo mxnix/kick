@@ -174,7 +174,9 @@ class _AccountCard extends ConsumerWidget {
             runSpacing: 8,
             children: [
               KickBadge(
-                label: l10n.projectIdChip(account.projectId),
+                label: account.projectId.trim().isEmpty
+                    ? '${l10n.projectIdLabel}: auto'
+                    : l10n.projectIdChip(account.projectId),
                 leading: const Icon(Icons.badge_rounded),
               ),
               KickBadge(
@@ -422,10 +424,12 @@ Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfil
   );
 
   Object? failure;
-  StackTrace? failureStackTrace;
 
   try {
     final snapshot = await ref.read(geminiProjectDiagnosticsServiceProvider).diagnose(account);
+    if (snapshot.projectId != account.projectId) {
+      await ref.read(accountsControllerProvider.notifier).refreshState();
+    }
     if (navigator.canPop()) {
       navigator.pop();
     }
@@ -441,7 +445,7 @@ Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfil
         content: Text(
           [
             l10n.accountProjectCheckSuccessMessage,
-            'PROJECT_ID: ${account.projectId}',
+            'PROJECT_ID: ${snapshot.projectId}',
             'Model: ${snapshot.modelVersion ?? snapshot.modelId}',
             if (snapshot.traceId?.trim().isNotEmpty == true) 'Trace ID: ${snapshot.traceId}',
           ].join('\n\n'),
@@ -454,9 +458,8 @@ Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfil
         ],
       ),
     );
-  } catch (error, stackTrace) {
+  } catch (error) {
     failure = error;
-    failureStackTrace = stackTrace;
   }
 
   if (failure == null) {
@@ -493,19 +496,6 @@ Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfil
       ],
     ),
   );
-
-  if (failureStackTrace != null) {
-    final reportedFailure = failure;
-    FlutterError.reportError(
-      FlutterErrorDetails(
-        exception: reportedFailure,
-        stack: failureStackTrace,
-        library: 'kick',
-        context: ErrorDescription('while running a Gemini project diagnostic'),
-        silent: true,
-      ),
-    );
-  }
 }
 
 String _errorActionLabel(KickLocalizations l10n, GeminiErrorAction action) {

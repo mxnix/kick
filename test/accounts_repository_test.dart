@@ -108,4 +108,41 @@ void main() {
 
     expect(accounts.any((account) => account.id == 'secondary'), isTrue);
   });
+
+  test('persists auto-discovered project id from runtime when stored value is empty', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick-accounts-repo');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+
+    final database = await AppDatabase.open(
+      '${tempDirectory.path}${Platform.pathSeparator}kick.sqlite',
+    );
+    addTearDown(database.close);
+
+    final repository = AccountsRepository(database);
+    await repository.upsert(
+      buildAccount(
+        id: 'primary',
+        label: 'Primary',
+        email: 'primary@example.com',
+        projectId: '',
+        notSupportedModels: const [],
+        tokenRef: 'primary-ref',
+      ),
+    );
+
+    await repository.mergeRuntimeState([
+      buildAccount(
+        id: 'primary',
+        label: 'Runtime label',
+        email: 'runtime@example.com',
+        projectId: 'runtime-project',
+        notSupportedModels: const [],
+        tokenRef: 'runtime-ref',
+      ),
+    ]);
+
+    final accounts = await repository.readAll();
+    expect(accounts, hasLength(1));
+    expect(accounts.single.projectId, 'runtime-project');
+  });
 }

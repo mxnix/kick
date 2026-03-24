@@ -69,6 +69,12 @@ final geminiProjectDiagnosticsServiceProvider = Provider<GeminiProjectDiagnostic
     readTokens: oauthService.readTokens,
     refreshTokens: oauthService.refreshTokens,
     persistTokens: oauthService.persistTokens,
+    onProjectIdResolved: (account, projectId) async {
+      if (account.projectId.trim().isNotEmpty) {
+        return;
+      }
+      await bootstrap.accountsRepository.upsert(account.copyWith(projectId: projectId));
+    },
     privilegedUserIdLoader: GeminiInstallationIdLoader(
       installationIdPathProvider: () => bootstrap.geminiInstallationIdPath,
     ),

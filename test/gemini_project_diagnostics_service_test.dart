@@ -80,6 +80,7 @@ void main() {
 
     final snapshot = await service.diagnose(sampleAccount());
 
+    expect(snapshot.projectId, 'project-1');
     expect(snapshot.modelId, GeminiProjectDiagnosticsService.probeHeaderModelId);
     expect(snapshot.modelVersion, isNull);
     expect(snapshot.responseId, '87f1ce57-30fe-4c1a-bb46-9fc68395ed86');
@@ -125,6 +126,66 @@ void main() {
     expect(seenTokens, ['Bearer fresh-token']);
     expect(persisted, hasLength(1));
     expect(persisted.single.accessToken, 'fresh-token');
+  });
+
+  test('auto-discovers and persists project id before diagnostics when missing', () async {
+    final persistedProjects = <String>[];
+    final seenPaths = <String>[];
+
+    final service = GeminiProjectDiagnosticsService(
+      readTokens: (_) async => activeTokens(),
+      refreshTokens: (tokens) async => tokens,
+      persistTokens: (_, tokens) async {},
+      onProjectIdResolved: (account, projectId) async {
+        persistedProjects.add(projectId);
+      },
+      httpClient: QueueHttpClient([
+        (request) async {
+          seenPaths.add(request.url.path);
+          expect(request.url.path, '/v1internal:loadCodeAssist');
+          return http.Response(
+            jsonEncode({
+              'allowedTiers': [
+                {'id': 'free-tier', 'isDefault': true},
+              ],
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          expect(request.url.path, '/v1internal:onboardUser');
+          return http.Response(
+            jsonEncode({
+              'done': true,
+              'response': {
+                'cloudaicompanionProject': {'id': 'resolved-project'},
+              },
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          expect(request.url.path, '/v1internal:retrieveUserQuota');
+          expect(jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>, {
+            'project': 'resolved-project',
+          });
+          return http.Response(jsonEncode({'traceId': 'trace-resolved'}), 200);
+        },
+      ]),
+    );
+
+    final snapshot = await service.diagnose(sampleAccount().copyWith(projectId: ''));
+
+    expect(snapshot.projectId, 'resolved-project');
+    expect(snapshot.traceId, 'trace-resolved');
+    expect(persistedProjects, ['resolved-project']);
+    expect(seenPaths, [
+      '/v1internal:loadCodeAssist',
+      '/v1internal:onboardUser',
+      '/v1internal:retrieveUserQuota',
+    ]);
   });
 
   test('retries project diagnostics after auth failure with refreshed token', () async {
@@ -217,6 +278,36 @@ void main() {
               'actionUrl',
               'https://console.developers.google.com/apis/api/cloudaicompanion.googleapis.com/overview?project=xz',
             ),
+      ),
+    );
+  });
+
+  test('fails diagnostics when project id cannot be auto-discovered', () async {
+    final service = GeminiProjectDiagnosticsService(
+      readTokens: (_) async => activeTokens(),
+      refreshTokens: (tokens) async => tokens,
+      persistTokens: (_, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async => http.Response(
+          jsonEncode({
+            'allowedTiers': [
+              {'id': 'free-tier', 'isDefault': true},
+            ],
+          }),
+          200,
+        ),
+        (request) async => http.Response(jsonEncode({'done': true, 'response': {}}), 200),
+      ]),
+    );
+
+    await expectLater(
+      service.diagnose(sampleAccount().copyWith(projectId: '')),
+      throwsA(
+        isA<GeminiGatewayException>().having(
+          (error) => error.detail,
+          'detail',
+          GeminiGatewayFailureDetail.projectIdMissing,
+        ),
       ),
     );
   });

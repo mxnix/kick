@@ -45,28 +45,31 @@ void main() {
     return 'PLATFORM_UNSPECIFIED';
   }
 
-  ProxyRuntimeAccount sampleAccount() => ProxyRuntimeAccount(
-    id: 'account-1',
-    label: 'Primary',
-    email: 'user@example.com',
-    projectId: 'project-1',
-    enabled: true,
-    priority: 0,
-    notSupportedModels: const [],
-    lastUsedAt: null,
-    usageCount: 0,
-    errorCount: 0,
-    cooldownUntil: null,
-    lastQuotaSnapshot: null,
-    tokenRef: 'token-ref',
-    tokens: OAuthTokens(
-      accessToken: 'access-token',
-      refreshToken: 'refresh-token',
-      expiry: DateTime.now().add(const Duration(hours: 1)),
-      tokenType: 'Bearer',
-      scope: null,
-    ),
-  );
+  ProxyRuntimeAccount sampleAccount({String projectId = 'project-1', OAuthTokens? tokens}) =>
+      ProxyRuntimeAccount(
+        id: 'account-1',
+        label: 'Primary',
+        email: 'user@example.com',
+        projectId: projectId,
+        enabled: true,
+        priority: 0,
+        notSupportedModels: const [],
+        lastUsedAt: null,
+        usageCount: 0,
+        errorCount: 0,
+        cooldownUntil: null,
+        lastQuotaSnapshot: null,
+        tokenRef: 'token-ref',
+        tokens:
+            tokens ??
+            OAuthTokens(
+              accessToken: 'access-token',
+              refreshToken: 'refresh-token',
+              expiry: DateTime.now().add(const Duration(hours: 1)),
+              tokenType: 'Bearer',
+              scope: null,
+            ),
+      );
 
   UnifiedPromptRequest sampleRequest({
     String requestId = 'req123',
@@ -109,6 +112,7 @@ void main() {
   test('builds Code Assist session and prompt identifiers', () async {
     Map<String, Object?>? capturedBody;
     Map<String, String>? capturedHeaders;
+    String? capturedPath;
     const sessionId = '11111111-1111-4111-8111-111111111111';
 
     final client = GeminiCodeAssistClient(
@@ -117,6 +121,7 @@ void main() {
       privilegedUserIdLoader: GeminiInstallationIdLoader(createUuid: () => 'privileged-user-1'),
       httpClient: QueueHttpClient([
         (request) async {
+          capturedPath = request.url.path;
           capturedHeaders = request.headers;
           final body = await request.finalize().bytesToString();
           capturedBody = jsonDecode(body) as Map<String, Object?>;
@@ -145,6 +150,7 @@ void main() {
       request: sampleRequest(requestId: 'abc123'),
     );
 
+    expect(capturedPath, '/v1internal:generateContent');
     expect(capturedBody?['user_prompt_id'], '$sessionId########0');
     final nestedRequest = (capturedBody?['request'] as Map?)?.cast<String, Object?>();
     expect(nestedRequest?['session_id'], sessionId);
@@ -242,6 +248,96 @@ void main() {
     expect(((capturedBodies[1]['request'] as Map)['session_id']), sessionIds[1]);
   });
 
+  test('auto-discovers and persists project id before unary generation', () async {
+    final seenPaths = <String>[];
+    final resolvedProjectIds = <String>[];
+    final account = sampleAccount(projectId: '');
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      onProjectIdResolved: (account, projectId) async {
+        resolvedProjectIds.add(projectId);
+      },
+      warmupEnabled: false,
+      httpClient: QueueHttpClient([
+        (request) async {
+          seenPaths.add(request.url.path);
+          expect(request.url.path, '/v1internal:loadCodeAssist');
+          expect(jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>, {
+            'metadata': {
+              'ideType': geminiCodeAssistIdeType,
+              'platform': geminiCodeAssistPlatformUnspecified,
+              'pluginType': geminiCodeAssistPluginType,
+            },
+          });
+          return http.Response(
+            jsonEncode({
+              'allowedTiers': [
+                {'id': 'free-tier', 'isDefault': true},
+              ],
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          expect(request.url.path, '/v1internal:onboardUser');
+          expect(jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>, {
+            'tierId': 'free-tier',
+            'metadata': {
+              'ideType': geminiCodeAssistIdeType,
+              'platform': geminiCodeAssistPlatformUnspecified,
+              'pluginType': geminiCodeAssistPluginType,
+            },
+          });
+          return http.Response(
+            jsonEncode({
+              'done': true,
+              'response': {
+                'cloudaicompanionProject': {'id': 'autodiscovered-project'},
+              },
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          final body = jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          expect(request.url.path, '/v1internal:generateContent');
+          expect(body['project'], 'autodiscovered-project');
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'Discovered'},
+                      ],
+                    },
+                    'finishReason': 'STOP',
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final response = await client.generateContent(account: account, request: sampleRequest());
+
+    expect(account.projectId, 'autodiscovered-project');
+    expect(resolvedProjectIds, ['autodiscovered-project']);
+    expect(seenPaths, [
+      '/v1internal:loadCodeAssist',
+      '/v1internal:onboardUser',
+      '/v1internal:generateContent',
+    ]);
+    expect(OpenAiResponseMapper.currentText(response), 'Discovered');
+  });
+
   test('sends warmup choreography once before the first generate request', () async {
     final seenPaths = <String>[];
     final seenBodies = <Map<String, Object?>>[];
@@ -323,8 +419,8 @@ void main() {
     expect(seenPaths, [
       '/v1internal:loadCodeAssist',
       '/v1internal:listExperiments',
-      '/v1internal:streamGenerateContent',
-      '/v1internal:streamGenerateContent',
+      '/v1internal:generateContent',
+      '/v1internal:generateContent',
     ]);
 
     expect((seenBodies[0]['metadata'] as Map?)?.cast<String, Object?>(), {

@@ -101,10 +101,6 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _projectController,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: (value) {
-                    return value?.trim().isEmpty == true ? l10n.projectIdRequiredError : null;
-                  },
                   decoration: InputDecoration(
                     labelText: l10n.projectIdLabel,
                     hintText: l10n.projectIdHint,

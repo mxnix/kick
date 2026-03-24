@@ -26,7 +26,7 @@ class ProxyRuntimeAccount {
   final String id;
   final String label;
   final String email;
-  final String projectId;
+  String projectId;
   final String? googleSubjectId;
   final String? avatarUrl;
   bool enabled;

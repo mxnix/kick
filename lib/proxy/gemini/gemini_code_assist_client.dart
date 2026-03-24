@@ -167,6 +167,9 @@ const _continuationPrompt = 'Please continue from where you left off.';
 const _continuationTailLength = 180;
 const _maxContinuationPasses = 12;
 const _minimumContinuationOverlap = 6;
+const _fallbackOnboardTierId = 'legacy-tier';
+const _projectDiscoveryPollDelay = Duration(seconds: 2);
+const _projectDiscoveryMaxPollAttempts = 15;
 const _defaultSafetySettings = [
   {'category': 'HARM_CATEGORY_HARASSMENT', 'threshold': 'OFF'},
   {'category': 'HARM_CATEGORY_HATE_SPEECH', 'threshold': 'OFF'},
@@ -378,6 +381,7 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
 class GeminiCodeAssistClient {
   GeminiCodeAssistClient({
     required Future<void> Function(ProxyRuntimeAccount account, OAuthTokens tokens) onTokensUpdated,
+    Future<void> Function(ProxyRuntimeAccount account, String projectId)? onProjectIdResolved,
     http.Client? httpClient,
     Future<void> Function(Duration delay)? wait,
     String Function()? createSessionId,
@@ -386,6 +390,7 @@ class GeminiCodeAssistClient {
     GeminiRetryPolicy retryPolicy = const GeminiRetryPolicy(),
     Duration requestTimeout = defaultGeminiRequestTimeout,
   }) : _onTokensUpdated = onTokensUpdated,
+       _onProjectIdResolved = onProjectIdResolved ?? _noopProjectIdResolved,
        _http = httpClient ?? http.Client(),
        _wait = wait ?? _defaultWait,
        _createSessionId = createSessionId ?? const Uuid().v4,
@@ -397,6 +402,7 @@ class GeminiCodeAssistClient {
            : defaultGeminiRequestTimeout;
 
   final Future<void> Function(ProxyRuntimeAccount account, OAuthTokens tokens) _onTokensUpdated;
+  final Future<void> Function(ProxyRuntimeAccount account, String projectId) _onProjectIdResolved;
   final http.Client _http;
   final Future<void> Function(Duration delay) _wait;
   final String Function() _createSessionId;
@@ -417,13 +423,18 @@ class GeminiCodeAssistClient {
   }) async {
     await _ensureFreshTokens(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
+    final resolvedProjectId = await _ensureResolvedProjectId(
+      account,
+      headerModel: resolvedModel,
+      onRetry: onRetry,
+    );
     _scheduleWarmupIfNeeded(account: account, headerModel: resolvedModel);
     final baseRequestBody = _buildRequestBody(request, resolvedModel: resolvedModel);
     final sessionState = _createSessionState(baseRequestBody);
     return _generateWithContinuation(
       account: account,
       model: resolvedModel,
-      projectId: account.projectId,
+      projectId: resolvedProjectId,
       baseRequestBody: baseRequestBody,
       sessionState: sessionState,
       onRetry: onRetry,
@@ -437,6 +448,11 @@ class GeminiCodeAssistClient {
   }) async {
     await _ensureFreshTokens(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
+    final resolvedProjectId = await _ensureResolvedProjectId(
+      account,
+      headerModel: resolvedModel,
+      onRetry: onRetry,
+    );
     _scheduleWarmupIfNeeded(account: account, headerModel: resolvedModel);
     final baseRequestBody = _buildRequestBody(request, resolvedModel: resolvedModel);
     final sessionState = _createSessionState(baseRequestBody);
@@ -468,7 +484,7 @@ class GeminiCodeAssistClient {
               () => _sendStreamRequest(
                 accessToken: account.tokens.accessToken,
                 model: resolvedModel,
-                projectId: account.projectId,
+                projectId: resolvedProjectId,
                 requestBody: currentRequestBody,
                 sessionState: sessionState,
                 cancellation: cancellation,
@@ -552,13 +568,13 @@ class GeminiCodeAssistClient {
   }) async {
     var currentRequestBody = baseRequestBody;
     var accumulatedText = '';
-    Map<String, Object?>? lastPayload;
+    late Map<String, Object?> lastPayload;
 
     for (var pass = 0; pass <= _maxContinuationPasses; pass++) {
       final accumulatedBeforePass = accumulatedText;
       await _ensureFreshTokens(account);
-      final response = await _executeWithRetry(
-        () => _sendStreamRequest(
+      lastPayload = await _executeWithRetry(
+        () => _sendUnaryRequest(
           accessToken: account.tokens.accessToken,
           model: model,
           projectId: projectId,
@@ -568,16 +584,6 @@ class GeminiCodeAssistClient {
         ),
         onRetry: onRetry,
       );
-
-      lastPayload = await _collectUnaryStreamPayload(
-        response,
-        pass: pass,
-        accumulatedBeforePass: accumulatedBeforePass,
-      );
-
-      if (lastPayload == null) {
-        break;
-      }
 
       final generatedText = _extractGeneratedText(lastPayload);
       if (generatedText.isNotEmpty) {
@@ -603,41 +609,9 @@ class GeminiCodeAssistClient {
       );
     }
 
-    if (lastPayload == null) {
-      throw GeminiGatewayException(
-        kind: GeminiGatewayFailureKind.unknown,
-        message: 'Gemini continuation finished without a payload.',
-        statusCode: 500,
-      );
-    }
-
     return accumulatedText.isEmpty
         ? lastPayload
         : _withAccumulatedText(lastPayload, accumulatedText);
-  }
-
-  Future<Map<String, Object?>?> _collectUnaryStreamPayload(
-    http.StreamedResponse response, {
-    required int pass,
-    required String accumulatedBeforePass,
-  }) async {
-    Map<String, Object?>? lastPayload;
-    final iterator = StreamIterator<Map<String, Object?>>(_streamResponse(response));
-    try {
-      while (await iterator.moveNext()) {
-        final rawPayload = iterator.current;
-        final generatedText = _extractGeneratedText(rawPayload);
-        final mergedText = pass == 0
-            ? generatedText
-            : _appendContinuationText(accumulatedBeforePass, generatedText);
-        lastPayload = mergedText == generatedText
-            ? rawPayload
-            : _withAccumulatedText(rawPayload, mergedText);
-      }
-    } finally {
-      await iterator.cancel();
-    }
-    return lastPayload;
   }
 
   Map<String, Object?> _buildRequestBody(
@@ -928,6 +902,43 @@ class GeminiCodeAssistClient {
     }
   }
 
+  Future<Map<String, Object?>> _sendUnaryRequest({
+    required String accessToken,
+    required String model,
+    required String projectId,
+    required Map<String, Object?> requestBody,
+    required _CodeAssistSessionState sessionState,
+    String timeoutLabel = 'Gemini request',
+  }) async {
+    final request = http.Request('POST', _methodUri('generateContent'))
+      ..headers.addAll(await _headers(accessToken, model: model))
+      ..body = jsonEncode(
+        _buildRequestEnvelope(
+          model: model,
+          projectId: projectId,
+          requestBody: requestBody,
+          sessionState: sessionState,
+        ),
+      );
+    final response = await _runWithRequestTimeout(() => _http.send(request), timeoutLabel);
+    final body = await response.stream.bytesToString();
+    if (response.statusCode >= 400) {
+      throw decodeGeminiGatewayError(response.statusCode, body);
+    }
+    final decoded = _tryDecodeJsonMap(body);
+    if (decoded.isNotEmpty) {
+      return decoded;
+    }
+    throw GeminiGatewayException(
+      kind: GeminiGatewayFailureKind.unknown,
+      message: 'Unexpected Gemini response shape.',
+      statusCode: 502,
+      source: GeminiGatewayFailureSource.transport,
+      sanitizedResponseBody: _sanitizeGatewayResponseBody(body),
+      rawResponseBody: body.trim().isEmpty ? null : body,
+    );
+  }
+
   Future<http.StreamedResponse> _sendStreamRequest({
     required String accessToken,
     required String model,
@@ -959,6 +970,122 @@ class GeminiCodeAssistClient {
       throw decodeGeminiGatewayError(response.statusCode, body);
     }
     return response;
+  }
+
+  Future<String> _ensureResolvedProjectId(
+    ProxyRuntimeAccount account, {
+    required String headerModel,
+    void Function(GeminiRetryEvent event)? onRetry,
+  }) async {
+    final currentProjectId = account.projectId.trim();
+    if (currentProjectId.isNotEmpty) {
+      return currentProjectId;
+    }
+
+    final resolvedProjectId = await _executeWithRetry(
+      () => _discoverProjectId(accessToken: account.tokens.accessToken, headerModel: headerModel),
+      onRetry: onRetry,
+    );
+    if (resolvedProjectId.isEmpty) {
+      throw GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.invalidRequest,
+        message: 'Could not discover a valid Google Cloud project ID for this account.',
+        statusCode: 400,
+        detail: GeminiGatewayFailureDetail.projectIdMissing,
+      );
+    }
+
+    account.projectId = resolvedProjectId;
+    await _onProjectIdResolved(account, resolvedProjectId);
+    return resolvedProjectId;
+  }
+
+  Future<String> _discoverProjectId({
+    required String accessToken,
+    required String headerModel,
+  }) async {
+    final setup = await _loadCodeAssistSetup(accessToken: accessToken, headerModel: headerModel);
+    if (setup.projectId.isNotEmpty) {
+      return setup.projectId;
+    }
+
+    final onboardRequest = <String, Object?>{
+      'tierId': setup.tierId,
+      'metadata': _buildSetupMetadata(),
+    };
+    for (var attempt = 0; attempt < _projectDiscoveryMaxPollAttempts; attempt++) {
+      final response = await _callJsonMethod(
+        method: 'onboardUser',
+        accessToken: accessToken,
+        headerModel: headerModel,
+        body: onboardRequest,
+        timeoutLabel: 'Gemini project discovery',
+      );
+      if (response['done'] == true) {
+        final payload =
+            (response['response'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
+        return _extractProjectId(payload['cloudaicompanionProject']);
+      }
+      if (attempt + 1 < _projectDiscoveryMaxPollAttempts) {
+        await _wait(_projectDiscoveryPollDelay);
+      }
+    }
+
+    return '';
+  }
+
+  Future<_LoadCodeAssistSetup> _loadCodeAssistSetup({
+    required String accessToken,
+    required String headerModel,
+  }) async {
+    final response = await _callJsonMethod(
+      method: 'loadCodeAssist',
+      accessToken: accessToken,
+      headerModel: headerModel,
+      body: {'metadata': _buildSetupMetadata()},
+      timeoutLabel: 'Gemini project discovery',
+    );
+    return _LoadCodeAssistSetup(
+      projectId: _extractProjectId(response['cloudaicompanionProject']),
+      tierId: _extractDefaultTierId(response['allowedTiers']),
+    );
+  }
+
+  Future<Map<String, Object?>> _callJsonMethod({
+    required String method,
+    required String accessToken,
+    required String headerModel,
+    required Map<String, Object?> body,
+    required String timeoutLabel,
+  }) async {
+    final request = http.Request('POST', _methodUri(method))
+      ..headers.addAll(await _headers(accessToken, model: headerModel))
+      ..body = jsonEncode(body);
+    final response = await _runWithRequestTimeout(() => _http.send(request), timeoutLabel);
+    final rawBody = await response.stream.bytesToString();
+    if (response.statusCode >= 400) {
+      throw decodeGeminiGatewayError(response.statusCode, rawBody);
+    }
+    final decoded = _tryDecodeJsonMap(rawBody);
+    if (decoded.isNotEmpty || rawBody.trim().isEmpty) {
+      return decoded;
+    }
+    throw GeminiGatewayException(
+      kind: GeminiGatewayFailureKind.unknown,
+      message: 'Unexpected Gemini response shape.',
+      statusCode: 502,
+      source: GeminiGatewayFailureSource.transport,
+      sanitizedResponseBody: _sanitizeGatewayResponseBody(rawBody),
+      rawResponseBody: rawBody,
+    );
+  }
+
+  Map<String, String> _buildSetupMetadata() {
+    return const <String, String>{
+      'ideType': geminiCodeAssistIdeType,
+      'platform': geminiCodeAssistPlatformUnspecified,
+      'pluginType': geminiCodeAssistPluginType,
+    };
   }
 
   Stream<Map<String, Object?>> _streamResponse(http.StreamedResponse response) {
@@ -1624,6 +1751,8 @@ class GeminiCodeAssistClient {
 
 Future<void> _defaultWait(Duration delay) => Future<void>.delayed(delay);
 
+Future<void> _noopProjectIdResolved(ProxyRuntimeAccount account, String projectId) async {}
+
 Map<String, Object?> _deepCopyJsonMap(Map<String, Object?> source) {
   final decoded = jsonDecode(jsonEncode(source));
   if (decoded is Map<String, dynamic>) {
@@ -1639,6 +1768,13 @@ String _buildCodeAssistPromptId(String sessionId, {required int turnIndex}) {
 String _warmupKey(ProxyRuntimeAccount account) {
   final accountId = account.id.trim().isEmpty ? account.tokenRef : account.id;
   return '$accountId:${account.projectId}';
+}
+
+final class _LoadCodeAssistSetup {
+  const _LoadCodeAssistSetup({required this.projectId, required this.tierId});
+
+  final String projectId;
+  final String tierId;
 }
 
 final class _CodeAssistSessionState {
@@ -1726,6 +1862,37 @@ Map<String, Object?> _tryDecodeJsonMap(String body) {
     }
   } catch (_) {}
   return const <String, Object?>{};
+}
+
+String _extractProjectId(Object? value) {
+  if (value is String) {
+    return value.trim();
+  }
+  if (value is Map) {
+    return (value['id'] as String? ?? '').trim();
+  }
+  return '';
+}
+
+String _extractDefaultTierId(Object? value) {
+  if (value is! List) {
+    return _fallbackOnboardTierId;
+  }
+
+  for (final rawTier in value) {
+    if (rawTier is! Map) {
+      continue;
+    }
+    if (rawTier['isDefault'] != true) {
+      continue;
+    }
+    final tierId = (rawTier['id'] as String? ?? '').trim();
+    if (tierId.isNotEmpty) {
+      return tierId;
+    }
+  }
+
+  return _fallbackOnboardTierId;
 }
 
 Map<String, Object?>? _typedDetail(List<Map<String, Object?>> details, String type) {

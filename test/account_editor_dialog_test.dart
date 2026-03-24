@@ -18,6 +18,19 @@ void main() {
     expect(find.text('Недоступные модели'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('allows submitting the dialog without project id', (tester) async {
+    await tester.pumpWidget(const _TestApp());
+
+    await tester.tap(find.text('Открыть диалог'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Продолжить'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Укажите ID проекта'), findsNothing);
+  });
 }
 
 class _TestApp extends StatelessWidget {

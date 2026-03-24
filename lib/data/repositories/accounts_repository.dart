@@ -82,6 +82,9 @@ class AccountsRepository {
 
         await upsert(
           current.copyWith(
+            projectId: current.projectId.trim().isNotEmpty
+                ? current.projectId
+                : runtimeAccount.projectId.trim(),
             runtimeNotSupportedModels: _extractRuntimeNotSupportedModels(
               current.notSupportedModels,
               runtimeAccount.notSupportedModels,
