@@ -58,7 +58,7 @@ class GeminiUsageService {
   }
 
   Future<GeminiUsageSnapshot> _requestUsage(AccountProfile account, OAuthTokens tokens) async {
-    final privilegedUserId = await _privilegedUserIdLoader.load();
+    final privilegedUserId = await _resolvePrivilegedUserId();
     final response = await _http.post(
       Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion:retrieveUserQuota'),
       headers: buildGeminiCodeAssistHeaders(
@@ -94,5 +94,12 @@ class GeminiUsageService {
     }
 
     return error.statusCode == HttpStatus.unauthorized && error.detail == null;
+  }
+
+  Future<String> _resolvePrivilegedUserId() async {
+    if (!shouldSendGeminiPrivilegedUserId()) {
+      return '';
+    }
+    return _privilegedUserIdLoader.load();
   }
 }

@@ -51,7 +51,7 @@ void main() {
           'function': {
             'name': 'lookupWeather',
             'description': 'Weather lookup',
-            'parameters': {
+            'parametersJsonSchema': {
               'type': 'object',
               'properties': {
                 'city': {'type': 'string'},

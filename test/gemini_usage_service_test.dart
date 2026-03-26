@@ -141,7 +141,7 @@ void main() {
     expect(requestHeaders?[HttpHeaders.authorizationHeader], 'Bearer fresh-token');
     expect(requestHeaders?[HttpHeaders.acceptHeader], 'application/json');
     expect(requestHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
-    expect(requestHeaders?['x-gemini-api-privileged-user-id'], 'privileged-user-usage');
+    expect(requestHeaders?.containsKey('x-gemini-api-privileged-user-id'), isFalse);
     expect(
       requestHeaders?[HttpHeaders.userAgentHeader],
       contains('/$geminiCodeAssistAuxiliaryHeaderModel '),

@@ -29,12 +29,16 @@ void main() {
     expect(
       buildGeminiCliUserAgent('gemini-2.5-pro'),
       '$geminiCodeAssistUserAgentPrefix/$geminiCodeAssistCliVersion/gemini-2.5-pro '
-      '(${expectedPlatform()}; ${expectedArchitecture()}; $geminiCodeAssistUserAgentSurface)',
+      '(${expectedPlatform()}; ${expectedArchitecture()}; $geminiCodeAssistUserAgentSurface) '
+      'google-api-nodejs-client/$geminiCodeAssistGoogleApiNodeClientVersion',
     );
   });
 
   test('uses the provided surface in the Gemini CLI user agent', () {
-    expect(buildGeminiCliUserAgent('gemini-2.5-pro', surface: 'vscode'), endsWith('; vscode)'));
+    expect(
+      buildGeminiCliUserAgent('gemini-2.5-pro', surface: 'vscode'),
+      contains('; vscode) google-api-nodejs-client/'),
+    );
   });
 
   test('supports dynamic Gemini CLI prefixes from client names', () {
@@ -59,7 +63,7 @@ void main() {
     );
   });
 
-  test('includes privileged user id alongside existing auth headers', () {
+  test('does not include privileged user id by default', () {
     final headers = buildGeminiCodeAssistHeaders(
       accessToken: 'access-token',
       model: 'gemini-2.5-pro',
@@ -70,6 +74,17 @@ void main() {
     expect(headers[HttpHeaders.contentTypeHeader], 'application/json');
     expect(headers[HttpHeaders.acceptHeader], 'application/json');
     expect(headers['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
+    expect(headers.containsKey('x-gemini-api-privileged-user-id'), isFalse);
+  });
+
+  test('allows explicitly opting back into the privileged user id header', () {
+    final headers = buildGeminiCodeAssistHeaders(
+      accessToken: 'access-token',
+      model: 'gemini-2.5-pro',
+      privilegedUserId: 'install-123',
+      includePrivilegedUserId: true,
+    );
+
     expect(headers['x-gemini-api-privileged-user-id'], 'install-123');
   });
 
@@ -78,6 +93,21 @@ void main() {
     expect(
       determineGeminiCliSurface(environment: const {'GEMINI_CLI_SURFACE': 'my-tool'}),
       'my-tool',
+    );
+  });
+
+  test('allows enabling privileged user id header from environment', () {
+    expect(
+      shouldSendGeminiPrivilegedUserId(
+        environment: const {'KICK_GEMINI_INCLUDE_PRIVILEGED_USER_ID': 'true'},
+      ),
+      isTrue,
+    );
+    expect(
+      shouldSendGeminiPrivilegedUserId(
+        environment: const {'KICK_GEMINI_INCLUDE_PRIVILEGED_USER_ID': '0'},
+      ),
+      isFalse,
     );
   });
 }

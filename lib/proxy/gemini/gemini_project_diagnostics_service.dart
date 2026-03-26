@@ -40,13 +40,15 @@ class GeminiProjectDiagnosticsService {
     GeminiInstallationIdLoader? privilegedUserIdLoader,
     http.Client? httpClient,
     String Function()? createDiagnosticId,
+    Future<void> Function(Duration delay)? wait,
   }) : _readTokens = readTokens,
        _refreshTokens = refreshTokens,
        _persistTokens = persistTokens,
        _onProjectIdResolved = onProjectIdResolved ?? _noopProjectIdResolved,
        _privilegedUserIdLoader = privilegedUserIdLoader ?? GeminiInstallationIdLoader(),
        _http = httpClient ?? http.Client(),
-       _createDiagnosticId = createDiagnosticId ?? const Uuid().v4;
+       _createDiagnosticId = createDiagnosticId ?? const Uuid().v4,
+       _wait = wait ?? _defaultWait;
 
   static const String probeMethodId = 'retrieveUserQuota';
   static const String probeHeaderModelId = geminiCodeAssistAuxiliaryHeaderModel;
@@ -61,6 +63,7 @@ class GeminiProjectDiagnosticsService {
   final GeminiInstallationIdLoader _privilegedUserIdLoader;
   final http.Client _http;
   final String Function() _createDiagnosticId;
+  final Future<void> Function(Duration delay) _wait;
 
   Future<GeminiProjectDiagnosticSnapshot> diagnose(AccountProfile account) async {
     final storedTokens = await _readTokens(account.tokenRef);
@@ -94,7 +97,7 @@ class GeminiProjectDiagnosticsService {
     OAuthTokens tokens,
   ) async {
     final diagnosticId = _createDiagnosticId();
-    final privilegedUserId = await _privilegedUserIdLoader.load();
+    final privilegedUserId = await _resolvePrivilegedUserId();
     final resolvedProjectId = await _ensureResolvedProjectId(account, tokens, privilegedUserId);
     final response = await _http.post(
       Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion:$probeMethodId'),
@@ -189,20 +192,39 @@ class GeminiProjectDiagnosticsService {
     String privilegedUserId,
     String tierId,
   ) async {
-    for (var attempt = 0; attempt < _projectDiscoveryMaxPollAttempts; attempt++) {
-      final response = await _postJson(
+    final response = await _postJson(
+      methodId: 'onboardUser',
+      tokens: tokens,
+      privilegedUserId: privilegedUserId,
+      body: {'tierId': tierId, 'metadata': _setupMetadata},
+    );
+    final onboardedProjectId = _extractOnboardedProjectId(response);
+    if (onboardedProjectId.isNotEmpty) {
+      return onboardedProjectId;
+    }
+    if (response['done'] == true) {
+      return '';
+    }
+
+    final operationName = (response['name'] as String?)?.trim() ?? '';
+    if (operationName.isNotEmpty) {
+      return _pollOperationProjectId(tokens, privilegedUserId, operationName);
+    }
+
+    for (var attempt = 1; attempt < _projectDiscoveryMaxPollAttempts; attempt++) {
+      await _wait(_projectDiscoveryPollDelay);
+      final retryResponse = await _postJson(
         methodId: 'onboardUser',
         tokens: tokens,
         privilegedUserId: privilegedUserId,
         body: {'tierId': tierId, 'metadata': _setupMetadata},
       );
-      if (response['done'] == true) {
-        final payload =
-            (response['response'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
-        return _extractProjectId(payload['cloudaicompanionProject']);
+      final retriedProjectId = _extractOnboardedProjectId(retryResponse);
+      if (retriedProjectId.isNotEmpty) {
+        return retriedProjectId;
       }
-      if (attempt + 1 < _projectDiscoveryMaxPollAttempts) {
-        await Future<void>.delayed(_projectDiscoveryPollDelay);
+      if (retryResponse['done'] == true) {
+        return '';
       }
     }
     return '';
@@ -235,6 +257,60 @@ class GeminiProjectDiagnosticsService {
     }
     return decoded.cast<String, Object?>();
   }
+
+  Future<String> _pollOperationProjectId(
+    OAuthTokens tokens,
+    String privilegedUserId,
+    String operationName,
+  ) async {
+    for (var attempt = 0; attempt < _projectDiscoveryMaxPollAttempts; attempt++) {
+      await _wait(_projectDiscoveryPollDelay);
+      final response = await _getOperation(
+        tokens: tokens,
+        privilegedUserId: privilegedUserId,
+        operationName: operationName,
+      );
+      final projectId = _extractOnboardedProjectId(response);
+      if (projectId.isNotEmpty) {
+        return projectId;
+      }
+    }
+    return '';
+  }
+
+  Future<Map<String, Object?>> _getOperation({
+    required OAuthTokens tokens,
+    required String privilegedUserId,
+    required String operationName,
+  }) async {
+    final normalizedOperationName = operationName.trim().replaceFirst(RegExp(r'^/+'), '');
+    final response = await _http.get(
+      Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion/$normalizedOperationName'),
+      headers: buildGeminiCodeAssistHeaders(
+        accessToken: tokens.accessToken,
+        model: probeHeaderModelId,
+        privilegedUserId: privilegedUserId,
+        tokenType: tokens.tokenType,
+      ),
+    );
+
+    if (response.statusCode >= 400) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw StateError('Unexpected Gemini project diagnostics response shape.');
+    }
+    return decoded.cast<String, Object?>();
+  }
+
+  Future<String> _resolvePrivilegedUserId() async {
+    if (!shouldSendGeminiPrivilegedUserId()) {
+      return '';
+    }
+    return _privilegedUserIdLoader.load();
+  }
 }
 
 const Map<String, String> _setupMetadata = <String, String>{
@@ -262,6 +338,16 @@ String _extractProjectId(Object? value) {
   return '';
 }
 
+String _extractOnboardedProjectId(Map<String, Object?> response) {
+  if (response['done'] != true) {
+    return '';
+  }
+
+  final payload =
+      (response['response'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
+  return _extractProjectId(payload['cloudaicompanionProject']);
+}
+
 String _extractDefaultTierId(Object? value) {
   if (value is! List) {
     return GeminiProjectDiagnosticsService._fallbackOnboardTierId;
@@ -281,3 +367,5 @@ String _extractDefaultTierId(Object? value) {
   }
   return GeminiProjectDiagnosticsService._fallbackOnboardTierId;
 }
+
+Future<void> _defaultWait(Duration delay) => Future<void>.delayed(delay);

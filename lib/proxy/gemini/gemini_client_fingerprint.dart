@@ -30,7 +30,8 @@ String buildGeminiCliUserAgent(
     clientPrefix: clientPrefix,
   );
   return '$resolvedPrefix/$geminiCodeAssistCliVersion/$resolvedModel '
-      '(${nodeStylePlatform()}; ${nodeStyleArchitecture()}; $resolvedSurface)';
+      '(${nodeStylePlatform()}; ${nodeStyleArchitecture()}; $resolvedSurface) '
+      'google-api-nodejs-client/$geminiCodeAssistGoogleApiNodeClientVersion';
 }
 
 String buildGeminiCliUserAgentPrefix({String? clientName, String? clientPrefix}) {
@@ -53,13 +54,17 @@ String buildGeminiCliUserAgentPrefix({String? clientName, String? clientPrefix})
 Map<String, String> buildGeminiCodeAssistHeaders({
   required String accessToken,
   required String model,
-  required String privilegedUserId,
+  String? privilegedUserId,
   String tokenType = 'Bearer',
   String accept = 'application/json',
   String? surface,
   String? clientName,
   String? clientPrefix,
+  bool? includePrivilegedUserId,
 }) {
+  final resolvedPrivilegedUserId = privilegedUserId?.trim();
+  final shouldIncludePrivilegedUserId =
+      includePrivilegedUserId ?? shouldSendGeminiPrivilegedUserId();
   return {
     HttpHeaders.authorizationHeader: '$tokenType $accessToken',
     HttpHeaders.contentTypeHeader: 'application/json',
@@ -71,8 +76,29 @@ Map<String, String> buildGeminiCodeAssistHeaders({
     ),
     HttpHeaders.acceptHeader: accept,
     'x-goog-api-client': geminiCodeAssistGoogApiClientHeader,
-    'x-gemini-api-privileged-user-id': privilegedUserId,
+    if (shouldIncludePrivilegedUserId &&
+        resolvedPrivilegedUserId != null &&
+        resolvedPrivilegedUserId.isNotEmpty)
+      'x-gemini-api-privileged-user-id': resolvedPrivilegedUserId,
   };
+}
+
+bool shouldSendGeminiPrivilegedUserId({Map<String, String>? environment}) {
+  final rawValue = (environment ?? Platform.environment)['KICK_GEMINI_INCLUDE_PRIVILEGED_USER_ID']
+      ?.trim();
+  if (rawValue == null || rawValue.isEmpty) {
+    return false;
+  }
+
+  switch (rawValue.toLowerCase()) {
+    case '1':
+    case 'true':
+    case 'yes':
+    case 'on':
+      return true;
+    default:
+      return false;
+  }
 }
 
 String determineGeminiCliSurface({Map<String, String>? environment}) {

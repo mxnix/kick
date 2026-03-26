@@ -88,7 +88,7 @@ void main() {
     expect(snapshot.probeText, isNull);
     expect(requestHeaders?[HttpHeaders.authorizationHeader], 'Bearer access-token');
     expect(requestHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
-    expect(requestHeaders?['x-gemini-api-privileged-user-id'], 'privileged-user-diagnostics');
+    expect(requestHeaders?.containsKey('x-gemini-api-privileged-user-id'), isFalse);
     expect(
       requestHeaders?[HttpHeaders.userAgentHeader],
       contains('/${GeminiProjectDiagnosticsService.probeHeaderModelId} '),
@@ -184,6 +184,80 @@ void main() {
     expect(seenPaths, [
       '/v1internal:loadCodeAssist',
       '/v1internal:onboardUser',
+      '/v1internal:retrieveUserQuota',
+    ]);
+  });
+
+  test('polls getOperation for diagnostics project discovery when onboarding is async', () async {
+    final waits = <Duration>[];
+    final seenPaths = <String>[];
+
+    final service = GeminiProjectDiagnosticsService(
+      readTokens: (_) async => activeTokens(),
+      refreshTokens: (tokens) async => tokens,
+      persistTokens: (_, tokens) async {},
+      wait: (delay) async {
+        waits.add(delay);
+      },
+      httpClient: QueueHttpClient([
+        (request) async {
+          seenPaths.add(request.url.path);
+          return http.Response(
+            jsonEncode({
+              'allowedTiers': [
+                {'id': 'free-tier', 'isDefault': true},
+              ],
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          return http.Response(
+            jsonEncode({'name': 'operations/diagnostics-123', 'done': false}),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          return http.Response(
+            jsonEncode({'name': 'operations/diagnostics-123', 'done': false}),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          return http.Response(
+            jsonEncode({
+              'name': 'operations/diagnostics-123',
+              'done': true,
+              'response': {
+                'cloudaicompanionProject': {'id': 'resolved-via-operation'},
+              },
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          expect(jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>, {
+            'project': 'resolved-via-operation',
+          });
+          return http.Response(jsonEncode({'traceId': 'trace-op'}), 200);
+        },
+      ]),
+    );
+
+    final snapshot = await service.diagnose(sampleAccount().copyWith(projectId: ''));
+
+    expect(snapshot.projectId, 'resolved-via-operation');
+    expect(snapshot.traceId, 'trace-op');
+    expect(waits, [const Duration(seconds: 2), const Duration(seconds: 2)]);
+    expect(seenPaths, [
+      '/v1internal:loadCodeAssist',
+      '/v1internal:onboardUser',
+      '/v1internal/operations/diagnostics-123',
+      '/v1internal/operations/diagnostics-123',
       '/v1internal:retrieveUserQuota',
     ]);
   });

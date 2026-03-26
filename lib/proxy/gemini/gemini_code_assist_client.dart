@@ -170,13 +170,6 @@ const _minimumContinuationOverlap = 6;
 const _fallbackOnboardTierId = 'legacy-tier';
 const _projectDiscoveryPollDelay = Duration(seconds: 2);
 const _projectDiscoveryMaxPollAttempts = 15;
-const _defaultSafetySettings = [
-  {'category': 'HARM_CATEGORY_HARASSMENT', 'threshold': 'OFF'},
-  {'category': 'HARM_CATEGORY_HATE_SPEECH', 'threshold': 'OFF'},
-  {'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold': 'OFF'},
-  {'category': 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold': 'OFF'},
-  {'category': 'HARM_CATEGORY_CIVIC_INTEGRITY', 'threshold': 'OFF'},
-];
 
 GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
   final decoded = _tryDecodeJsonMap(body);
@@ -710,7 +703,7 @@ class GeminiCodeAssistClient {
       generationConfig['responseMimeType'] = 'application/json';
     }
     if (request.responseSchema != null) {
-      generationConfig['responseSchema'] = request.responseSchema;
+      generationConfig['responseJsonSchema'] = request.responseSchema;
     }
     if (_buildThinkingConfig(request, resolvedModel) case final thinkingConfig?
         when thinkingConfig.isNotEmpty) {
@@ -726,7 +719,11 @@ class GeminiCodeAssistClient {
       tools.add({
         'functionDeclarations': [
           for (final tool in request.tools)
-            {'name': tool.name, 'description': tool.description, 'parameters': tool.parameters},
+            {
+              'name': tool.name,
+              'description': tool.description,
+              'parametersJsonSchema': tool.parameters,
+            },
         ],
       });
     }
@@ -746,7 +743,6 @@ class GeminiCodeAssistClient {
       if (tools.isNotEmpty) 'tools': tools,
       if (request.tools.isNotEmpty) ...{'toolConfig': _buildToolConfig(request.toolChoice)},
       if (generationConfig.isNotEmpty) 'generationConfig': generationConfig,
-      'safetySettings': _defaultSafetySettings,
       'session_id': sessionId,
     };
   }
@@ -859,6 +855,12 @@ class GeminiCodeAssistClient {
           'metadata': buildCodeAssistClientMetadata(account.projectId),
         },
       ),
+      _postWarmupRequest(
+        method: 'fetchAdminControls',
+        accessToken: account.tokens.accessToken,
+        headerModel: headerModel,
+        body: {'project': account.projectId},
+      ),
     ];
     unawaited(
       Future.wait(
@@ -875,12 +877,26 @@ class GeminiCodeAssistClient {
     return Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion:$method');
   }
 
+  Uri _operationUri(String operationName) {
+    final normalizedOperationName = operationName.trim().replaceFirst(RegExp(r'^/+'), '');
+    return Uri.parse(
+      '$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion/$normalizedOperationName',
+    );
+  }
+
   Future<Map<String, String>> _headers(String accessToken, {required String model}) async {
     return buildGeminiCodeAssistHeaders(
       accessToken: accessToken,
       model: model,
-      privilegedUserId: await _privilegedUserIdLoader.load(),
+      privilegedUserId: await _resolvePrivilegedUserId(),
     );
+  }
+
+  Future<String?> _resolvePrivilegedUserId() async {
+    if (!shouldSendGeminiPrivilegedUserId()) {
+      return null;
+    }
+    return _privilegedUserIdLoader.load();
   }
 
   Future<void> _postWarmupRequest({
@@ -1013,21 +1029,46 @@ class GeminiCodeAssistClient {
       'tierId': setup.tierId,
       'metadata': _buildSetupMetadata(),
     };
-    for (var attempt = 0; attempt < _projectDiscoveryMaxPollAttempts; attempt++) {
-      final response = await _callJsonMethod(
+    final response = await _callJsonMethod(
+      method: 'onboardUser',
+      accessToken: accessToken,
+      headerModel: headerModel,
+      body: onboardRequest,
+      timeoutLabel: 'Gemini project discovery',
+    );
+
+    final onboardedProjectId = _extractOnboardedProjectId(response);
+    if (onboardedProjectId.isNotEmpty) {
+      return onboardedProjectId;
+    }
+    if (response['done'] == true) {
+      return '';
+    }
+
+    final operationName = (response['name'] as String?)?.trim() ?? '';
+    if (operationName.isNotEmpty) {
+      return _pollOperationProjectId(
+        operationName: operationName,
+        accessToken: accessToken,
+        headerModel: headerModel,
+      );
+    }
+
+    for (var attempt = 1; attempt < _projectDiscoveryMaxPollAttempts; attempt++) {
+      await _wait(_projectDiscoveryPollDelay);
+      final retryResponse = await _callJsonMethod(
         method: 'onboardUser',
         accessToken: accessToken,
         headerModel: headerModel,
         body: onboardRequest,
         timeoutLabel: 'Gemini project discovery',
       );
-      if (response['done'] == true) {
-        final payload =
-            (response['response'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
-        return _extractProjectId(payload['cloudaicompanionProject']);
+      final retriedProjectId = _extractOnboardedProjectId(retryResponse);
+      if (retriedProjectId.isNotEmpty) {
+        return retriedProjectId;
       }
-      if (attempt + 1 < _projectDiscoveryMaxPollAttempts) {
-        await _wait(_projectDiscoveryPollDelay);
+      if (retryResponse['done'] == true) {
+        return '';
       }
     }
 
@@ -1061,6 +1102,55 @@ class GeminiCodeAssistClient {
     final request = http.Request('POST', _methodUri(method))
       ..headers.addAll(await _headers(accessToken, model: headerModel))
       ..body = jsonEncode(body);
+    final response = await _runWithRequestTimeout(() => _http.send(request), timeoutLabel);
+    final rawBody = await response.stream.bytesToString();
+    if (response.statusCode >= 400) {
+      throw decodeGeminiGatewayError(response.statusCode, rawBody);
+    }
+    final decoded = _tryDecodeJsonMap(rawBody);
+    if (decoded.isNotEmpty || rawBody.trim().isEmpty) {
+      return decoded;
+    }
+    throw GeminiGatewayException(
+      kind: GeminiGatewayFailureKind.unknown,
+      message: 'Unexpected Gemini response shape.',
+      statusCode: 502,
+      source: GeminiGatewayFailureSource.transport,
+      sanitizedResponseBody: _sanitizeGatewayResponseBody(rawBody),
+      rawResponseBody: rawBody,
+    );
+  }
+
+  Future<String> _pollOperationProjectId({
+    required String operationName,
+    required String accessToken,
+    required String headerModel,
+  }) async {
+    for (var attempt = 0; attempt < _projectDiscoveryMaxPollAttempts; attempt++) {
+      await _wait(_projectDiscoveryPollDelay);
+      final response = await _callOperation(
+        operationName: operationName,
+        accessToken: accessToken,
+        headerModel: headerModel,
+        timeoutLabel: 'Gemini project discovery',
+      );
+      final projectId = _extractOnboardedProjectId(response);
+      if (projectId.isNotEmpty) {
+        return projectId;
+      }
+    }
+
+    return '';
+  }
+
+  Future<Map<String, Object?>> _callOperation({
+    required String operationName,
+    required String accessToken,
+    required String headerModel,
+    required String timeoutLabel,
+  }) async {
+    final request = http.Request('GET', _operationUri(operationName))
+      ..headers.addAll(await _headers(accessToken, model: headerModel));
     final response = await _runWithRequestTimeout(() => _http.send(request), timeoutLabel);
     final rawBody = await response.stream.bytesToString();
     if (response.statusCode >= 400) {
@@ -1872,6 +1962,16 @@ String _extractProjectId(Object? value) {
     return (value['id'] as String? ?? '').trim();
   }
   return '';
+}
+
+String _extractOnboardedProjectId(Map<String, Object?> response) {
+  if (response['done'] != true) {
+    return '';
+  }
+
+  final payload =
+      (response['response'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
+  return _extractProjectId(payload['cloudaicompanionProject']);
 }
 
 String _extractDefaultTierId(Object? value) {

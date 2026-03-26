@@ -228,9 +228,7 @@ class OpenAiRequestParser {
     final responseFormat = (json['response_format'] as Map?)?.cast<String, Object?>();
     final googleWebSearchEnabled = _parseGoogleWebSearchEnabled(json);
     if (toolDeclarations.isNotEmpty && googleWebSearchEnabled) {
-      throw const FormatException(
-        '`google web search` cannot be used together with `tools` yet.',
-      );
+      throw const FormatException('`google web search` cannot be used together with `tools` yet.');
     }
     final mergedSystemInstruction = systemParts.join('\n\n').trim();
     var systemInstruction = mergedSystemInstruction.isEmpty ? null : mergedSystemInstruction;
@@ -333,9 +331,7 @@ class OpenAiRequestParser {
     final tools = _parseTools(json['tools']);
     final googleWebSearchEnabled = _parseGoogleWebSearchEnabled(json);
     if (tools.isNotEmpty && googleWebSearchEnabled) {
-      throw const FormatException(
-        '`google web search` cannot be used together with `tools` yet.',
-      );
+      throw const FormatException('`google web search` cannot be used together with `tools` yet.');
     }
     final textConfig = (json['text'] as Map?)?.cast<String, Object?>();
     final responseFormat = (textConfig?['format'] as Map?)?.cast<String, Object?>();
@@ -395,6 +391,7 @@ class OpenAiRequestParser {
           name: name,
           description: function['description'] as String? ?? '',
           parameters:
+              (function['parametersJsonSchema'] as Map?)?.cast<String, Object?>() ??
               (function['parameters'] as Map?)?.cast<String, Object?>() ??
               const {'type': 'object', 'properties': <String, Object?>{}},
         ),
@@ -681,14 +678,14 @@ class OpenAiRequestParser {
     final google = (extraBody?['google'] as Map?)?.cast<String, Object?>();
     final directGoogle = (json['google'] as Map?)?.cast<String, Object?>();
     return _readBooleanFlag(google?['web_search']) ??
-            _readBooleanFlag(google?['webSearch']) ??
-            _readBooleanFlag(extraBody?['web_search']) ??
-            _readBooleanFlag(extraBody?['webSearch']) ??
-            _readBooleanFlag(directGoogle?['web_search']) ??
-            _readBooleanFlag(directGoogle?['webSearch']) ??
-            _readBooleanFlag(json['web_search']) ??
-            _readBooleanFlag(json['webSearch']) ??
-            false;
+        _readBooleanFlag(google?['webSearch']) ??
+        _readBooleanFlag(extraBody?['web_search']) ??
+        _readBooleanFlag(extraBody?['webSearch']) ??
+        _readBooleanFlag(directGoogle?['web_search']) ??
+        _readBooleanFlag(directGoogle?['webSearch']) ??
+        _readBooleanFlag(json['web_search']) ??
+        _readBooleanFlag(json['webSearch']) ??
+        false;
   }
 
   static bool? _readBooleanFlag(Object? raw) {

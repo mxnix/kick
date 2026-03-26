@@ -168,11 +168,12 @@ void main() {
     expect(
       capturedHeaders?[HttpHeaders.userAgentHeader],
       '$geminiCodeAssistUserAgentPrefix/$geminiCodeAssistCliVersion/gemini-2.5-pro '
-      '($expectedPlatform; $expectedArchitecture; ${determineGeminiCliSurface()})',
+      '($expectedPlatform; $expectedArchitecture; ${determineGeminiCliSurface()}) '
+      'google-api-nodejs-client/$geminiCodeAssistGoogleApiNodeClientVersion',
     );
     expect(capturedBody?.containsKey('metadata'), isFalse);
     expect(capturedHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
-    expect(capturedHeaders?['x-gemini-api-privileged-user-id'], 'privileged-user-1');
+    expect(capturedHeaders?.containsKey('x-gemini-api-privileged-user-id'), isFalse);
   });
 
   test('starts the prompt turn counter from zero for each new session', () async {
@@ -338,6 +339,89 @@ void main() {
     expect(OpenAiResponseMapper.currentText(response), 'Discovered');
   });
 
+  test('polls getOperation after onboardUser returns a long-running operation', () async {
+    final waits = <Duration>[];
+    final seenPaths = <String>[];
+    final account = sampleAccount(projectId: '');
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      wait: (delay) async {
+        waits.add(delay);
+      },
+      warmupEnabled: false,
+      httpClient: QueueHttpClient([
+        (request) async {
+          seenPaths.add(request.url.path);
+          return http.Response(
+            jsonEncode({
+              'allowedTiers': [
+                {'id': 'free-tier', 'isDefault': true},
+              ],
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          return http.Response(jsonEncode({'name': 'operations/onboard-123', 'done': false}), 200);
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          return http.Response(jsonEncode({'name': 'operations/onboard-123', 'done': false}), 200);
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          return http.Response(
+            jsonEncode({
+              'name': 'operations/onboard-123',
+              'done': true,
+              'response': {
+                'cloudaicompanionProject': {'id': 'operation-project'},
+              },
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenPaths.add(request.url.path);
+          final body = jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          expect(body['project'], 'operation-project');
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'Resolved via operation'},
+                      ],
+                    },
+                    'finishReason': 'STOP',
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final response = await client.generateContent(account: account, request: sampleRequest());
+
+    expect(account.projectId, 'operation-project');
+    expect(waits, [const Duration(seconds: 2), const Duration(seconds: 2)]);
+    expect(seenPaths, [
+      '/v1internal:loadCodeAssist',
+      '/v1internal:onboardUser',
+      '/v1internal/operations/onboard-123',
+      '/v1internal/operations/onboard-123',
+      '/v1internal:generateContent',
+    ]);
+    expect(OpenAiResponseMapper.currentText(response), 'Resolved via operation');
+  });
+
   test('sends warmup choreography once before the first generate request', () async {
     final seenPaths = <String>[];
     final seenBodies = <Map<String, Object?>>[];
@@ -346,6 +430,13 @@ void main() {
       onTokensUpdated: (account, tokens) async {},
       warmupEnabled: true,
       httpClient: QueueHttpClient([
+        (request) async {
+          seenPaths.add(request.url.path);
+          seenBodies.add(
+            jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>,
+          );
+          return http.Response('{}', 200);
+        },
         (request) async {
           seenPaths.add(request.url.path);
           seenBodies.add(
@@ -419,6 +510,7 @@ void main() {
     expect(seenPaths, [
       '/v1internal:loadCodeAssist',
       '/v1internal:listExperiments',
+      '/v1internal:fetchAdminControls',
       '/v1internal:generateContent',
       '/v1internal:generateContent',
     ]);
@@ -439,8 +531,9 @@ void main() {
       'duetProject': 'project-1',
     });
 
-    expect(seenBodies[2]['model'], 'gemini-2.5-pro');
+    expect(seenBodies[2], {'project': 'project-1'});
     expect(seenBodies[3]['model'], 'gemini-2.5-pro');
+    expect(seenBodies[4]['model'], 'gemini-2.5-pro');
   });
 
   test('fails fast when the Gemini request times out', () async {
@@ -1066,7 +1159,7 @@ void main() {
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingLevel': 'HIGH',
     });
-    expect(requestMap['safetySettings'], isNotEmpty);
+    expect(requestMap.containsKey('safetySettings'), isFalse);
   });
 
   test('maps Gemini 3 flash reasoning effort none to minimal thinking', () async {
@@ -1423,6 +1516,101 @@ void main() {
 
     expect(generationConfig.containsKey('responseModalities'), isFalse);
     expect(generationConfig.containsKey('thinkingConfig'), isFalse);
+  });
+
+  test('uses Gemini CLI wire-format for tools and structured JSON output', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': '{}'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: UnifiedPromptRequest(
+        requestId: 'req_json_tools',
+        model: 'gemini-3-flash',
+        stream: false,
+        source: 'chat.completions',
+        turns: const [
+          UnifiedTurn(role: 'user', parts: [UnifiedPart.text('Return JSON weather')]),
+        ],
+        tools: const [
+          UnifiedToolDeclaration(
+            name: 'lookupWeather',
+            description: 'Weather lookup',
+            parameters: {
+              'type': 'object',
+              'properties': {
+                'city': {'type': 'string'},
+              },
+            },
+          ),
+        ],
+        systemInstruction: null,
+        toolChoice: null,
+        temperature: null,
+        topP: null,
+        maxOutputTokens: 256,
+        stopSequences: null,
+        reasoningEffort: null,
+        googleThinkingConfig: null,
+        googleWebSearchEnabled: false,
+        responseModalities: null,
+        jsonMode: true,
+        responseSchema: const {
+          'type': 'object',
+          'properties': {
+            'weather': {'type': 'string'},
+          },
+        },
+      ),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
+    final tools = (requestMap['tools'] as List).cast<Map>();
+    final functionDeclarations = (tools.single['functionDeclarations'] as List)
+        .cast<Map<String, Object?>>();
+
+    expect(generationConfig['responseMimeType'], 'application/json');
+    expect(generationConfig['responseJsonSchema'], {
+      'type': 'object',
+      'properties': {
+        'weather': {'type': 'string'},
+      },
+    });
+    expect(generationConfig.containsKey('responseSchema'), isFalse);
+    expect(functionDeclarations.single['parametersJsonSchema'], {
+      'type': 'object',
+      'properties': {
+        'city': {'type': 'string'},
+      },
+    });
+    expect(functionDeclarations.single.containsKey('parameters'), isFalse);
+    expect(requestMap.containsKey('safetySettings'), isFalse);
   });
 
   test('adds googleSearch built-in tool without function calling config', () async {
