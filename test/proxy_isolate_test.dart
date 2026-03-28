@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kick/core/accounts/account_runtime_notice.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/account_pool/account_pool.dart';
 import 'package:kick/proxy/engine/proxy_isolate.dart';
@@ -174,4 +175,29 @@ void main() {
     expect(account.errorCount, 1);
     expect(account.cooldownUntil, isNotNull);
   });
+
+  test(
+    'applyProxyAccountFailurePolicy marks indefinite resource exhausted as pending ban check',
+    () {
+      final account = sampleAccount();
+      final pool = GeminiAccountPool([account]);
+
+      applyProxyAccountFailurePolicy(
+        pool: pool,
+        account: account,
+        requestedModel: 'gemini-3.1-pro-preview',
+        error: GeminiGatewayException(
+          kind: GeminiGatewayFailureKind.quota,
+          detail: GeminiGatewayFailureDetail.indefiniteQuotaExhausted,
+          message: 'Resource has been exhausted (e.g. check quota).',
+          statusCode: 429,
+        ),
+        mark429AsUnhealthy: false,
+      );
+
+      expect(account.errorCount, 0);
+      expect(account.cooldownUntil, isNull);
+      expect(account.lastQuotaSnapshot, buildBanCheckPendingSnapshot());
+    },
+  );
 }

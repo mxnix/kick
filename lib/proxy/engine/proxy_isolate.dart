@@ -8,6 +8,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/accounts/account_runtime_notice.dart';
 import '../../core/logging/log_sanitizer.dart';
 import '../account_pool/account_pool.dart';
 import '../gemini/gemini_code_assist_client.dart';
@@ -157,7 +158,9 @@ void applyProxyAccountFailurePolicy({
       pool.markAuthFailure(account, cooldown: error.retryAfter);
       break;
     case GeminiGatewayFailureKind.quota:
-      if (mark429AsUnhealthy) {
+      if (error.detail == GeminiGatewayFailureDetail.indefiniteQuotaExhausted) {
+        account.lastQuotaSnapshot = buildBanCheckPendingSnapshot();
+      } else if (mark429AsUnhealthy) {
         pool.markQuotaFailure(
           account,
           quotaSnapshot: error.quotaSnapshot,
@@ -233,6 +236,7 @@ class _ProxyIsolateHost {
   String? _geminiInstallationIdPath;
   ModelCatalog _catalog = ModelCatalog(customModels: const []);
   GeminiAccountPool _pool = GeminiAccountPool(<ProxyRuntimeAccount>[]);
+  final Set<String> _pendingTermsOfServiceChecks = <String>{};
   HttpServer? _server;
   DateTime? _startedAt;
   int _requestCount = 0;
@@ -1035,6 +1039,9 @@ class _ProxyIsolateHost {
       error: error,
       mark429AsUnhealthy: _settings?['mark_429_as_unhealthy'] == true,
     );
+    if (error.detail == GeminiGatewayFailureDetail.indefiniteQuotaExhausted) {
+      _scheduleTermsOfServiceCheck(account, error);
+    }
     _publishAccounts();
     _publishStatus();
   }
@@ -1567,6 +1574,76 @@ class _ProxyIsolateHost {
     });
   }
 
+  void _scheduleTermsOfServiceCheck(
+    ProxyRuntimeAccount account,
+    GeminiGatewayException sourceError,
+  ) {
+    final accountKey = _runtimeAccountKey(account);
+    final runtimeNotice = parseAccountRuntimeNotice(account.lastQuotaSnapshot);
+    if (runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation ||
+        !_pendingTermsOfServiceChecks.add(accountKey)) {
+      return;
+    }
+    unawaited(
+      Future<void>(() async {
+        try {
+          final currentAccount = _findRuntimeAccount(account.id, account.tokenRef);
+          if (currentAccount == null) {
+            return;
+          }
+          final violation = await _client.probeTermsOfServiceViolation(account: currentAccount);
+          final refreshedAccount = _findRuntimeAccount(account.id, account.tokenRef);
+          if (refreshedAccount == null) {
+            return;
+          }
+          if (violation != null) {
+            _pool.markAuthFailure(refreshedAccount, cooldown: violation.retryAfter);
+            refreshedAccount.lastQuotaSnapshot = buildTermsOfServiceViolationSnapshot(
+              actionUrl: violation.actionUrl,
+            );
+          } else {
+            _completeDeferredQuotaFailure(refreshedAccount, sourceError);
+          }
+          await _publishAccounts();
+          _publishStatus();
+        } catch (error, stackTrace) {
+          final refreshedAccount = _findRuntimeAccount(account.id, account.tokenRef);
+          if (refreshedAccount != null) {
+            _completeDeferredQuotaFailure(refreshedAccount, sourceError);
+            await _publishAccounts();
+            _publishStatus();
+          }
+          await _logFailure(
+            category: 'proxy.runtime',
+            route: '/accounts/terms-of-service-check',
+            message: error.toString(),
+            stackTrace: stackTrace,
+            details: {'account_id': account.id},
+          );
+        } finally {
+          _pendingTermsOfServiceChecks.remove(accountKey);
+        }
+      }),
+    );
+  }
+
+  void _completeDeferredQuotaFailure(
+    ProxyRuntimeAccount account,
+    GeminiGatewayException sourceError,
+  ) {
+    final quotaSnapshot = sourceError.quotaSnapshot ?? sourceError.message;
+    if (_settings?['mark_429_as_unhealthy'] == true) {
+      _pool.markQuotaFailure(
+        account,
+        quotaSnapshot: quotaSnapshot,
+        cooldown: sourceError.retryAfter,
+      );
+      return;
+    }
+    account.errorCount += 1;
+    account.lastQuotaSnapshot = quotaSnapshot;
+  }
+
   void _emitRequestSucceededAnalytics({
     required UnifiedPromptRequest request,
     required String route,
@@ -1668,10 +1745,15 @@ class _ProxyIsolateHost {
     if (error.kind == GeminiGatewayFailureKind.auth) {
       return switch (error.detail) {
         GeminiGatewayFailureDetail.accountVerificationRequired => 'account_verification_required',
+        GeminiGatewayFailureDetail.termsOfServiceViolation => 'terms_of_service_violation',
         GeminiGatewayFailureDetail.projectIdMissing => 'project_id_missing',
         GeminiGatewayFailureDetail.projectConfiguration => 'project_configuration',
         _ => null,
       };
+    }
+
+    if (error.detail == GeminiGatewayFailureDetail.indefiniteQuotaExhausted) {
+      return 'indefinite_quota_exhausted';
     }
 
     if (error.detail == GeminiGatewayFailureDetail.noHealthyAccountAvailable ||
@@ -1688,6 +1770,19 @@ class _ProxyIsolateHost {
 
   int _healthyAccountCount() {
     return _pool.accounts.where((account) => account.enabled && !account.isCoolingDown).length;
+  }
+
+  ProxyRuntimeAccount? _findRuntimeAccount(String accountId, String tokenRef) {
+    for (final candidate in _pool.accounts) {
+      if (candidate.id == accountId || candidate.tokenRef == tokenRef) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  String _runtimeAccountKey(ProxyRuntimeAccount account) {
+    return account.id.trim().isNotEmpty ? account.id : account.tokenRef;
   }
 
   bool _shouldRestartServerForConfigurationChange(

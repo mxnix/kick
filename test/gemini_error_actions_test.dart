@@ -35,6 +35,22 @@ void main() {
     );
   });
 
+  test('extracts appeal action details from terms of service violations', () {
+    final action = primaryActionForError(
+      GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.auth,
+        detail: GeminiGatewayFailureDetail.termsOfServiceViolation,
+        message:
+            'This service has been disabled in this account for violation of Terms of Service.',
+        statusCode: 403,
+        actionUrl: 'https://example.com/appeal',
+      ),
+    );
+
+    expect(action?.kind, GeminiErrorActionKind.accountAppeal);
+    expect(action?.url, 'https://example.com/appeal');
+  });
+
   test('ignores non verification errors', () {
     final actionUrl = accountVerificationUrlForError(
       GeminiGatewayException(

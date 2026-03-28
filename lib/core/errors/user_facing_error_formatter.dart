@@ -59,6 +59,9 @@ String formatUserFacingMessage(KickLocalizations l10n, String rawMessage) {
   if (_looksLikeGoogleAccountVerificationError(lower)) {
     return l10n.errorGoogleAccountVerificationRequired;
   }
+  if (_looksLikeTermsOfServiceViolationError(lower)) {
+    return l10n.errorGoogleTermsOfServiceViolation;
+  }
   if (_looksLikeMissingProjectIdError(lower)) {
     return l10n.errorGoogleProjectIdMissing;
   }
@@ -78,6 +81,9 @@ String formatUserFacingMessage(KickLocalizations l10n, String rawMessage) {
         return l10n.errorQuotaExhaustedRetry(retryHint);
       }
       return l10n.errorGoogleRateLimitedRetry(retryHint);
+    }
+    if (_looksLikeIndefiniteQuotaExhaustedError(lower)) {
+      return l10n.errorQuotaExhaustedNoResetHint;
     }
     if (_looksLikeQuotaExhaustedError(lower)) {
       return l10n.errorQuotaExhausted;
@@ -115,11 +121,14 @@ String _formatGatewayError(KickLocalizations l10n, GeminiGatewayException error)
       switch (error.detail) {
         case GeminiGatewayFailureDetail.accountVerificationRequired:
           return l10n.errorGoogleAccountVerificationRequired;
+        case GeminiGatewayFailureDetail.termsOfServiceViolation:
+          return l10n.errorGoogleTermsOfServiceViolation;
         case GeminiGatewayFailureDetail.projectIdMissing:
           return l10n.errorGoogleProjectIdMissing;
         case GeminiGatewayFailureDetail.projectConfiguration:
           return _formatProjectConfigurationError(l10n, error.upstreamReason);
         case GeminiGatewayFailureDetail.quotaExhausted:
+        case GeminiGatewayFailureDetail.indefiniteQuotaExhausted:
         case GeminiGatewayFailureDetail.rateLimited:
         case GeminiGatewayFailureDetail.reasoningConfigUnsupported:
         case GeminiGatewayFailureDetail.noHealthyAccountAvailable:
@@ -127,6 +136,9 @@ String _formatGatewayError(KickLocalizations l10n, GeminiGatewayException error)
           return l10n.errorAuthExpired;
       }
     case GeminiGatewayFailureKind.quota:
+      if (error.detail == GeminiGatewayFailureDetail.indefiniteQuotaExhausted) {
+        return l10n.errorQuotaExhaustedNoResetHint;
+      }
       if (error.detail == GeminiGatewayFailureDetail.quotaExhausted) {
         if (error.retryAfter != null) {
           return l10n.errorQuotaExhaustedRetry(_formatDuration(l10n, error.retryAfter!));
@@ -178,6 +190,19 @@ bool _looksLikeQuotaExhaustedError(String message) {
   return message.contains('quota exhausted') ||
       message.contains('exhausted your capacity on this model') ||
       message.contains('resource has been exhausted');
+}
+
+bool _looksLikeTermsOfServiceViolationError(String message) {
+  return message.contains('tos_violation') ||
+      message.contains('violation of terms of service') ||
+      message.contains('disabled in this account for violation of terms of service');
+}
+
+bool _looksLikeIndefiniteQuotaExhaustedError(String message) {
+  return message.contains('resource_exhausted') &&
+      message.contains('resource has been exhausted') &&
+      !message.contains('retry in') &&
+      !message.contains('reset after');
 }
 
 bool _looksLikeAuthError(String message) {

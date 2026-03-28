@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/accounts/account_runtime_notice.dart';
 import '../../core/errors/gemini_error_actions.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../core/theme/kick_theme.dart';
@@ -178,24 +179,37 @@ class _UsageAccountCard extends StatelessWidget {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     final hasQuotaPressure = account.lastQuotaSnapshot?.trim().isNotEmpty == true;
+    final runtimeNotice = parseAccountRuntimeNotice(account.lastQuotaSnapshot);
     final statusIcon = !account.enabled
         ? Icons.pause_circle_rounded
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
+        ? Icons.report_gmailerrorred_rounded
         : account.isCoolingDown
         ? Icons.schedule_rounded
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending
+        ? Icons.manage_search_rounded
         : hasQuotaPressure
         ? Icons.query_stats_rounded
         : Icons.check_circle_rounded;
     final statusLabel = !account.enabled
         ? l10n.accountUsageStatusDisabled
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
+        ? l10n.accountTermsOfServiceStatus
         : account.isCoolingDown
         ? l10n.accountUsageStatusCoolingDown
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending
+        ? l10n.accountBanCheckPendingStatus
         : hasQuotaPressure
         ? l10n.accountUsageStatusLowQuota
         : l10n.accountUsageStatusHealthy;
     final statusTint = !account.enabled
         ? scheme.onSurfaceVariant
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
+        ? scheme.error
         : account.isCoolingDown
         ? scheme.error
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending
+        ? scheme.tertiary
         : hasQuotaPressure
         ? scheme.tertiary
         : scheme.primary;
@@ -254,11 +268,20 @@ class _UsageAccountCard extends StatelessWidget {
           if (account.lastQuotaSnapshot?.trim().isNotEmpty == true) ...[
             const SizedBox(height: 14),
             Text(
-              account.lastQuotaSnapshot!,
+              _formatAccountRuntimeNoticeMessage(l10n, account.lastQuotaSnapshot!),
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
+            if (runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation &&
+                runtimeNotice?.actionUrl?.trim().isNotEmpty == true) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => unawaited(_openErrorAction(context, runtimeNotice!.actionUrl!)),
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: Text(l10n.accountSubmitAppealButton),
+              ),
+            ],
           ],
           if (usage != null) ...[
             const SizedBox(height: 16),
@@ -514,11 +537,15 @@ class _UsageErrorCard extends StatelessWidget {
               icon: Icon(
                 errorAction!.kind == GeminiErrorActionKind.accountVerification
                     ? Icons.verified_user_rounded
+                    : errorAction!.kind == GeminiErrorActionKind.accountAppeal
+                    ? Icons.mail_outline_rounded
                     : Icons.open_in_new_rounded,
               ),
               label: Text(
                 errorAction!.kind == GeminiErrorActionKind.accountVerification
                     ? l10n.accountUsageVerifyAccountButton
+                    : errorAction!.kind == GeminiErrorActionKind.accountAppeal
+                    ? l10n.accountSubmitAppealButton
                     : l10n.openGoogleCloudButton,
               ),
             ),
@@ -531,6 +558,15 @@ class _UsageErrorCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatAccountRuntimeNoticeMessage(KickLocalizations l10n, String snapshot) {
+  final runtimeNotice = parseAccountRuntimeNotice(snapshot);
+  return switch (runtimeNotice?.kind) {
+    AccountRuntimeNoticeKind.banCheckPending => l10n.accountBanCheckPendingMessage,
+    AccountRuntimeNoticeKind.termsOfServiceViolation => l10n.accountTermsOfServiceMessage,
+    null => formatUserFacingMessage(l10n, snapshot),
+  };
 }
 
 class _StatusBadge extends StatelessWidget {

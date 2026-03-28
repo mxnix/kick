@@ -23,6 +23,21 @@ void main() {
     expect(message, l10n.errorGoogleAccountVerificationRequired);
   });
 
+  test('formats terms of service violations distinctly', () {
+    final message = formatUserFacingError(
+      l10n,
+      GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.auth,
+        detail: GeminiGatewayFailureDetail.termsOfServiceViolation,
+        message:
+            'This service has been disabled in this account for violation of Terms of Service.',
+        statusCode: 403,
+      ),
+    );
+
+    expect(message, l10n.errorGoogleTermsOfServiceViolation);
+  });
+
   test('formats quota exhausted retries with explicit delay', () {
     final message = formatUserFacingError(
       l10n,
@@ -36,6 +51,20 @@ void main() {
     );
 
     expect(message, l10n.errorQuotaExhaustedRetry('1 ч 20 мин'));
+  });
+
+  test('formats indefinite quota exhaustion without reset hint distinctly', () {
+    final message = formatUserFacingError(
+      l10n,
+      GeminiGatewayException(
+        kind: GeminiGatewayFailureKind.quota,
+        detail: GeminiGatewayFailureDetail.indefiniteQuotaExhausted,
+        message: 'Resource has been exhausted (e.g. check quota).',
+        statusCode: 429,
+      ),
+    );
+
+    expect(message, l10n.errorQuotaExhaustedNoResetHint);
   });
 
   test('formats raw Google project access errors distinctly', () {

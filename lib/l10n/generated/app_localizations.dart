@@ -464,6 +464,30 @@ abstract class AppLocalizations {
   /// **'Лимит заканчивается'**
   String get accountQuotaWarningStatus;
 
+  /// No description provided for @accountBanCheckPendingStatus.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверяем бан'**
+  String get accountBanCheckPendingStatus;
+
+  /// No description provided for @accountBanCheckPendingMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Google вернул RESOURCE_EXHAUSTED без времени сброса'**
+  String get accountBanCheckPendingMessage;
+
+  /// No description provided for @accountTermsOfServiceStatus.
+  ///
+  /// In ru, this message translates to:
+  /// **'Бан подтвержден'**
+  String get accountTermsOfServiceStatus;
+
+  /// No description provided for @accountTermsOfServiceMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Google подтвердил блокировку этого аккаунта за нарушение ToS. Аккаунт выведен из ротации.'**
+  String get accountTermsOfServiceMessage;
+
   /// No description provided for @accountUsageLoadErrorTitle.
   ///
   /// In ru, this message translates to:
@@ -481,6 +505,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Подтвердить в Google'**
   String get accountUsageVerifyAccountButton;
+
+  /// No description provided for @accountSubmitAppealButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подать апелляцию'**
+  String get accountSubmitAppealButton;
 
   /// No description provided for @openGoogleCloudButton.
   ///
@@ -1831,6 +1861,18 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Лимит этого аккаунта исчерпан. Попробуйте снова через {retryHint} или используйте другой аккаунт.'**
   String errorQuotaExhaustedRetry(String retryHint);
+
+  /// No description provided for @errorQuotaExhaustedNoResetHint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Google вернул RESOURCE_EXHAUSTED без времени сброса. KiCk отдельно проверит этот аккаунт; если ошибка повторяется, используйте другой аккаунт'**
+  String get errorQuotaExhaustedNoResetHint;
+
+  /// No description provided for @errorGoogleTermsOfServiceViolation.
+  ///
+  /// In ru, this message translates to:
+  /// **'Google отключил этот аккаунт за нарушение ToS. Подайте апелляцию или используйте другой аккаунт.'**
+  String get errorGoogleTermsOfServiceViolation;
 
   /// No description provided for @errorInvalidRequestRejected.
   ///

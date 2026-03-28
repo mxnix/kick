@@ -1,6 +1,6 @@
 import '../../proxy/gemini/gemini_code_assist_client.dart';
 
-enum GeminiErrorActionKind { accountVerification, projectConfiguration }
+enum GeminiErrorActionKind { accountVerification, accountAppeal, projectConfiguration }
 
 class GeminiErrorAction {
   const GeminiErrorAction({required this.kind, required this.url});
@@ -24,12 +24,17 @@ GeminiErrorAction? primaryActionForError(Object error) {
       kind: GeminiErrorActionKind.accountVerification,
       url: actionUrl,
     ),
+    GeminiGatewayFailureDetail.termsOfServiceViolation => GeminiErrorAction(
+      kind: GeminiErrorActionKind.accountAppeal,
+      url: actionUrl,
+    ),
     GeminiGatewayFailureDetail.projectConfiguration => GeminiErrorAction(
       kind: GeminiErrorActionKind.projectConfiguration,
       url: actionUrl,
     ),
     GeminiGatewayFailureDetail.projectIdMissing ||
     GeminiGatewayFailureDetail.quotaExhausted ||
+    GeminiGatewayFailureDetail.indefiniteQuotaExhausted ||
     GeminiGatewayFailureDetail.rateLimited ||
     GeminiGatewayFailureDetail.noHealthyAccountAvailable ||
     GeminiGatewayFailureDetail.reasoningConfigUnsupported ||

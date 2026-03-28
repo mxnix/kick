@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/accounts/account_runtime_notice.dart';
 import '../../core/errors/gemini_error_actions.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../data/models/account_profile.dart';
@@ -116,6 +117,7 @@ class _AccountCard extends ConsumerWidget {
     final effectiveUnsupportedModels = account.effectiveNotSupportedModels;
     final priorityLabel = accountPriorityLabel(l10n, account.priority);
     final resetLabel = account.isCoolingDown ? l10n.clearCooldownAction : l10n.resetCooldownTooltip;
+    final runtimeNotice = parseAccountRuntimeNotice(account.lastQuotaSnapshot);
     final statusLabel = !account.enabled
         ? l10n.accountDisabledStatus
         : account.isCoolingDown
@@ -191,9 +193,9 @@ class _AccountCard extends ConsumerWidget {
               ),
               if (hasQuotaWarning)
                 KickBadge(
-                  label: l10n.accountQuotaWarningStatus,
-                  leading: const Icon(Icons.query_stats_rounded, size: 16),
-                  tint: scheme.tertiary,
+                  label: _accountRuntimeNoticeStatusLabel(l10n, account.lastQuotaSnapshot!),
+                  leading: Icon(_accountRuntimeNoticeIcon(runtimeNotice), size: 16),
+                  tint: _accountRuntimeNoticeTint(scheme, runtimeNotice),
                 ),
             ],
           ),
@@ -207,9 +209,18 @@ class _AccountCard extends ConsumerWidget {
           if (hasQuotaWarning) ...[
             const SizedBox(height: 14),
             Text(
-              account.lastQuotaSnapshot!,
+              _formatAccountRuntimeNoticeMessage(l10n, account.lastQuotaSnapshot!),
               style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
+            if (runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation &&
+                runtimeNotice?.actionUrl?.trim().isNotEmpty == true) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => unawaited(_openErrorAction(context, runtimeNotice!.actionUrl!)),
+                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                label: Text(l10n.accountSubmitAppealButton),
+              ),
+            ],
           ],
           const SizedBox(height: 18),
           Wrap(
@@ -501,7 +512,41 @@ Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfil
 String _errorActionLabel(KickLocalizations l10n, GeminiErrorAction action) {
   return switch (action.kind) {
     GeminiErrorActionKind.accountVerification => l10n.accountUsageVerifyAccountButton,
+    GeminiErrorActionKind.accountAppeal => l10n.accountSubmitAppealButton,
     GeminiErrorActionKind.projectConfiguration => l10n.openGoogleCloudButton,
+  };
+}
+
+String _accountRuntimeNoticeStatusLabel(KickLocalizations l10n, String snapshot) {
+  final runtimeNotice = parseAccountRuntimeNotice(snapshot);
+  return switch (runtimeNotice?.kind) {
+    AccountRuntimeNoticeKind.banCheckPending => l10n.accountBanCheckPendingStatus,
+    AccountRuntimeNoticeKind.termsOfServiceViolation => l10n.accountTermsOfServiceStatus,
+    null => l10n.accountQuotaWarningStatus,
+  };
+}
+
+String _formatAccountRuntimeNoticeMessage(KickLocalizations l10n, String snapshot) {
+  final runtimeNotice = parseAccountRuntimeNotice(snapshot);
+  return switch (runtimeNotice?.kind) {
+    AccountRuntimeNoticeKind.banCheckPending => l10n.accountBanCheckPendingMessage,
+    AccountRuntimeNoticeKind.termsOfServiceViolation => l10n.accountTermsOfServiceMessage,
+    null => formatUserFacingMessage(l10n, snapshot),
+  };
+}
+
+IconData _accountRuntimeNoticeIcon(AccountRuntimeNotice? runtimeNotice) {
+  return switch (runtimeNotice?.kind) {
+    AccountRuntimeNoticeKind.banCheckPending => Icons.manage_search_rounded,
+    AccountRuntimeNoticeKind.termsOfServiceViolation => Icons.report_gmailerrorred_rounded,
+    null => Icons.query_stats_rounded,
+  };
+}
+
+Color _accountRuntimeNoticeTint(ColorScheme scheme, AccountRuntimeNotice? runtimeNotice) {
+  return switch (runtimeNotice?.kind) {
+    AccountRuntimeNoticeKind.termsOfServiceViolation => scheme.error,
+    AccountRuntimeNoticeKind.banCheckPending || null => scheme.tertiary,
   };
 }
 

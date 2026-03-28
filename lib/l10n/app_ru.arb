@@ -120,9 +120,14 @@
   "accountUsageStatusLowQuota": "Лимит заканчивается",
   "accountUsageStatusDisabled": "Выключен",
   "accountQuotaWarningStatus": "Лимит заканчивается",
+  "accountBanCheckPendingStatus": "Проверяем бан",
+  "accountBanCheckPendingMessage": "Google вернул RESOURCE_EXHAUSTED без времени сброса",
+  "accountTermsOfServiceStatus": "Бан подтвержден",
+  "accountTermsOfServiceMessage": "Google подтвердил блокировку этого аккаунта за нарушение ToS. Аккаунт выведен из ротации.",
   "accountUsageLoadErrorTitle": "Не удалось загрузить данные по лимитам",
   "accountUsageRetryButton": "Повторить",
   "accountUsageVerifyAccountButton": "Подтвердить в Google",
+  "accountSubmitAppealButton": "Подать апелляцию",
   "openGoogleCloudButton": "Открыть Google Cloud",
   "accountUsageVerificationOpenFailedMessage": "Не удалось открыть страницу подтверждения в Google",
   "accountErrorActionOpenFailedMessage": "Не удалось открыть страницу Google",
@@ -477,6 +482,8 @@
       }
     }
   },
+  "errorQuotaExhaustedNoResetHint": "Google вернул RESOURCE_EXHAUSTED без времени сброса. KiCk отдельно проверит этот аккаунт; если ошибка повторяется, используйте другой аккаунт",
+  "errorGoogleTermsOfServiceViolation": "Google отключил этот аккаунт за нарушение ToS. Подайте апелляцию или используйте другой аккаунт.",
   "errorInvalidRequestRejected": "Запрос имеет неверный формат и был отклонён.",
   "errorReasoningConfigRejected": "Google отклонил параметры reasoning/thinking для этой модели. Включите автоматический режим размышлений (reasoning).",
   "durationFewSeconds": "несколько секунд",

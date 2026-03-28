@@ -210,6 +210,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountQuotaWarningStatus => 'Лимит заканчивается';
 
   @override
+  String get accountBanCheckPendingStatus => 'Проверяем бан';
+
+  @override
+  String get accountBanCheckPendingMessage => 'Google вернул RESOURCE_EXHAUSTED без времени сброса';
+
+  @override
+  String get accountTermsOfServiceStatus => 'Бан подтвержден';
+
+  @override
+  String get accountTermsOfServiceMessage =>
+      'Google подтвердил блокировку этого аккаунта за нарушение ToS. Аккаунт выведен из ротации.';
+
+  @override
   String get accountUsageLoadErrorTitle => 'Не удалось загрузить данные по лимитам';
 
   @override
@@ -217,6 +230,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accountUsageVerifyAccountButton => 'Подтвердить в Google';
+
+  @override
+  String get accountSubmitAppealButton => 'Подать апелляцию';
 
   @override
   String get openGoogleCloudButton => 'Открыть Google Cloud';
@@ -970,6 +986,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String errorQuotaExhaustedRetry(String retryHint) {
     return 'Лимит этого аккаунта исчерпан. Попробуйте снова через $retryHint или используйте другой аккаунт.';
   }
+
+  @override
+  String get errorQuotaExhaustedNoResetHint =>
+      'Google вернул RESOURCE_EXHAUSTED без времени сброса. KiCk отдельно проверит этот аккаунт; если ошибка повторяется, используйте другой аккаунт';
+
+  @override
+  String get errorGoogleTermsOfServiceViolation =>
+      'Google отключил этот аккаунт за нарушение ToS. Подайте апелляцию или используйте другой аккаунт.';
 
   @override
   String get errorInvalidRequestRejected => 'Запрос имеет неверный формат и был отклонён.';

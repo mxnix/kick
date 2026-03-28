@@ -27,9 +27,11 @@ enum GeminiGatewayFailureKind {
 
 enum GeminiGatewayFailureDetail {
   accountVerificationRequired,
+  termsOfServiceViolation,
   projectIdMissing,
   projectConfiguration,
   quotaExhausted,
+  indefiniteQuotaExhausted,
   rateLimited,
   reasoningConfigUnsupported,
   noHealthyAccountAvailable,
@@ -188,6 +190,7 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
   final retryInfo = _typedDetail(details, 'type.googleapis.com/google.rpc.RetryInfo');
   final quotaFailure = _typedDetail(details, 'type.googleapis.com/google.rpc.QuotaFailure');
   final errorReason = errorInfo?['reason'] as String?;
+  final errorStatus = (error['status'] as String?)?.trim().toUpperCase();
   final errorDomain = _sanitizeDomain(errorInfo?['domain'] as String?);
   final errorMetadata = ((errorInfo?['metadata'] as Map?) ?? const <String, Object?>{})
       .cast<String, Object?>();
@@ -195,6 +198,7 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
   final quotaSnapshot = decoded['quota']?.toString();
   final actionUrl = _gatewayActionUrl(errorMetadata, help);
   final isProjectIdMissing = _looksLikeMissingProjectIdError(lower);
+  final isTermsOfServiceViolation = statusCode == 403 && errorReason == 'TOS_VIOLATION';
 
   if (statusCode == 404 ||
       lower.contains('unsupported model') ||
@@ -222,13 +226,18 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
   );
   final isAuthProjectConfigurationError = statusCode == 403 && isProjectConfigurationError;
 
-  if (statusCode == 401 || isAccountVerificationRequired || isAuthProjectConfigurationError) {
+  if (statusCode == 401 ||
+      isTermsOfServiceViolation ||
+      isAccountVerificationRequired ||
+      isAuthProjectConfigurationError) {
     return GeminiGatewayException(
       kind: GeminiGatewayFailureKind.auth,
       message: message,
       statusCode: statusCode,
       upstreamReason: errorReason,
-      detail: isAccountVerificationRequired
+      detail: isTermsOfServiceViolation
+          ? GeminiGatewayFailureDetail.termsOfServiceViolation
+          : isAccountVerificationRequired
           ? GeminiGatewayFailureDetail.accountVerificationRequired
           : isProjectIdMissing
           ? GeminiGatewayFailureDetail.projectIdMissing
@@ -280,6 +289,13 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
       lower.contains('quota exhausted') ||
       lower.contains('exhausted your capacity on this model') ||
       lower.contains('resource has been exhausted');
+  final isIndefiniteQuotaExhausted =
+      statusCode == 429 &&
+      retryAfter == null &&
+      (errorStatus == 'RESOURCE_EXHAUSTED' ||
+          lower.contains('resource has been exhausted (e.g. check quota)')) &&
+      !lower.contains('retry in') &&
+      !lower.contains('reset after');
   final hasCapacityPressure =
       lower.contains('no capacity') ||
       lower.contains('capacity temporarily unavailable') ||
@@ -310,7 +326,9 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
       statusCode: statusCode == 0 ? 429 : statusCode,
       quotaSnapshot: quotaSnapshot,
       upstreamReason: errorReason,
-      detail: isQuotaExhausted
+      detail: isIndefiniteQuotaExhausted
+          ? GeminiGatewayFailureDetail.indefiniteQuotaExhausted
+          : isQuotaExhausted
           ? GeminiGatewayFailureDetail.quotaExhausted
           : GeminiGatewayFailureDetail.rateLimited,
       retryAfter: retryAfter,
@@ -549,6 +567,48 @@ class GeminiCodeAssistClient {
       }),
     );
     return controller.stream;
+  }
+
+  Future<GeminiGatewayException?> probeTermsOfServiceViolation({
+    required ProxyRuntimeAccount account,
+  }) async {
+    await _ensureFreshTokens(account);
+    final headerModel = geminiCodeAssistAuxiliaryHeaderModel;
+    final projectIdHint = account.projectId.trim();
+    final setupBody = <String, Object?>{
+      if (projectIdHint.isNotEmpty) 'cloudaicompanionProject': projectIdHint,
+      'metadata': _buildSetupMetadata(),
+    };
+    try {
+      final response = await _callJsonMethod(
+        method: 'loadCodeAssist',
+        accessToken: account.tokens.accessToken,
+        headerModel: headerModel,
+        body: setupBody,
+        timeoutLabel: 'Gemini account restriction check',
+      );
+      if (response['currentTier'] != null) {
+        return null;
+      }
+
+      await _callJsonMethod(
+        method: 'onboardUser',
+        accessToken: account.tokens.accessToken,
+        headerModel: headerModel,
+        body: <String, Object?>{
+          'tierId': _extractDefaultTierId(response['allowedTiers']),
+          if (projectIdHint.isNotEmpty) 'cloudaicompanionProject': projectIdHint,
+          'metadata': _buildSetupMetadata(),
+        },
+        timeoutLabel: 'Gemini account restriction check',
+      );
+      return null;
+    } on GeminiGatewayException catch (error) {
+      if (error.detail == GeminiGatewayFailureDetail.termsOfServiceViolation) {
+        return error;
+      }
+      rethrow;
+    }
   }
 
   Future<Map<String, Object?>> _generateWithContinuation({
@@ -2163,7 +2223,13 @@ bool _looksLikeProjectConfigurationError(
 }
 
 String? _gatewayActionUrl(Map<String, Object?> metadata, Map<String, Object?>? help) {
-  for (final key in const ['validation_url', 'activationUrl', 'activation_url']) {
+  for (final key in const [
+    'validation_url',
+    'activationUrl',
+    'activation_url',
+    'appeal_url',
+    'appealUrl',
+  ]) {
     final url = metadata[key] as String?;
     if (url != null && url.trim().isNotEmpty) {
       return url.trim();

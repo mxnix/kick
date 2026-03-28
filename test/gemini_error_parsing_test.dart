@@ -62,6 +62,31 @@ void main() {
     expect(error.retryAfter, const Duration(minutes: 5));
   });
 
+  test('treats TOS violation as dedicated auth issue with appeal action', () {
+    final error = decodeGeminiGatewayError(403, '''
+      {
+        "error": {
+          "code": 403,
+          "message": "This service has been disabled in this account for violation of Terms of Service.",
+          "details": [
+            {
+              "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+              "reason": "TOS_VIOLATION",
+              "domain": "cloudcode-pa.googleapis.com",
+              "metadata": {
+                "appeal_url": "https://example.com/appeal"
+              }
+            }
+          ]
+        }
+      }
+      ''');
+
+    expect(error.kind, GeminiGatewayFailureKind.auth);
+    expect(error.detail, GeminiGatewayFailureDetail.termsOfServiceViolation);
+    expect(error.actionUrl, 'https://example.com/appeal');
+  });
+
   test('treats project access denial as configuration issue', () {
     final error = decodeGeminiGatewayError(403, '''
       {
@@ -135,7 +160,7 @@ void main() {
     expect(error.retryAfter, const Duration(hours: 2, minutes: 15, seconds: 30));
   });
 
-  test('does not invent retry delay for quota exhausted without timer', () {
+  test('treats bare resource exhausted without timer as indefinite quota exhaustion', () {
     final error = decodeGeminiGatewayError(429, '''
       {
         "error": {
@@ -153,7 +178,7 @@ void main() {
       ''');
 
     expect(error.kind, GeminiGatewayFailureKind.quota);
-    expect(error.detail, GeminiGatewayFailureDetail.quotaExhausted);
+    expect(error.detail, GeminiGatewayFailureDetail.indefiniteQuotaExhausted);
     expect(error.retryAfter, isNull);
   });
 
