@@ -53,6 +53,7 @@ void main() {
     final service = ConfigurationBackupService(
       readTokens: (tokenRef) async => tokenRef == 'primary-ref' ? buildTokens('access-1') : null,
       readCurrentAccounts: () async => const [],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'kick-secret'),
       saveSettings: (_) async {},
       replaceAccounts: (_) async {},
       writeTokens: (_, _) async {},
@@ -118,6 +119,7 @@ void main() {
     final service = ConfigurationBackupService(
       readTokens: (tokenRef) async => tokenRef == 'primary-ref' ? buildTokens('access-1') : null,
       readCurrentAccounts: () async => const [],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'kick-secret'),
       saveSettings: (_) async {},
       replaceAccounts: (_) async {},
       writeTokens: (_, _) async {},
@@ -196,6 +198,7 @@ void main() {
           tokenRef: 'obsolete-ref',
         ),
       ],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'old-api-key'),
       saveSettings: (settings) async {
         savedSettings.add(settings);
       },
@@ -246,6 +249,7 @@ void main() {
     final exportService = ConfigurationBackupService(
       readTokens: (tokenRef) async => tokenRef == 'primary-ref' ? buildTokens('access-1') : null,
       readCurrentAccounts: () async => const [],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'kick-secret'),
       saveSettings: (_) async {},
       replaceAccounts: (_) async {},
       writeTokens: (_, _) async {},
@@ -281,6 +285,7 @@ void main() {
     final restoreService = ConfigurationBackupService(
       readTokens: (_) async => null,
       readCurrentAccounts: () async => const [],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'old-api-key'),
       saveSettings: (settings) async {
         savedSettings.add(settings);
       },
@@ -317,6 +322,7 @@ void main() {
     final service = ConfigurationBackupService(
       readTokens: (_) async => null,
       readCurrentAccounts: () async => const [],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'kick-secret'),
       saveSettings: (_) async {},
       replaceAccounts: (_) async {},
       writeTokens: (_, _) async {},
@@ -354,6 +360,7 @@ void main() {
     final service = ConfigurationBackupService(
       readTokens: (_) async => null,
       readCurrentAccounts: () async => const [],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'kick-secret'),
       saveSettings: (_) async {},
       replaceAccounts: (_) async {},
       writeTokens: (_, _) async {},
@@ -375,5 +382,81 @@ void main() {
         ),
       ),
     );
+  });
+
+  test('rolls back accounts, tokens, and settings when restore fails mid-flight', () async {
+    final previousSettings = AppSettings.defaults(
+      apiKey: 'previous-key',
+    ).copyWith(host: '127.0.0.1', port: 3000);
+    final restoredSettings = AppSettings.defaults(
+      apiKey: 'restored-key',
+    ).copyWith(host: '10.0.0.5', port: 4010);
+    final existingAccount = buildAccount(
+      id: 'existing',
+      label: 'Existing',
+      email: 'existing@example.com',
+      projectId: 'proj-existing',
+      tokenRef: 'existing-ref',
+    );
+    final restoredAccount = buildAccount(
+      id: 'restored',
+      label: 'Restored',
+      email: 'restored@example.com',
+      projectId: 'proj-restored',
+      tokenRef: 'restored-ref',
+    );
+
+    AppSettings persistedSettings = previousSettings;
+    List<AccountProfile> persistedAccounts = [existingAccount];
+    final persistedTokens = <String, OAuthTokens?>{'existing-ref': buildTokens('existing-access')};
+    var replaceAttempts = 0;
+
+    final service = ConfigurationBackupService(
+      readTokens: (tokenRef) async => persistedTokens[tokenRef],
+      readCurrentAccounts: () async => List<AccountProfile>.from(persistedAccounts),
+      readCurrentSettings: () async => persistedSettings,
+      saveSettings: (settings) async {
+        persistedSettings = settings;
+      },
+      replaceAccounts: (accounts) async {
+        replaceAttempts += 1;
+        persistedAccounts = List<AccountProfile>.from(accounts);
+      },
+      writeTokens: (tokenRef, tokens) async {
+        if (tokenRef == 'restored-ref' && replaceAttempts == 1) {
+          throw StateError('secure storage write failed');
+        }
+        persistedTokens[tokenRef] = tokens;
+      },
+      deleteTokens: (tokenRef) async {
+        persistedTokens.remove(tokenRef);
+      },
+      pickFileCallback: ({String? dialogTitle}) async {
+        return ConfigurationBackupPickedFile(
+          fileName: 'kick-restore.json',
+          bytes: Uint8List.fromList(
+            utf8.encode(
+              jsonEncode({
+                'schema': 'kick.configuration_backup',
+                'version': 1,
+                'exported_at': '2026-03-29T10:00:00Z',
+                'settings': restoredSettings.toBackupJson(),
+                'accounts': [restoredAccount.toBackupJson(tokens: buildTokens('restored-access'))],
+              }),
+            ),
+          ),
+        );
+      },
+    );
+
+    await expectLater(service.restore(), throwsA(isA<StateError>()));
+
+    expect(persistedSettings.apiKey, previousSettings.apiKey);
+    expect(persistedSettings.host, previousSettings.host);
+    expect(persistedSettings.port, previousSettings.port);
+    expect(persistedAccounts.map((account) => account.id), [existingAccount.id]);
+    expect(persistedTokens.keys, ['existing-ref']);
+    expect(persistedTokens['existing-ref']?.accessToken, 'existing-access');
+    expect(persistedTokens.containsKey('restored-ref'), isFalse);
   });
 }

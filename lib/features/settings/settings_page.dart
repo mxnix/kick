@@ -190,7 +190,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         );
       },
     );
-    if (confirmed != true) {
+    if (!mounted || confirmed != true) {
       return;
     }
 
@@ -209,6 +209,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       return;
     }
 
+    final l10n = context.l10n;
     _draftController.saveImmediately();
     await _draftController.settlePendingSaves();
     if (!mounted) {
@@ -220,33 +221,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
 
     final exportOptions = await _showBackupExportOptionsDialog();
-    if (exportOptions == null) {
+    if (!mounted || exportOptions == null) {
       return;
     }
 
     setState(() => _configurationTransferInProgress = true);
     try {
       final accounts = await ref.read(accountsControllerProvider.future);
+      if (!mounted) {
+        return;
+      }
       final result = await ref
           .read(configurationBackupServiceProvider)
           .export(
             settings: settings,
             accounts: accounts,
             options: exportOptions,
-            dialogTitle: context.l10n.settingsBackupExportDialogTitle,
+            dialogTitle: l10n.settingsBackupExportDialogTitle,
           );
       if (!mounted || result == null) {
         return;
       }
-      _showSnackBar(context.l10n.settingsBackupExportedMessage(result.fileName));
+      _showSnackBar(l10n.settingsBackupExportedMessage(result.fileName));
     } catch (error) {
       if (!mounted) {
         return;
       }
       _showSnackBar(
-        context.l10n.settingsBackupExportFailedMessage(
-          _formatConfigurationBackupError(context.l10n, error),
-        ),
+        l10n.settingsBackupExportFailedMessage(_formatConfigurationBackupError(l10n, error)),
       );
     } finally {
       if (mounted) {
@@ -280,13 +282,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         );
       },
     );
-    if (confirmed != true) {
+    if (!mounted || confirmed != true) {
       return;
     }
 
     setState(() => _configurationTransferInProgress = true);
     try {
       await _draftController.settlePendingSaves();
+      if (!mounted) {
+        return;
+      }
       final result = await ref
           .read(configurationBackupServiceProvider)
           .restore(

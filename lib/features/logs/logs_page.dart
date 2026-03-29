@@ -24,6 +24,13 @@ class _LogsPageState extends ConsumerState<LogsPage> {
   bool _isExporting = false;
   bool _isSharing = false;
   final Set<String> _expandedPayloadEntries = <String>{};
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +39,12 @@ class _LogsPageState extends ConsumerState<LogsPage> {
 
     return logsValue.when(
       data: (logs) {
+        if (_searchController.text != logs.query) {
+          _searchController.value = TextEditingValue(
+            text: logs.query,
+            selection: TextSelection.collapsed(offset: logs.query.length),
+          );
+        }
         final entries = logs.entries;
         return CustomScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -87,6 +100,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextField(
+                      controller: _searchController,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.search_rounded),
                         hintText: l10n.logsSearchHint,

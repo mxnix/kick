@@ -139,23 +139,44 @@ class _AccountCard extends ConsumerWidget {
     final priorityLabel = accountPriorityLabel(l10n, account.priority);
     final resetLabel = account.isCoolingDown ? l10n.clearCooldownAction : l10n.resetCooldownTooltip;
     final runtimeNotice = parseAccountRuntimeNotice(account.lastQuotaSnapshot);
+    final hasQuotaWarning = account.lastQuotaSnapshot?.trim().isNotEmpty == true;
     final statusLabel = !account.enabled
         ? l10n.accountDisabledStatus
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
+        ? l10n.accountTermsOfServiceStatus
         : account.isCoolingDown
         ? l10n.accountCoolingDownStatus
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending
+        ? l10n.accountBanCheckPendingStatus
+        : hasQuotaWarning
+        ? l10n.accountQuotaWarningStatus
         : l10n.accountReadyStatus;
     final statusIcon = !account.enabled
         ? Icons.pause_circle_rounded
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
+        ? Icons.report_gmailerrorred_rounded
         : account.isCoolingDown
         ? Icons.schedule_rounded
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending
+        ? Icons.manage_search_rounded
+        : hasQuotaWarning
+        ? Icons.query_stats_rounded
         : Icons.check_circle_rounded;
     final statusTint = !account.enabled
         ? scheme.onSurfaceVariant
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
+        ? scheme.error
         : account.isCoolingDown
         ? scheme.error
+        : runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending
+        ? scheme.tertiary
+        : hasQuotaWarning
+        ? scheme.tertiary
         : scheme.primary;
-    final statusEmphasis = account.enabled && !account.isCoolingDown;
-    final hasQuotaWarning = account.lastQuotaSnapshot?.trim().isNotEmpty == true;
+    final statusEmphasis = account.enabled && !account.isCoolingDown && !hasQuotaWarning;
+    final showRuntimeNoticeBadge =
+        hasQuotaWarning &&
+        statusLabel != _accountRuntimeNoticeStatusLabel(l10n, account.lastQuotaSnapshot!);
 
     return KickPanel(
       tone: KickPanelTone.soft,
@@ -212,7 +233,7 @@ class _AccountCard extends ConsumerWidget {
                 emphasis: statusEmphasis,
                 tint: statusTint,
               ),
-              if (hasQuotaWarning)
+              if (showRuntimeNoticeBadge)
                 KickBadge(
                   label: _accountRuntimeNoticeStatusLabel(l10n, account.lastQuotaSnapshot!),
                   leading: Icon(_accountRuntimeNoticeIcon(runtimeNotice), size: 16),

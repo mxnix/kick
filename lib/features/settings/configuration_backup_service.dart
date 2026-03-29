@@ -17,6 +17,7 @@ typedef ConfigurationBackupReadTokens = Future<OAuthTokens?> Function(String tok
 typedef ConfigurationBackupWriteTokens = Future<void> Function(String tokenRef, OAuthTokens tokens);
 typedef ConfigurationBackupDeleteTokens = Future<void> Function(String tokenRef);
 typedef ConfigurationBackupReadAccounts = Future<List<AccountProfile>> Function();
+typedef ConfigurationBackupReadSettings = Future<AppSettings?> Function();
 typedef ConfigurationBackupReplaceAccounts = Future<void> Function(List<AccountProfile> accounts);
 typedef ConfigurationBackupSaveSettings = Future<void> Function(AppSettings settings);
 typedef ConfigurationBackupSaveFileCallback =
@@ -46,9 +47,8 @@ class ConfigurationBackupException implements Exception {
 class ConfigurationBackupExportOptions {
   const ConfigurationBackupExportOptions.plainJson() : protectWithPassword = false, password = null;
 
-  const ConfigurationBackupExportOptions.passwordProtected({required String password})
-    : protectWithPassword = true,
-      password = password;
+  const ConfigurationBackupExportOptions.passwordProtected({required this.password})
+    : protectWithPassword = true;
 
   final bool protectWithPassword;
   final String? password;
@@ -117,6 +117,7 @@ class ConfigurationBackupService {
   ConfigurationBackupService({
     required ConfigurationBackupReadTokens readTokens,
     required ConfigurationBackupReadAccounts readCurrentAccounts,
+    required ConfigurationBackupReadSettings readCurrentSettings,
     required ConfigurationBackupSaveSettings saveSettings,
     required ConfigurationBackupReplaceAccounts replaceAccounts,
     required ConfigurationBackupWriteTokens writeTokens,
@@ -127,6 +128,7 @@ class ConfigurationBackupService {
     bool? useNativeSaveDialog,
   }) : _readTokens = readTokens,
        _readCurrentAccounts = readCurrentAccounts,
+       _readCurrentSettings = readCurrentSettings,
        _saveSettings = saveSettings,
        _replaceAccounts = replaceAccounts,
        _writeTokens = writeTokens,
@@ -138,6 +140,7 @@ class ConfigurationBackupService {
 
   final ConfigurationBackupReadTokens _readTokens;
   final ConfigurationBackupReadAccounts _readCurrentAccounts;
+  final ConfigurationBackupReadSettings _readCurrentSettings;
   final ConfigurationBackupSaveSettings _saveSettings;
   final ConfigurationBackupReplaceAccounts _replaceAccounts;
   final ConfigurationBackupWriteTokens _writeTokens;
@@ -210,46 +213,65 @@ class ConfigurationBackupService {
     }
 
     final document = _decodeDocument(decodedPayload.contents);
-    await _saveSettings(document.settings);
-
+    final currentSettings = await _readCurrentSettings();
     final existingAccounts = await _readCurrentAccounts();
+    final previousTokensByRef = await _snapshotTokens(existingAccounts);
     final restoredAccounts = document.accounts
         .map((entry) => entry.profile)
         .toList(growable: false);
-    await _replaceAccounts(restoredAccounts);
 
     final importedTokenRefs = <String>{};
-    var accountsWithTokens = 0;
     for (final entry in document.accounts) {
       final tokenRef = entry.profile.tokenRef.trim();
-      if (tokenRef.isEmpty) {
-        continue;
+      if (tokenRef.isNotEmpty) {
+        importedTokenRefs.add(tokenRef);
       }
-      importedTokenRefs.add(tokenRef);
-      if (entry.tokens == null) {
+    }
+
+    try {
+      await _replaceAccounts(restoredAccounts);
+
+      var accountsWithTokens = 0;
+      for (final entry in document.accounts) {
+        final tokenRef = entry.profile.tokenRef.trim();
+        if (tokenRef.isEmpty) {
+          continue;
+        }
+        if (entry.tokens == null) {
+          await _deleteTokens(tokenRef);
+          continue;
+        }
+        accountsWithTokens += 1;
+        await _writeTokens(tokenRef, entry.tokens!);
+      }
+
+      for (final account in existingAccounts) {
+        final tokenRef = account.tokenRef.trim();
+        if (tokenRef.isEmpty || importedTokenRefs.contains(tokenRef)) {
+          continue;
+        }
         await _deleteTokens(tokenRef);
-        continue;
       }
-      accountsWithTokens += 1;
-      await _writeTokens(tokenRef, entry.tokens!);
-    }
 
-    for (final account in existingAccounts) {
-      final tokenRef = account.tokenRef.trim();
-      if (tokenRef.isEmpty || importedTokenRefs.contains(tokenRef)) {
-        continue;
-      }
-      await _deleteTokens(tokenRef);
-    }
+      await _saveSettings(document.settings);
 
-    return ConfigurationBackupRestoreResult(
-      fileName: pickedFile.fileName,
-      accountCount: document.accounts.length,
-      accountsWithTokens: accountsWithTokens,
-      accountsWithoutTokens: document.accounts.length - accountsWithTokens,
-      settings: document.settings,
-      wasPasswordProtected: decodedPayload.wasPasswordProtected,
-    );
+      return ConfigurationBackupRestoreResult(
+        fileName: pickedFile.fileName,
+        accountCount: document.accounts.length,
+        accountsWithTokens: accountsWithTokens,
+        accountsWithoutTokens: document.accounts.length - accountsWithTokens,
+        settings: document.settings,
+        wasPasswordProtected: decodedPayload.wasPasswordProtected,
+      );
+    } catch (error, stackTrace) {
+      await _rollbackRestore(
+        settings: currentSettings,
+        accounts: existingAccounts,
+        tokensByRef: previousTokensByRef,
+        importedTokenRefs: importedTokenRefs,
+      );
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   String _encodeDocument(_ConfigurationBackupDocument document) {
@@ -399,6 +421,55 @@ class ConfigurationBackupService {
       protectedWithPassword: protectedWithPassword,
       file: file,
     );
+  }
+
+  Future<Map<String, OAuthTokens?>> _snapshotTokens(List<AccountProfile> accounts) async {
+    final tokensByRef = <String, OAuthTokens?>{};
+    for (final account in accounts) {
+      final tokenRef = account.tokenRef.trim();
+      if (tokenRef.isEmpty || tokensByRef.containsKey(tokenRef)) {
+        continue;
+      }
+      tokensByRef[tokenRef] = await _readTokens(tokenRef);
+    }
+    return tokensByRef;
+  }
+
+  Future<void> _rollbackRestore({
+    required AppSettings? settings,
+    required List<AccountProfile> accounts,
+    required Map<String, OAuthTokens?> tokensByRef,
+    required Set<String> importedTokenRefs,
+  }) async {
+    try {
+      await _replaceAccounts(accounts);
+    } catch (_) {
+      // Best-effort rollback; preserve the original restore error.
+    }
+
+    final affectedTokenRefs = <String>{...tokensByRef.keys, ...importedTokenRefs};
+    for (final tokenRef in affectedTokenRefs) {
+      try {
+        final tokens = tokensByRef[tokenRef];
+        if (tokens == null) {
+          await _deleteTokens(tokenRef);
+        } else {
+          await _writeTokens(tokenRef, tokens);
+        }
+      } catch (_) {
+        // Best-effort rollback; preserve the original restore error.
+      }
+    }
+
+    if (settings == null) {
+      return;
+    }
+
+    try {
+      await _saveSettings(settings);
+    } catch (_) {
+      // Best-effort rollback; preserve the original restore error.
+    }
   }
 
   static String _buildFileName() {

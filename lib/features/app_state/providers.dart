@@ -146,6 +146,8 @@ final configurationBackupServiceProvider = Provider<ConfigurationBackupService>(
   return ConfigurationBackupService(
     readTokens: bootstrap.secretStore.readOAuthTokens,
     readCurrentAccounts: bootstrap.accountsRepository.readAll,
+    readCurrentSettings: () async =>
+        ref.read(settingsControllerProvider).asData?.value ?? bootstrap.initialSettings,
     saveSettings: ref.read(settingsControllerProvider.notifier).save,
     replaceAccounts: bootstrap.accountsRepository.replaceAll,
     writeTokens: bootstrap.secretStore.writeOAuthTokens,
@@ -438,6 +440,7 @@ class LogsController extends AsyncNotifier<LogsViewState> {
       return;
     }
 
+    final revision = _loadRevision;
     state = AsyncData(current.copyWith(isLoadingMore: true));
     try {
       final bootstrap = ref.read(appBootstrapProvider);
@@ -448,6 +451,9 @@ class LogsController extends AsyncNotifier<LogsViewState> {
         level: current.selectedLevel,
         category: current.selectedCategory,
       );
+      if (revision != _loadRevision) {
+        return;
+      }
       state = AsyncData(
         current.copyWith(
           entries: [...current.entries, ...nextEntries],
@@ -456,6 +462,9 @@ class LogsController extends AsyncNotifier<LogsViewState> {
         ),
       );
     } catch (error, stackTrace) {
+      if (revision != _loadRevision) {
+        return;
+      }
       state = AsyncError(error, stackTrace);
     }
   }

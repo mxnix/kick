@@ -157,7 +157,7 @@ class LogExportService {
         ..writeln(summarySection);
     }
 
-    buffer..writeln();
+    buffer.writeln();
 
     for (final entry in entries) {
       buffer
