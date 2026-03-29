@@ -38,6 +38,7 @@ dependencies:
   launch_at_startup: ^0.3.1
   local_notifier: ^0.1.6
   sentry_flutter: ^9.15.0
+  cryptography: ^2.9.0
 
 dev_dependencies:
   flutter_test:

@@ -400,6 +400,20 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsGoogleSectionSummary => 'Веб-поиск в Google и настройка источников';
 
   @override
+  String get settingsBackupSectionTitle => 'Резервная копия и восстановление';
+
+  @override
+  String get settingsBackupSectionSummary => 'Перенос настроек и аккаунтов между устройствами';
+
+  @override
+  String get settingsBackupInfoTitle =>
+      'В резервную копию попадут настройки, API-ключ и OAuth-токены';
+
+  @override
+  String get settingsBackupInfoSubtitle =>
+      'Храните файл в безопасном месте! После восстановления текущие настройки и список аккаунтов будут полностью заменены.';
+
+  @override
   String get hostLabel => 'Хост';
 
   @override
@@ -526,6 +540,113 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsSaveFailedStatus => 'Не удалось сохранить изменения';
+
+  @override
+  String get settingsBackupExportButton => 'Сохранить резервную копию';
+
+  @override
+  String get settingsBackupImportButton => 'Восстановить резервную копию';
+
+  @override
+  String get settingsBackupExportOptionsDialogTitle => 'Экспорт резервной копии';
+
+  @override
+  String get settingsBackupExportDialogTitle => 'Куда сохранить резервную копию?';
+
+  @override
+  String get settingsBackupImportDialogTitle => 'Выберите файл резервной копии';
+
+  @override
+  String get settingsBackupExportConfirmButton => 'Продолжить';
+
+  @override
+  String get settingsBackupProtectWithPasswordLabel => 'Защитить файл паролем (рекомендуется)';
+
+  @override
+  String get settingsBackupProtectWithPasswordSubtitle =>
+      'Шифрует резервную копию, чтобы токены и ключи нельзя было прочитать без пароля';
+
+  @override
+  String get settingsBackupPasswordLabel => 'Пароль';
+
+  @override
+  String get settingsBackupPasswordConfirmLabel => 'Подтвердите пароль';
+
+  @override
+  String get settingsBackupPasswordHelperText =>
+      'Запомните этот пароль: без него зашифрованную резервную копию восстановить нельзя!';
+
+  @override
+  String get settingsBackupPasswordsDoNotMatch => 'Пароли не совпадают';
+
+  @override
+  String get settingsBackupUnprotectedWarning =>
+      'Внимание! Ваши токены и ключи будут сохранены в открытом виде. Любой, кто получит этот файл, получит доступ к вашим данным.';
+
+  @override
+  String get settingsBackupRestoreDialogTitle => 'Восстановить конфигурацию?';
+
+  @override
+  String get settingsBackupRestoreDialogMessage =>
+      'Текущие настройки, API-ключ и список аккаунтов будут заменены данными из этой резервной копии. Это действие нельзя отменить.';
+
+  @override
+  String get settingsBackupRestoreConfirmButton => 'Восстановить';
+
+  @override
+  String get settingsBackupPasswordDialogTitle => 'Введите пароль резервной копии';
+
+  @override
+  String settingsBackupPasswordDialogMessage(String fileName) {
+    return 'Файл $fileName защищен паролем. Введите пароль, чтобы продолжить восстановление.';
+  }
+
+  @override
+  String settingsBackupPasswordDialogInvalidMessage(String fileName) {
+    return 'Не удалось расшифровать файл $fileName. Проверьте пароль и попробуйте снова.';
+  }
+
+  @override
+  String get settingsBackupPasswordConfirmButton => 'Расшифровать';
+
+  @override
+  String settingsBackupExportedMessage(String fileName) {
+    return 'Резервная копия сохранена в файл $fileName';
+  }
+
+  @override
+  String settingsBackupRestoredMessage(int accountCount) {
+    return 'Конфигурация восстановлена. Аккаунтов: $accountCount';
+  }
+
+  @override
+  String settingsBackupRestoredMissingTokensMessage(int accountCount, int missingCount) {
+    return 'Конфигурация восстановлена. Аккаунтов: $accountCount, без токенов: $missingCount';
+  }
+
+  @override
+  String settingsBackupExportFailedMessage(String error) {
+    return 'Не удалось сохранить резервную копию: $error';
+  }
+
+  @override
+  String settingsBackupRestoreFailedMessage(String error) {
+    return 'Не удалось восстановить резервную копию: $error';
+  }
+
+  @override
+  String get settingsBackupInvalidMessage =>
+      'Файл резервной копии поврежден или имеет неподдерживаемый формат';
+
+  @override
+  String get settingsBackupUnsupportedVersionMessage =>
+      'Эта резервная копия создана в более новой версии KiCk и пока не поддерживается';
+
+  @override
+  String get settingsBackupReadFailedMessage => 'Не удалось прочитать выбранную резервную копию';
+
+  @override
+  String get settingsBackupPasswordRequiredMessage => 'Для этой резервной копии нужен пароль';
 
   @override
   String get settingsLoadErrorTitle => 'Не удалось загрузить настройки';

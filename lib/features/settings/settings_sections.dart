@@ -380,6 +380,146 @@ class SettingsGoogleSection extends StatelessWidget {
   }
 }
 
+class SettingsBackupSection extends StatelessWidget {
+  const SettingsBackupSection({
+    super.key,
+    required this.expanded,
+    required this.onToggle,
+    required this.onExport,
+    required this.onImport,
+    this.busy = false,
+  });
+
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Future<void> Function() onExport;
+  final Future<void> Function() onImport;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return SettingsExpandableSection(
+      title: l10n.settingsBackupSectionTitle,
+      subtitle: l10n.settingsBackupSectionSummary,
+      expanded: expanded,
+      onToggle: onToggle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SettingInfoCard(
+            icon: Icons.security_rounded,
+            title: l10n.settingsBackupInfoTitle,
+            subtitle: l10n.settingsBackupInfoSubtitle,
+          ),
+          const SizedBox(height: 18),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SettingsActionButton(
+                variant: _SettingsActionButtonVariant.outlined,
+                busy: busy,
+                icon: Icons.download_rounded,
+                label: l10n.settingsBackupExportButton,
+                onPressed: () {
+                  unawaited(onExport());
+                },
+              ),
+              const SizedBox(height: 12),
+              _SettingsActionButton(
+                variant: _SettingsActionButtonVariant.filled,
+                busy: busy,
+                icon: Icons.settings_backup_restore_rounded,
+                label: l10n.settingsBackupImportButton,
+                onPressed: () {
+                  unawaited(onImport());
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _SettingsActionButtonVariant { outlined, filled }
+
+class _SettingsActionButton extends StatelessWidget {
+  const _SettingsActionButton({
+    required this.variant,
+    required this.busy,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final _SettingsActionButtonVariant variant;
+  final bool busy;
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = _SettingsActionButtonContent(icon: icon, label: label);
+    final style = switch (variant) {
+      _SettingsActionButtonVariant.outlined => OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(56),
+      ),
+      _SettingsActionButtonVariant.filled => FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(56),
+      ),
+    };
+
+    return SizedBox(
+      width: double.infinity,
+      child: switch (variant) {
+        _SettingsActionButtonVariant.outlined => OutlinedButton(
+          onPressed: busy ? null : onPressed,
+          style: style,
+          child: child,
+        ),
+        _SettingsActionButtonVariant.filled => FilledButton(
+          onPressed: busy ? null : onPressed,
+          style: style,
+          child: child,
+        ),
+      },
+    );
+  }
+}
+
+class _SettingsActionButtonContent extends StatelessWidget {
+  const _SettingsActionButtonContent({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 22,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(alignment: Alignment.centerLeft, child: Icon(icon, size: 18)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class SettingsExpandableSection extends StatelessWidget {
   const SettingsExpandableSection({
     super.key,

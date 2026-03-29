@@ -179,6 +179,75 @@ class AppSettings {
     };
   }
 
+  Map<String, Object?> toBackupJson() {
+    return {
+      'api_key': apiKey,
+      'api_key_required': apiKeyRequired,
+      'theme_mode': themeMode.name,
+      'use_dynamic_color': useDynamicColor,
+      'has_acknowledged_disclaimer': hasAcknowledgedDisclaimer,
+      'analytics_consent_enabled': analyticsConsentEnabled,
+      'host': host,
+      'port': port,
+      'allow_lan': allowLan,
+      'android_background_runtime': androidBackgroundRuntime,
+      'windows_launch_at_startup': windowsLaunchAtStartup,
+      'request_max_retries': requestMaxRetries,
+      'retry_429_delay_seconds': retry429DelaySeconds,
+      'mark_429_as_unhealthy': mark429AsUnhealthy,
+      'default_google_web_search_enabled': defaultGoogleWebSearchEnabled,
+      'render_google_grounding_in_message': renderGoogleGroundingInMessage,
+      'logging_verbosity': loggingVerbosity.name,
+      'log_retention_count': logRetentionCount,
+      'unsafe_raw_logging_enabled': unsafeRawLoggingEnabled,
+      'custom_models': List<String>.from(customModels),
+    };
+  }
+
+  factory AppSettings.fromBackupJson(Map<String, Object?> json) {
+    final apiKey = _readRequiredString(json['api_key'], fieldName: 'api_key');
+    final allowLan = _readBool(json['allow_lan'], defaultValue: false);
+    return AppSettings(
+      apiKey: apiKey,
+      apiKeyRequired: _readBool(json['api_key_required'], defaultValue: true),
+      themeMode: ThemeMode.values.firstWhere(
+        (value) => value.name == json['theme_mode'],
+        orElse: () => ThemeMode.system,
+      ),
+      useDynamicColor: _readBool(json['use_dynamic_color'], defaultValue: true),
+      hasAcknowledgedDisclaimer: _readBool(
+        json['has_acknowledged_disclaimer'],
+        defaultValue: false,
+      ),
+      analyticsConsentEnabled: _readBool(json['analytics_consent_enabled'], defaultValue: false),
+      host: _normalizeHost(_readString(json['host']), allowLan: allowLan),
+      port: _readInt(json['port']) ?? 3000,
+      allowLan: allowLan,
+      androidBackgroundRuntime: _readBool(json['android_background_runtime'], defaultValue: true),
+      windowsLaunchAtStartup: _readBool(json['windows_launch_at_startup'], defaultValue: false),
+      requestMaxRetries: _normalizeRequestMaxRetries(_readInt(json['request_max_retries'])),
+      retry429DelaySeconds: _normalizeRetry429DelaySeconds(
+        _readInt(json['retry_429_delay_seconds']),
+      ),
+      mark429AsUnhealthy: _readBool(json['mark_429_as_unhealthy'], defaultValue: false),
+      defaultGoogleWebSearchEnabled: _readBool(
+        json['default_google_web_search_enabled'],
+        defaultValue: false,
+      ),
+      renderGoogleGroundingInMessage: _readBool(
+        json['render_google_grounding_in_message'],
+        defaultValue: false,
+      ),
+      loggingVerbosity: KickLogVerbosity.values.firstWhere(
+        (value) => value.name == json['logging_verbosity'],
+        orElse: () => KickLogVerbosity.normal,
+      ),
+      logRetentionCount: normalizeLogRetentionCount(_readInt(json['log_retention_count'])),
+      unsafeRawLoggingEnabled: _readBool(json['unsafe_raw_logging_enabled'], defaultValue: false),
+      customModels: _readStringList(json['custom_models']),
+    );
+  }
+
   factory AppSettings.fromStorageMap(Map<String, String> values, {required String apiKey}) {
     final allowLan = values['allow_lan'] == 'true';
     return AppSettings(
@@ -270,4 +339,47 @@ int normalizeLogRetentionCount(int? value) {
     return maxLogRetentionCount;
   }
   return value;
+}
+
+String _readRequiredString(Object? value, {required String fieldName}) {
+  final text = _readString(value);
+  if (text == null || text.isEmpty) {
+    throw FormatException('Backup settings are missing "$fieldName".');
+  }
+  return text;
+}
+
+String? _readString(Object? value) {
+  return switch (value) {
+    String text => text.trim(),
+    _ => null,
+  };
+}
+
+bool _readBool(Object? value, {required bool defaultValue}) {
+  return switch (value) {
+    bool flag => flag,
+    String text => text.trim().toLowerCase() == 'true',
+    num number => number != 0,
+    _ => defaultValue,
+  };
+}
+
+int? _readInt(Object? value) {
+  return switch (value) {
+    int number => number,
+    num number => number.round(),
+    String text => int.tryParse(text.trim()),
+    _ => null,
+  };
+}
+
+List<String> _readStringList(Object? value) {
+  if (value is! List) {
+    return const <String>[];
+  }
+  return value
+      .map((item) => item.toString().trim())
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
 }

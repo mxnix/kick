@@ -232,6 +232,10 @@
   "settingsModelsSectionSummary": "Пользовательские ID моделей",
   "settingsGoogleSectionTitle": "Поиск Google",
   "settingsGoogleSectionSummary": "Веб-поиск в Google и настройка источников",
+  "settingsBackupSectionTitle": "Резервная копия и восстановление",
+  "settingsBackupSectionSummary": "Перенос настроек и аккаунтов между устройствами",
+  "settingsBackupInfoTitle": "В резервную копию попадут настройки, API-ключ и OAuth-токены",
+  "settingsBackupInfoSubtitle": "Храните файл в безопасном месте! После восстановления текущие настройки и список аккаунтов будут полностью заменены.",
   "hostLabel": "Хост",
   "hostHelperText": "Обычно localhost",
   "hostRequiredError": "Укажите адрес хоста",
@@ -281,6 +285,87 @@
   "settingsSavedStatus": "Изменения сохранены",
   "settingsValidationStatus": "Проверьте поля с ошибками",
   "settingsSaveFailedStatus": "Не удалось сохранить изменения",
+  "settingsBackupExportButton": "Сохранить резервную копию",
+  "settingsBackupImportButton": "Восстановить резервную копию",
+  "settingsBackupExportOptionsDialogTitle": "Экспорт резервной копии",
+  "settingsBackupExportDialogTitle": "Куда сохранить резервную копию?",
+  "settingsBackupImportDialogTitle": "Выберите файл резервной копии",
+  "settingsBackupExportConfirmButton": "Продолжить",
+  "settingsBackupProtectWithPasswordLabel": "Защитить файл паролем (рекомендуется)",
+  "settingsBackupProtectWithPasswordSubtitle": "Шифрует резервную копию, чтобы токены и ключи нельзя было прочитать без пароля",
+  "settingsBackupPasswordLabel": "Пароль",
+  "settingsBackupPasswordConfirmLabel": "Подтвердите пароль",
+  "settingsBackupPasswordHelperText": "Запомните этот пароль: без него зашифрованную резервную копию восстановить нельзя!",
+  "settingsBackupPasswordsDoNotMatch": "Пароли не совпадают",
+  "settingsBackupUnprotectedWarning": "Внимание! Ваши токены и ключи будут сохранены в открытом виде. Любой, кто получит этот файл, получит доступ к вашим данным.",
+  "settingsBackupRestoreDialogTitle": "Восстановить конфигурацию?",
+  "settingsBackupRestoreDialogMessage": "Текущие настройки, API-ключ и список аккаунтов будут заменены данными из этой резервной копии. Это действие нельзя отменить.",
+  "settingsBackupRestoreConfirmButton": "Восстановить",
+  "settingsBackupPasswordDialogTitle": "Введите пароль резервной копии",
+  "settingsBackupPasswordDialogMessage": "Файл {fileName} защищен паролем. Введите пароль, чтобы продолжить восстановление.",
+  "@settingsBackupPasswordDialogMessage": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupPasswordDialogInvalidMessage": "Не удалось расшифровать файл {fileName}. Проверьте пароль и попробуйте снова.",
+  "@settingsBackupPasswordDialogInvalidMessage": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupPasswordConfirmButton": "Расшифровать",
+  "settingsBackupExportedMessage": "Резервная копия сохранена в файл {fileName}",
+  "@settingsBackupExportedMessage": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupRestoredMessage": "Конфигурация восстановлена. Аккаунтов: {accountCount}",
+  "@settingsBackupRestoredMessage": {
+    "placeholders": {
+      "accountCount": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsBackupRestoredMissingTokensMessage": "Конфигурация восстановлена. Аккаунтов: {accountCount}, без токенов: {missingCount}",
+  "@settingsBackupRestoredMissingTokensMessage": {
+    "placeholders": {
+      "accountCount": {
+        "type": "int"
+      },
+      "missingCount": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsBackupExportFailedMessage": "Не удалось сохранить резервную копию: {error}",
+  "@settingsBackupExportFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupRestoreFailedMessage": "Не удалось восстановить резервную копию: {error}",
+  "@settingsBackupRestoreFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupInvalidMessage": "Файл резервной копии поврежден или имеет неподдерживаемый формат",
+  "settingsBackupUnsupportedVersionMessage": "Эта резервная копия создана в более новой версии KiCk и пока не поддерживается",
+  "settingsBackupReadFailedMessage": "Не удалось прочитать выбранную резервную копию",
+  "settingsBackupPasswordRequiredMessage": "Для этой резервной копии нужен пароль",
   "settingsLoadErrorTitle": "Не удалось загрузить настройки",
   "aboutTitle": "О программе",
   "aboutMenuSubtitle": "Версия, обновления и аналитика",

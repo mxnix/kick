@@ -119,6 +119,28 @@ class AccountProfile {
     };
   }
 
+  Map<String, Object?> toBackupJson({OAuthTokens? tokens}) {
+    return {
+      'id': id,
+      'label': label,
+      'email': email,
+      'project_id': projectId,
+      'google_subject_id': googleSubjectId,
+      'avatar_url': avatarUrl,
+      'enabled': enabled,
+      'priority': priority,
+      'not_supported_models': List<String>.from(notSupportedModels),
+      'runtime_not_supported_models': List<String>.from(runtimeNotSupportedModels),
+      'last_used_at': lastUsedAt?.toIso8601String(),
+      'usage_count': usageCount,
+      'error_count': errorCount,
+      'cooldown_until': cooldownUntil?.toIso8601String(),
+      'last_quota_snapshot': lastQuotaSnapshot,
+      'token_ref': tokenRef,
+      'tokens': tokens?.toJson(),
+    };
+  }
+
   factory AccountProfile.fromDatabaseMap(Map<String, Object?> map) {
     final rawQuotaSnapshot = map['last_quota_snapshot'] as String?;
     return AccountProfile(
@@ -143,6 +165,28 @@ class AccountProfile {
     );
   }
 
+  factory AccountProfile.fromBackupJson(Map<String, Object?> json) {
+    final id = _readRequiredString(json['id'], fieldName: 'id');
+    return AccountProfile(
+      id: id,
+      label: _readRequiredString(json['label'], fieldName: 'label'),
+      email: _readRequiredString(json['email'], fieldName: 'email'),
+      projectId: _readString(json['project_id']) ?? '',
+      googleSubjectId: _readNullableString(json['google_subject_id']),
+      avatarUrl: _readNullableString(json['avatar_url']),
+      enabled: _readBool(json['enabled'], defaultValue: true),
+      priority: _readInt(json['priority']) ?? 0,
+      notSupportedModels: _readStringList(json['not_supported_models']),
+      runtimeNotSupportedModels: _readStringList(json['runtime_not_supported_models']),
+      lastUsedAt: DateTime.tryParse(_readString(json['last_used_at']) ?? ''),
+      usageCount: _readInt(json['usage_count']) ?? 0,
+      errorCount: _readInt(json['error_count']) ?? 0,
+      cooldownUntil: DateTime.tryParse(_readString(json['cooldown_until']) ?? ''),
+      lastQuotaSnapshot: _readNullableString(json['last_quota_snapshot']),
+      tokenRef: _readNullableString(json['token_ref']) ?? 'kick.oauth.$id',
+    );
+  }
+
   static String? _readOptionalString(Object? value) {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty) {
@@ -163,4 +207,55 @@ class AccountProfile {
     final merged = <String>{...primary, ...secondary};
     return merged.toList(growable: false);
   }
+}
+
+String _readRequiredString(Object? value, {required String fieldName}) {
+  final text = _readString(value);
+  if (text == null || text.isEmpty) {
+    throw FormatException('Backup account is missing "$fieldName".');
+  }
+  return text;
+}
+
+String? _readString(Object? value) {
+  return switch (value) {
+    String text => text.trim(),
+    _ => null,
+  };
+}
+
+String? _readNullableString(Object? value) {
+  final text = _readString(value);
+  if (text == null || text.isEmpty) {
+    return null;
+  }
+  return text;
+}
+
+bool _readBool(Object? value, {required bool defaultValue}) {
+  return switch (value) {
+    bool flag => flag,
+    String text => text.trim().toLowerCase() == 'true',
+    num number => number != 0,
+    _ => defaultValue,
+  };
+}
+
+int? _readInt(Object? value) {
+  return switch (value) {
+    int number => number,
+    num number => number.round(),
+    String text => int.tryParse(text.trim()),
+    _ => null,
+  };
+}
+
+List<String> _readStringList(Object? value) {
+  if (value is! List) {
+    return const <String>[];
+  }
+  return value
+      .map((item) => item.toString().trim())
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
 }

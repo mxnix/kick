@@ -107,5 +107,29 @@ void main() {
       expect(savedSettings.last.logRetentionCount, 2400);
       expect(controller.saveState, SettingsDraftSaveState.saved);
     });
+
+    test('rehydrates the draft when settings change externally', () async {
+      final controller = SettingsDraftController(
+        saveSettings: (_) async {},
+        regenerateApiKey: () async => 'regenerated-key',
+        saveDebounceDuration: const Duration(milliseconds: 10),
+      );
+      addTearDown(controller.dispose);
+
+      controller.syncWithSettings(buildSettings());
+      controller.hostController.text = '192.168.0.10';
+      await controller.settlePendingSaves();
+
+      controller.syncWithSettings(
+        AppSettings.defaults(
+          apiKey: 'restored-key',
+        ).copyWith(host: '10.0.0.5', port: 4010, customModels: const ['gemini-2.5-flash']),
+      );
+
+      expect(controller.apiKeyController.text, 'restored-key');
+      expect(controller.hostController.text, '10.0.0.5');
+      expect(controller.portController.text, '4010');
+      expect(controller.customModelsController.text, 'gemini-2.5-flash');
+    });
   });
 }

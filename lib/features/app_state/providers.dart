@@ -22,6 +22,7 @@ import '../../proxy/gemini/gemini_usage_models.dart';
 import '../../proxy/gemini/gemini_usage_service.dart';
 import '../logs/log_export_service.dart';
 import '../settings/app_update_checker.dart';
+import '../settings/configuration_backup_service.dart';
 import 'proxy_configuration_orchestrator.dart';
 
 final proxyControllerProvider = Provider<KickProxyController>(
@@ -139,6 +140,18 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     return nextApiKey;
   }
 }
+
+final configurationBackupServiceProvider = Provider<ConfigurationBackupService>((ref) {
+  final bootstrap = ref.watch(appBootstrapProvider);
+  return ConfigurationBackupService(
+    readTokens: bootstrap.secretStore.readOAuthTokens,
+    readCurrentAccounts: bootstrap.accountsRepository.readAll,
+    saveSettings: ref.read(settingsControllerProvider.notifier).save,
+    replaceAccounts: bootstrap.accountsRepository.replaceAll,
+    writeTokens: bootstrap.secretStore.writeOAuthTokens,
+    deleteTokens: bootstrap.secretStore.deleteOAuthTokens,
+  );
+});
 
 final accountsControllerProvider = AsyncNotifierProvider<AccountsController, List<AccountProfile>>(
   AccountsController.new,

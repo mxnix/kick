@@ -59,6 +59,40 @@ void main() {
     expect(restored.customModels, ['gemini-2.5-flash']);
   });
 
+  test('round-trips settings through backup json', () {
+    const settings = AppSettings(
+      apiKey: 'kick_backup',
+      apiKeyRequired: false,
+      themeMode: ThemeMode.dark,
+      useDynamicColor: false,
+      hasAcknowledgedDisclaimer: true,
+      analyticsConsentEnabled: true,
+      host: '192.168.1.10',
+      port: 4010,
+      allowLan: true,
+      androidBackgroundRuntime: false,
+      windowsLaunchAtStartup: true,
+      requestMaxRetries: 6,
+      retry429DelaySeconds: 90,
+      mark429AsUnhealthy: true,
+      defaultGoogleWebSearchEnabled: true,
+      renderGoogleGroundingInMessage: true,
+      loggingVerbosity: KickLogVerbosity.verbose,
+      logRetentionCount: 1200,
+      unsafeRawLoggingEnabled: true,
+      customModels: ['gemini-2.5-flash', 'gemini-2.5-pro'],
+    );
+
+    final restored = AppSettings.fromBackupJson(settings.toBackupJson());
+
+    expect(restored.apiKey, 'kick_backup');
+    expect(restored.analyticsConsentEnabled, isTrue);
+    expect(restored.host, '192.168.1.10');
+    expect(restored.port, 4010);
+    expect(restored.customModels, ['gemini-2.5-flash', 'gemini-2.5-pro']);
+    expect(restored.loggingVerbosity, KickLogVerbosity.verbose);
+  });
+
   test('normalizes wildcard host back to loopback when LAN is disabled', () {
     final restored = AppSettings.fromStorageMap({
       'host': '0.0.0.0',

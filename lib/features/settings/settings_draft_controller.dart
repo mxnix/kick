@@ -55,6 +55,7 @@ class SettingsDraftController extends ChangeNotifier {
   Object? _saveError;
   AppSettings? _syncedSettings;
   AppSettings? _queuedSettings;
+  Completer<void>? _idleCompleter;
   Timer? _saveDebounce;
   Timer? _saveStatusHideTimer;
 
@@ -74,11 +75,23 @@ class SettingsDraftController extends ChangeNotifier {
   Object? get saveError => _saveError;
 
   void syncWithSettings(AppSettings settings) {
+    final previousSettings = _syncedSettings;
     _syncedSettings = settings;
-    if (_initialized) {
+    if (_initialized && previousSettings != null && _settingsEqual(previousSettings, settings)) {
       return;
     }
+    _saveDebounce?.cancel();
+    _queuedSettings = null;
     _hydrateFromSettings(settings);
+  }
+
+  Future<void> settlePendingSaves() async {
+    _saveDebounce?.cancel();
+    _queuedSettings = null;
+    if (_saveInFlight) {
+      _idleCompleter ??= Completer<void>();
+      await _idleCompleter!.future;
+    }
   }
 
   void setThemeMode(ThemeMode value) {
@@ -374,6 +387,11 @@ class SettingsDraftController extends ChangeNotifier {
       _presentSaveStatus(SettingsDraftSaveState.error, error: error);
     } finally {
       _saveInFlight = false;
+      final idleCompleter = _idleCompleter;
+      if (idleCompleter != null && !idleCompleter.isCompleted) {
+        idleCompleter.complete();
+      }
+      _idleCompleter = null;
     }
   }
 

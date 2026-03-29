@@ -800,6 +800,30 @@ abstract class AppLocalizations {
   /// **'Веб-поиск в Google и настройка источников'**
   String get settingsGoogleSectionSummary;
 
+  /// No description provided for @settingsBackupSectionTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Резервная копия и восстановление'**
+  String get settingsBackupSectionTitle;
+
+  /// No description provided for @settingsBackupSectionSummary.
+  ///
+  /// In ru, this message translates to:
+  /// **'Перенос настроек и аккаунтов между устройствами'**
+  String get settingsBackupSectionSummary;
+
+  /// No description provided for @settingsBackupInfoTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'В резервную копию попадут настройки, API-ключ и OAuth-токены'**
+  String get settingsBackupInfoTitle;
+
+  /// No description provided for @settingsBackupInfoSubtitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Храните файл в безопасном месте! После восстановления текущие настройки и список аккаунтов будут полностью заменены.'**
+  String get settingsBackupInfoSubtitle;
+
   /// No description provided for @hostLabel.
   ///
   /// In ru, this message translates to:
@@ -1033,6 +1057,180 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Не удалось сохранить изменения'**
   String get settingsSaveFailedStatus;
+
+  /// No description provided for @settingsBackupExportButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохранить резервную копию'**
+  String get settingsBackupExportButton;
+
+  /// No description provided for @settingsBackupImportButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Восстановить резервную копию'**
+  String get settingsBackupImportButton;
+
+  /// No description provided for @settingsBackupExportOptionsDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Экспорт резервной копии'**
+  String get settingsBackupExportOptionsDialogTitle;
+
+  /// No description provided for @settingsBackupExportDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Куда сохранить резервную копию?'**
+  String get settingsBackupExportDialogTitle;
+
+  /// No description provided for @settingsBackupImportDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выберите файл резервной копии'**
+  String get settingsBackupImportDialogTitle;
+
+  /// No description provided for @settingsBackupExportConfirmButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Продолжить'**
+  String get settingsBackupExportConfirmButton;
+
+  /// No description provided for @settingsBackupProtectWithPasswordLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Защитить файл паролем (рекомендуется)'**
+  String get settingsBackupProtectWithPasswordLabel;
+
+  /// No description provided for @settingsBackupProtectWithPasswordSubtitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Шифрует резервную копию, чтобы токены и ключи нельзя было прочитать без пароля'**
+  String get settingsBackupProtectWithPasswordSubtitle;
+
+  /// No description provided for @settingsBackupPasswordLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пароль'**
+  String get settingsBackupPasswordLabel;
+
+  /// No description provided for @settingsBackupPasswordConfirmLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подтвердите пароль'**
+  String get settingsBackupPasswordConfirmLabel;
+
+  /// No description provided for @settingsBackupPasswordHelperText.
+  ///
+  /// In ru, this message translates to:
+  /// **'Запомните этот пароль: без него зашифрованную резервную копию восстановить нельзя!'**
+  String get settingsBackupPasswordHelperText;
+
+  /// No description provided for @settingsBackupPasswordsDoNotMatch.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пароли не совпадают'**
+  String get settingsBackupPasswordsDoNotMatch;
+
+  /// No description provided for @settingsBackupUnprotectedWarning.
+  ///
+  /// In ru, this message translates to:
+  /// **'Внимание! Ваши токены и ключи будут сохранены в открытом виде. Любой, кто получит этот файл, получит доступ к вашим данным.'**
+  String get settingsBackupUnprotectedWarning;
+
+  /// No description provided for @settingsBackupRestoreDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Восстановить конфигурацию?'**
+  String get settingsBackupRestoreDialogTitle;
+
+  /// No description provided for @settingsBackupRestoreDialogMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Текущие настройки, API-ключ и список аккаунтов будут заменены данными из этой резервной копии. Это действие нельзя отменить.'**
+  String get settingsBackupRestoreDialogMessage;
+
+  /// No description provided for @settingsBackupRestoreConfirmButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Восстановить'**
+  String get settingsBackupRestoreConfirmButton;
+
+  /// No description provided for @settingsBackupPasswordDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите пароль резервной копии'**
+  String get settingsBackupPasswordDialogTitle;
+
+  /// No description provided for @settingsBackupPasswordDialogMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Файл {fileName} защищен паролем. Введите пароль, чтобы продолжить восстановление.'**
+  String settingsBackupPasswordDialogMessage(String fileName);
+
+  /// No description provided for @settingsBackupPasswordDialogInvalidMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось расшифровать файл {fileName}. Проверьте пароль и попробуйте снова.'**
+  String settingsBackupPasswordDialogInvalidMessage(String fileName);
+
+  /// No description provided for @settingsBackupPasswordConfirmButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Расшифровать'**
+  String get settingsBackupPasswordConfirmButton;
+
+  /// No description provided for @settingsBackupExportedMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Резервная копия сохранена в файл {fileName}'**
+  String settingsBackupExportedMessage(String fileName);
+
+  /// No description provided for @settingsBackupRestoredMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Конфигурация восстановлена. Аккаунтов: {accountCount}'**
+  String settingsBackupRestoredMessage(int accountCount);
+
+  /// No description provided for @settingsBackupRestoredMissingTokensMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Конфигурация восстановлена. Аккаунтов: {accountCount}, без токенов: {missingCount}'**
+  String settingsBackupRestoredMissingTokensMessage(int accountCount, int missingCount);
+
+  /// No description provided for @settingsBackupExportFailedMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось сохранить резервную копию: {error}'**
+  String settingsBackupExportFailedMessage(String error);
+
+  /// No description provided for @settingsBackupRestoreFailedMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось восстановить резервную копию: {error}'**
+  String settingsBackupRestoreFailedMessage(String error);
+
+  /// No description provided for @settingsBackupInvalidMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Файл резервной копии поврежден или имеет неподдерживаемый формат'**
+  String get settingsBackupInvalidMessage;
+
+  /// No description provided for @settingsBackupUnsupportedVersionMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Эта резервная копия создана в более новой версии KiCk и пока не поддерживается'**
+  String get settingsBackupUnsupportedVersionMessage;
+
+  /// No description provided for @settingsBackupReadFailedMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось прочитать выбранную резервную копию'**
+  String get settingsBackupReadFailedMessage;
+
+  /// No description provided for @settingsBackupPasswordRequiredMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Для этой резервной копии нужен пароль'**
+  String get settingsBackupPasswordRequiredMessage;
 
   /// No description provided for @settingsLoadErrorTitle.
   ///
