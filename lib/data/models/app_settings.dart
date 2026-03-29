@@ -180,7 +180,7 @@ class AppSettings {
       ),
       useDynamicColor: values['use_dynamic_color'] != 'false',
       hasAcknowledgedDisclaimer: values['has_acknowledged_disclaimer'] == 'true',
-      analyticsConsentEnabled: values['analytics_consent_enabled'] != 'false',
+      analyticsConsentEnabled: values['analytics_consent_enabled'] == 'true',
       host: _normalizeHost(values['host'], allowLan: allowLan),
       port: int.tryParse(values['port'] ?? '') ?? 3000,
       allowLan: allowLan,

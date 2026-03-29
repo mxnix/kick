@@ -65,4 +65,12 @@ void main() {
     expect(restored.host, '127.0.0.1');
     expect(restored.allowLan, isFalse);
   });
+
+  test('keeps analytics consent disabled when legacy settings are missing the key', () {
+    final restored = AppSettings.fromStorageMap({
+      'has_acknowledged_disclaimer': 'false',
+    }, apiKey: 'kick_test');
+
+    expect(restored.analyticsConsentEnabled, isFalse);
+  });
 }
