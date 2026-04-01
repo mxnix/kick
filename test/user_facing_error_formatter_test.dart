@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kick/core/errors/user_facing_error_formatter.dart';
+import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/l10n/kick_localizations.dart';
 import 'package:kick/proxy/gemini/gemini_code_assist_client.dart';
 
@@ -161,5 +162,21 @@ void main() {
     );
 
     expect(message, l10n.errorGoogleServiceUnavailable);
+  });
+
+  test('formats Kiro service unavailable errors with provider-specific copy', () {
+    final message = formatUserFacingError(
+      l10n,
+      GeminiGatewayException(
+        provider: AccountProvider.kiro,
+        kind: GeminiGatewayFailureKind.serviceUnavailable,
+        detail: GeminiGatewayFailureDetail.noHealthyAccountAvailable,
+        message: 'No healthy kiro account is available for `claude-sonnet-4`.',
+        statusCode: 503,
+        source: GeminiGatewayFailureSource.accountPool,
+      ),
+    );
+
+    expect(message, l10n.errorKiroServiceUnavailable);
   });
 }

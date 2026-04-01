@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kick/core/accounts/account_runtime_notice.dart';
+import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/account_pool/account_pool.dart';
 import 'package:kick/proxy/engine/proxy_isolate.dart';
@@ -21,6 +22,7 @@ void main() {
     label: 'Primary',
     email: 'user@example.com',
     projectId: 'project-1',
+    provider: AccountProvider.gemini,
     enabled: true,
     priority: 0,
     notSupportedModels: <String>[],

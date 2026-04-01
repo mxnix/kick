@@ -9,6 +9,11 @@ class ProxyRuntimeAccount {
     required this.label,
     required this.email,
     required this.projectId,
+    required this.provider,
+    this.providerRegion,
+    this.credentialSourceType,
+    this.credentialSourcePath,
+    this.providerProfileArn,
     this.googleSubjectId,
     this.avatarUrl,
     required this.enabled,
@@ -27,6 +32,11 @@ class ProxyRuntimeAccount {
   final String label;
   final String email;
   String projectId;
+  final AccountProvider provider;
+  String? providerRegion;
+  String? credentialSourceType;
+  String? credentialSourcePath;
+  String? providerProfileArn;
   final String? googleSubjectId;
   final String? avatarUrl;
   bool enabled;
@@ -48,6 +58,11 @@ class ProxyRuntimeAccount {
       label: label,
       email: email,
       projectId: projectId,
+      provider: provider,
+      providerRegion: providerRegion,
+      credentialSourceType: credentialSourceType,
+      credentialSourcePath: credentialSourcePath,
+      providerProfileArn: providerProfileArn,
       googleSubjectId: googleSubjectId,
       avatarUrl: avatarUrl,
       enabled: enabled,
@@ -68,6 +83,11 @@ class ProxyRuntimeAccount {
       'label': label,
       'email': email,
       'project_id': projectId,
+      'provider': provider.name,
+      'provider_region': providerRegion,
+      'credential_source_type': credentialSourceType,
+      'credential_source_path': credentialSourcePath,
+      'provider_profile_arn': providerProfileArn,
       'google_subject_id': googleSubjectId,
       'avatar_url': avatarUrl,
       'enabled': enabled,
@@ -89,6 +109,11 @@ class ProxyRuntimeAccount {
       label: json['label'] as String? ?? '',
       email: json['email'] as String? ?? '',
       projectId: json['project_id'] as String? ?? '',
+      provider: AccountProvider.fromValue(json['provider'] as String?),
+      providerRegion: json['provider_region'] as String?,
+      credentialSourceType: json['credential_source_type'] as String?,
+      credentialSourcePath: json['credential_source_path'] as String?,
+      providerProfileArn: json['provider_profile_arn'] as String?,
       googleSubjectId: json['google_subject_id'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       enabled: json['enabled'] as bool? ?? true,
@@ -110,19 +135,24 @@ class ProxyRuntimeAccount {
   }
 }
 
-class GeminiAccountPool {
-  GeminiAccountPool(this._accounts);
+class ProxyAccountPool {
+  ProxyAccountPool(this._accounts);
 
   final List<ProxyRuntimeAccount> _accounts;
 
   List<ProxyRuntimeAccount> get accounts => _accounts;
 
-  ProxyRuntimeAccount? select(String requestedModel, {Set<String>? excludedIds}) {
+  ProxyRuntimeAccount? select(
+    String requestedModel, {
+    required AccountProvider provider,
+    Set<String>? excludedIds,
+  }) {
     final blockedIds = excludedIds ?? const <String>{};
     final normalizedModel = _normalizeModel(requestedModel);
     final candidates = _accounts
         .where((account) {
-          return account.enabled &&
+          return account.provider == provider &&
+              account.enabled &&
               !blockedIds.contains(account.id) &&
               !account.isCoolingDown &&
               !account.notSupportedModels.map(_normalizeModel).contains(normalizedModel);
@@ -213,3 +243,5 @@ class GeminiAccountPool {
     return account.lastQuotaSnapshot?.trim().isNotEmpty == true ? 1 : 0;
   }
 }
+
+typedef GeminiAccountPool = ProxyAccountPool;

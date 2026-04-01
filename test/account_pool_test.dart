@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/account_pool/account_pool.dart';
 
@@ -18,6 +19,7 @@ void main() {
         label: 'A',
         email: 'a@example.com',
         projectId: 'proj-a',
+        provider: AccountProvider.gemini,
         enabled: true,
         priority: 5,
         notSupportedModels: [],
@@ -34,6 +36,7 @@ void main() {
         label: 'B',
         email: 'b@example.com',
         projectId: 'proj-b',
+        provider: AccountProvider.gemini,
         enabled: true,
         priority: 5,
         notSupportedModels: [],
@@ -50,6 +53,7 @@ void main() {
         label: 'C',
         email: 'c@example.com',
         projectId: 'proj-c',
+        provider: AccountProvider.gemini,
         enabled: true,
         priority: 1,
         notSupportedModels: [],
@@ -63,7 +67,7 @@ void main() {
       ),
     ]);
 
-    final selected = pool.select('gemini-2.5-flash');
+    final selected = pool.select('gemini-2.5-flash', provider: AccountProvider.gemini);
 
     expect(selected?.id, 'b');
   });
@@ -75,6 +79,7 @@ void main() {
         label: 'Alias blocked',
         email: 'alias@example.com',
         projectId: 'proj-alias',
+        provider: AccountProvider.gemini,
         enabled: true,
         priority: 5,
         notSupportedModels: ['gemini-3-flash-preview'],
@@ -88,7 +93,7 @@ void main() {
       ),
     ]);
 
-    expect(pool.select('gemini-3-flash'), isNull);
+    expect(pool.select('gemini-3-flash', provider: AccountProvider.gemini), isNull);
   });
 
   test('prefers account without recent quota warning inside same priority tier', () {
@@ -98,6 +103,7 @@ void main() {
         label: 'Quota hit',
         email: 'quota@example.com',
         projectId: 'proj-quota',
+        provider: AccountProvider.gemini,
         enabled: true,
         priority: 5,
         notSupportedModels: [],
@@ -114,6 +120,7 @@ void main() {
         label: 'Healthy',
         email: 'healthy@example.com',
         projectId: 'proj-healthy',
+        provider: AccountProvider.gemini,
         enabled: true,
         priority: 5,
         notSupportedModels: [],
@@ -127,7 +134,7 @@ void main() {
       ),
     ]);
 
-    final selected = pool.select('gemini-2.5-flash');
+    final selected = pool.select('gemini-2.5-flash', provider: AccountProvider.gemini);
 
     expect(selected?.id, 'healthy');
   });
@@ -138,6 +145,7 @@ void main() {
       label: 'Quota hit',
       email: 'quota@example.com',
       projectId: 'proj-quota',
+      provider: AccountProvider.gemini,
       enabled: true,
       priority: 5,
       notSupportedModels: [],

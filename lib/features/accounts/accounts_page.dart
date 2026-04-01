@@ -10,6 +10,8 @@ import '../../core/errors/gemini_error_actions.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../data/models/account_profile.dart';
 import '../../l10n/kick_localizations.dart';
+import '../../proxy/kiro/kiro_auth_source.dart';
+import '../../proxy/kiro/kiro_link_auth_service.dart';
 import '../app_state/providers.dart';
 import '../shared/kick_surfaces.dart';
 import 'account_editor_dialog.dart';
@@ -109,9 +111,21 @@ class AccountsPage extends ConsumerWidget {
   Future<void> _authenticateNewAccount(BuildContext context, WidgetRef ref) async {
     final draft = await showAccountEditorDialog(
       context,
-      title: context.l10n.connectGoogleAccountTitle,
+      title: context.l10n.connectAccountDialogTitle,
     );
     if (!context.mounted || draft == null) {
+      return;
+    }
+    if (draft.provider == AccountProvider.kiro) {
+      await _connectKiroAccount(
+        context,
+        ref,
+        label: draft.label,
+        kiroBuilderIdStartUrl: draft.kiroBuilderIdStartUrl,
+        kiroRegion: draft.kiroRegion,
+        priority: draft.priority,
+        notSupportedModels: draft.notSupportedModels,
+      );
       return;
     }
     await _connectGoogleAccount(
@@ -196,7 +210,7 @@ class _AccountCard extends ConsumerWidget {
                     Text(account.label, style: textTheme.titleLarge),
                     const SizedBox(height: 4),
                     Text(
-                      account.email,
+                      account.displayIdentity,
                       style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
                     ),
                   ],
@@ -218,11 +232,22 @@ class _AccountCard extends ConsumerWidget {
             runSpacing: 8,
             children: [
               KickBadge(
-                label: account.projectId.trim().isEmpty
-                    ? '${l10n.projectIdLabel}: auto'
-                    : l10n.projectIdChip(account.projectId),
-                leading: const Icon(Icons.badge_rounded),
+                label: account.provider == AccountProvider.kiro
+                    ? l10n.accountProviderKiro
+                    : l10n.accountProviderGemini,
+                leading: Icon(
+                  account.provider == AccountProvider.kiro
+                      ? Icons.devices_rounded
+                      : Icons.auto_awesome_rounded,
+                ),
               ),
+              if (account.provider != AccountProvider.kiro)
+                KickBadge(
+                  label: account.projectId.trim().isEmpty
+                      ? '${l10n.projectIdLabel}: auto'
+                      : l10n.projectIdChip(account.projectId),
+                  leading: const Icon(Icons.badge_rounded),
+                ),
               KickBadge(
                 label: l10n.priorityChip(priorityLabel),
                 leading: const Icon(Icons.low_priority_rounded),
@@ -281,6 +306,19 @@ class _AccountCard extends ConsumerWidget {
                   if (!context.mounted || draft == null) {
                     return;
                   }
+                  if (account.provider == AccountProvider.kiro) {
+                    await _connectKiroAccount(
+                      context,
+                      ref,
+                      existing: account,
+                      label: draft.label.isEmpty ? account.label : draft.label,
+                      kiroBuilderIdStartUrl: draft.kiroBuilderIdStartUrl,
+                      kiroRegion: draft.kiroRegion,
+                      priority: draft.priority,
+                      notSupportedModels: draft.notSupportedModels,
+                    );
+                    return;
+                  }
                   await ref
                       .read(accountsControllerProvider.notifier)
                       .saveAccount(
@@ -293,13 +331,15 @@ class _AccountCard extends ConsumerWidget {
                       );
                 },
               ),
-              _AccountActionButton(
-                icon: Icons.query_stats_rounded,
-                label: l10n.accountUsageOpenTooltip,
-                onPressed: () =>
-                    context.pushNamed('account-usage', pathParameters: {'accountId': account.id}),
-              ),
+              if (account.supportsUsageDiagnostics)
+                _AccountActionButton(
+                  icon: Icons.query_stats_rounded,
+                  label: l10n.accountUsageOpenTooltip,
+                  onPressed: () =>
+                      context.pushNamed('account-usage', pathParameters: {'accountId': account.id}),
+                ),
               _AccountMoreActionsButton(
+                account: account,
                 label: l10n.moreButton,
                 resetLabel: resetLabel,
                 onSelected: (action) {
@@ -449,6 +489,70 @@ Future<void> _connectGoogleAccount(
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(content: Text(formatUserFacingError(context.l10n, error))));
   }
+}
+
+Future<void> _connectKiroAccount(
+  BuildContext context,
+  WidgetRef ref, {
+  required String label,
+  required String kiroBuilderIdStartUrl,
+  required String kiroRegion,
+  required int priority,
+  required List<String> notSupportedModels,
+  AccountProfile? existing,
+}) async {
+  try {
+    final resolvedCredentialSourcePath = await _authorizeKiroByLink(
+      context,
+      ref,
+      startUrl: kiroBuilderIdStartUrl,
+      region: kiroRegion,
+    );
+    if (resolvedCredentialSourcePath == null) {
+      return;
+    }
+
+    await ref
+        .read(accountsControllerProvider.notifier)
+        .connectKiroAccount(
+          existing: existing,
+          label: label,
+          credentialSourcePath: resolvedCredentialSourcePath,
+          priority: priority,
+          notSupportedModels: notSupportedModels,
+        );
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(formatUserFacingError(context.l10n, error))));
+  }
+}
+
+Future<String?> _authorizeKiroByLink(
+  BuildContext context,
+  WidgetRef ref, {
+  required String startUrl,
+  required String region,
+}) async {
+  final service = ref.read(kiroLinkAuthServiceProvider);
+  final request = await service.startBuilderIdAuthorization(
+    startUrl: startUrl.trim().isEmpty ? defaultKiroBuilderIdStartUrl : startUrl.trim(),
+    region: region.trim().isEmpty ? defaultKiroRegion : region.trim(),
+  );
+  if (!context.mounted) {
+    return null;
+  }
+
+  final snapshot = await showDialog<KiroAuthSourceSnapshot>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => _KiroLinkAuthDialog(request: request, service: service),
+  );
+  return snapshot?.sourcePath;
 }
 
 Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfile account) async {
@@ -611,6 +715,188 @@ Future<void> _openErrorAction(BuildContext context, String url) async {
   }
 }
 
+class _KiroLinkAuthDialog extends StatefulWidget {
+  const _KiroLinkAuthDialog({required this.request, required this.service});
+
+  final KiroLinkAuthRequest request;
+  final KiroLinkAuthService service;
+
+  @override
+  State<_KiroLinkAuthDialog> createState() => _KiroLinkAuthDialogState();
+}
+
+class _KiroLinkAuthDialogState extends State<_KiroLinkAuthDialog> {
+  Object? _error;
+  bool _cancelled = false;
+  bool _openingLink = false;
+  bool _linkOpenedOnce = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_openLink());
+    unawaited(_waitForAuthorization());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        icon: Icon(_error == null ? Icons.link_rounded : Icons.error_outline_rounded),
+        title: Text(l10n.kiroLinkAuthDialogTitle),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _error == null
+                    ? l10n.kiroLinkAuthDialogMessage
+                    : formatUserFacingError(l10n, _error!),
+              ),
+              const SizedBox(height: 16),
+              _KiroAuthFactRow(
+                icon: Icons.password_rounded,
+                label: l10n.kiroLinkAuthUserCodeLabel,
+                value: widget.request.userCode,
+              ),
+              const SizedBox(height: 8),
+              _KiroAuthFactRow(
+                icon: Icons.public_rounded,
+                label: l10n.kiroLinkAuthVerificationUrlLabel,
+                value: widget.request.verificationUriComplete,
+              ),
+              if (_error == null) ...[
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2.2),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(l10n.kiroLinkAuthWaitingMessage)),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _openingLink ? null : _openLink,
+            child: Text(
+              _linkOpenedOnce
+                  ? l10n.kiroLinkAuthOpenLinkAgainButton
+                  : l10n.kiroLinkAuthOpenLinkButton,
+            ),
+          ),
+          FilledButton(
+            onPressed: _dismiss,
+            child: Text(_error == null ? l10n.cancelButton : l10n.continueButton),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _waitForAuthorization() async {
+    try {
+      final snapshot = await widget.service.completeBuilderIdAuthorization(
+        widget.request,
+        isCancelled: () => _cancelled,
+      );
+      if (!mounted || _cancelled) {
+        return;
+      }
+      Navigator.of(context).pop(snapshot);
+    } catch (error) {
+      if (!mounted || _cancelled) {
+        return;
+      }
+      setState(() => _error = error);
+    }
+  }
+
+  Future<void> _openLink() async {
+    setState(() => _openingLink = true);
+    try {
+      final opened = await launchUrl(
+        Uri.parse(widget.request.verificationUriComplete),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() => _linkOpenedOnce = _linkOpenedOnce || opened);
+      if (!opened) {
+        _showOpenLinkFailedSnackBar();
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showOpenLinkFailedSnackBar();
+    } finally {
+      if (mounted) {
+        setState(() => _openingLink = false);
+      }
+    }
+  }
+
+  void _showOpenLinkFailedSnackBar() {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(context.l10n.kiroLinkAuthOpenLinkFailedMessage)));
+  }
+
+  void _dismiss() {
+    _cancelled = true;
+    Navigator.of(context).pop();
+  }
+}
+
+class _KiroAuthFactRow extends StatelessWidget {
+  const _KiroAuthFactRow({required this.icon, required this.label, required this.value});
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 2),
+              SelectableText(
+                value,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _AccountActionButton extends StatelessWidget {
   const _AccountActionButton({required this.icon, required this.label, required this.onPressed});
 
@@ -639,11 +925,13 @@ class _AccountActionButton extends StatelessWidget {
 
 class _AccountMoreActionsButton extends StatelessWidget {
   const _AccountMoreActionsButton({
+    required this.account,
     required this.label,
     required this.resetLabel,
     required this.onSelected,
   });
 
+  final AccountProfile account;
   final String label;
   final String resetLabel;
   final ValueChanged<_AccountMenuAction> onSelected;
@@ -665,16 +953,18 @@ class _AccountMoreActionsButton extends StatelessWidget {
         ),
       ),
       menuChildren: [
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.manage_accounts_rounded, size: 18),
-          onPressed: () => onSelected(_AccountMenuAction.reauthorize),
-          child: Text(l10n.reauthorizeButton),
-        ),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.fact_check_rounded, size: 18),
-          onPressed: () => onSelected(_AccountMenuAction.diagnose),
-          child: Text(l10n.accountProjectCheckButton),
-        ),
+        if (account.provider == AccountProvider.gemini)
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.manage_accounts_rounded, size: 18),
+            onPressed: () => onSelected(_AccountMenuAction.reauthorize),
+            child: Text(l10n.reauthorizeButton),
+          ),
+        if (account.provider == AccountProvider.gemini)
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.fact_check_rounded, size: 18),
+            onPressed: () => onSelected(_AccountMenuAction.diagnose),
+            child: Text(l10n.accountProjectCheckButton),
+          ),
         MenuItemButton(
           leadingIcon: const Icon(Icons.restart_alt_rounded, size: 18),
           onPressed: () => onSelected(_AccountMenuAction.reset),

@@ -79,9 +79,9 @@ void main() {
     expect(accounts, hasLength(1));
 
     final updated = accounts.single;
-    expect(updated.notSupportedModels, ['manual-model']);
+    expect(updated.notSupportedModels, ['google/manual-model']);
     expect(updated.runtimeNotSupportedModels, isEmpty);
-    expect(updated.effectiveNotSupportedModels, ['manual-model']);
+    expect(updated.effectiveNotSupportedModels, ['google/manual-model']);
     expect(updated.errorCount, 0);
     expect(updated.cooldownUntil, isNull);
     expect(updated.lastQuotaSnapshot, isNull);

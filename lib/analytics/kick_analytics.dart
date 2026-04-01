@@ -469,7 +469,14 @@ class KickAnalytics {
 
   @visibleForTesting
   static String modelFamily(String model) {
+    final trimmed = model.trim().toLowerCase();
+    if (trimmed.startsWith('kiro/') || trimmed.startsWith('kiro:')) {
+      return 'kiro';
+    }
     final normalized = ModelCatalog.normalizeModel(model).toLowerCase();
+    if (normalized.startsWith('claude-') || normalized == 'auto') {
+      return 'kiro';
+    }
     if (normalized.contains('gemini-3')) {
       return 'gemini-3';
     }

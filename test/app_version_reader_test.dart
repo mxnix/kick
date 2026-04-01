@@ -41,12 +41,8 @@ Future<PackageInfo> _packageInfo_1_0_1() async => PackageInfo(
   buildNumber: '1',
 );
 
-Future<PackageInfo> _packageInfoEmpty() async => PackageInfo(
-  appName: 'KiCk',
-  packageName: 'com.example.kick',
-  version: '',
-  buildNumber: '1',
-);
+Future<PackageInfo> _packageInfoEmpty() async =>
+    PackageInfo(appName: 'KiCk', packageName: 'com.example.kick', version: '', buildNumber: '1');
 
 Future<PackageInfo> _throwingPackageInfo() async {
   throw StateError('Package metadata is unavailable.');

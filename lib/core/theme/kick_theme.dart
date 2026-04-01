@@ -401,6 +401,8 @@ class KickThemeData {
           color: scheme.onSurfaceVariant.withValues(alpha: 0.84),
         ),
         helperStyle: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+        helperMaxLines: 4,
+        errorMaxLines: 4,
         labelStyle: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
         prefixIconColor: scheme.onSurfaceVariant,
         suffixIconColor: scheme.onSurfaceVariant,

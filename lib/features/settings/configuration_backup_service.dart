@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../data/models/account_profile.dart';
 import '../../data/models/app_settings.dart';
 import '../../data/models/oauth_tokens.dart';
+import '../../proxy/kiro/kiro_auth_source.dart';
 
 typedef ConfigurationBackupDirectoryResolver = Future<Directory> Function();
 typedef ConfigurationBackupReadTokens = Future<OAuthTokens?> Function(String tokenRef);
@@ -126,6 +127,7 @@ class ConfigurationBackupService {
     ConfigurationBackupSaveFileCallback? saveFileCallback,
     ConfigurationBackupPickFileCallback? pickFileCallback,
     bool? useNativeSaveDialog,
+    Future<Directory> Function()? supportDirectoryProvider,
   }) : _readTokens = readTokens,
        _readCurrentAccounts = readCurrentAccounts,
        _readCurrentSettings = readCurrentSettings,
@@ -136,7 +138,8 @@ class ConfigurationBackupService {
        _exportDirectoryResolver = exportDirectoryResolver ?? _defaultExportDirectory,
        _saveFileCallback = saveFileCallback ?? _defaultSaveFile,
        _pickFileCallback = pickFileCallback ?? _defaultPickFile,
-       _useNativeSaveDialog = useNativeSaveDialog ?? (Platform.isAndroid || Platform.isWindows);
+       _useNativeSaveDialog = useNativeSaveDialog ?? (Platform.isAndroid || Platform.isWindows),
+       _supportDirectoryProvider = supportDirectoryProvider ?? getApplicationSupportDirectory;
 
   final ConfigurationBackupReadTokens _readTokens;
   final ConfigurationBackupReadAccounts _readCurrentAccounts;
@@ -149,6 +152,7 @@ class ConfigurationBackupService {
   final ConfigurationBackupSaveFileCallback _saveFileCallback;
   final ConfigurationBackupPickFileCallback _pickFileCallback;
   final bool _useNativeSaveDialog;
+  final Future<Directory> Function() _supportDirectoryProvider;
 
   Future<ConfigurationBackupExportResult?> export({
     required AppSettings settings,
@@ -160,6 +164,7 @@ class ConfigurationBackupService {
       settings: settings,
       accounts: accounts,
       readTokens: _readTokens,
+      readKiroManagedCredentialState: _readKiroManagedCredentialState,
     );
     final plainContents = _encodeDocument(document);
     final contents = options.protectWithPassword
@@ -181,7 +186,9 @@ class ConfigurationBackupService {
         fileName: _extractFileName(savedLocation, fallback: fileName),
         contents: contents,
         accountCount: document.accounts.length,
-        accountsWithTokens: document.accounts.where((account) => account.tokens != null).length,
+        accountsWithTokens: document.accounts
+            .where((account) => account.profile.usesSecretStoreTokens && account.tokens != null)
+            .length,
         protectedWithPassword: options.protectWithPassword,
       );
     }
@@ -216,12 +223,23 @@ class ConfigurationBackupService {
     final currentSettings = await _readCurrentSettings();
     final existingAccounts = await _readCurrentAccounts();
     final previousTokensByRef = await _snapshotTokens(existingAccounts);
-    final restoredAccounts = document.accounts
+    final preparedRestore = await _prepareAccountsForRestore(document.accounts);
+    final restoredEntries = preparedRestore.accounts;
+    final restoredAccounts = restoredEntries
         .map((entry) => entry.profile)
         .toList(growable: false);
+    final restoredCredentialSourcePaths = {
+      for (final account in restoredAccounts)
+        if (account.provider == AccountProvider.kiro &&
+            account.credentialSourcePath?.trim().isNotEmpty == true)
+          account.credentialSourcePath!.trim(),
+    };
 
     final importedTokenRefs = <String>{};
-    for (final entry in document.accounts) {
+    for (final entry in restoredEntries) {
+      if (!entry.profile.usesSecretStoreTokens) {
+        continue;
+      }
       final tokenRef = entry.profile.tokenRef.trim();
       if (tokenRef.isNotEmpty) {
         importedTokenRefs.add(tokenRef);
@@ -232,7 +250,10 @@ class ConfigurationBackupService {
       await _replaceAccounts(restoredAccounts);
 
       var accountsWithTokens = 0;
-      for (final entry in document.accounts) {
+      for (final entry in restoredEntries) {
+        if (!entry.profile.usesSecretStoreTokens) {
+          continue;
+        }
         final tokenRef = entry.profile.tokenRef.trim();
         if (tokenRef.isEmpty) {
           continue;
@@ -246,6 +267,19 @@ class ConfigurationBackupService {
       }
 
       for (final account in existingAccounts) {
+        if (!account.usesSecretStoreTokens) {
+          final sourcePath = account.credentialSourcePath?.trim();
+          if (sourcePath == null ||
+              sourcePath.isEmpty ||
+              restoredCredentialSourcePaths.contains(sourcePath)) {
+            continue;
+          }
+          await deleteManagedKiroCredentialSource(
+            sourcePath,
+            supportDirectoryProvider: _supportDirectoryProvider,
+          );
+          continue;
+        }
         final tokenRef = account.tokenRef.trim();
         if (tokenRef.isEmpty || importedTokenRefs.contains(tokenRef)) {
           continue;
@@ -259,7 +293,9 @@ class ConfigurationBackupService {
         fileName: pickedFile.fileName,
         accountCount: document.accounts.length,
         accountsWithTokens: accountsWithTokens,
-        accountsWithoutTokens: document.accounts.length - accountsWithTokens,
+        accountsWithoutTokens: document.accounts
+            .where((entry) => entry.profile.usesSecretStoreTokens && entry.tokens == null)
+            .length,
         settings: document.settings,
         wasPasswordProtected: decodedPayload.wasPasswordProtected,
       );
@@ -269,6 +305,7 @@ class ConfigurationBackupService {
         accounts: existingAccounts,
         tokensByRef: previousTokensByRef,
         importedTokenRefs: importedTokenRefs,
+        createdManagedKiroSourcePaths: preparedRestore.createdManagedKiroSourcePaths,
       );
       Error.throwWithStackTrace(error, stackTrace);
     }
@@ -417,7 +454,9 @@ class ConfigurationBackupService {
       fileName: fileName,
       contents: contents,
       accountCount: document.accounts.length,
-      accountsWithTokens: document.accounts.where((account) => account.tokens != null).length,
+      accountsWithTokens: document.accounts
+          .where((account) => account.profile.usesSecretStoreTokens && account.tokens != null)
+          .length,
       protectedWithPassword: protectedWithPassword,
       file: file,
     );
@@ -426,6 +465,9 @@ class ConfigurationBackupService {
   Future<Map<String, OAuthTokens?>> _snapshotTokens(List<AccountProfile> accounts) async {
     final tokensByRef = <String, OAuthTokens?>{};
     for (final account in accounts) {
+      if (!account.usesSecretStoreTokens) {
+        continue;
+      }
       final tokenRef = account.tokenRef.trim();
       if (tokenRef.isEmpty || tokensByRef.containsKey(tokenRef)) {
         continue;
@@ -435,11 +477,72 @@ class ConfigurationBackupService {
     return tokensByRef;
   }
 
+  Future<_KiroManagedCredentialBackupState?> _readKiroManagedCredentialState(
+    AccountProfile account,
+  ) async {
+    if (account.provider != AccountProvider.kiro ||
+        account.credentialSourceType != builderIdKiroCredentialSourceType) {
+      return null;
+    }
+
+    if (!await isManagedKiroCredentialSourcePath(
+      account.credentialSourcePath,
+      supportDirectoryProvider: _supportDirectoryProvider,
+    )) {
+      return null;
+    }
+
+    final snapshot = await loadKiroAuthSource(sourcePath: account.credentialSourcePath);
+    if (snapshot == null) {
+      return null;
+    }
+    return _KiroManagedCredentialBackupState.fromSnapshot(snapshot);
+  }
+
+  Future<_PreparedRestoreAccounts> _prepareAccountsForRestore(
+    List<_ConfigurationBackupAccount> accounts,
+  ) async {
+    final restoredAccounts = <_ConfigurationBackupAccount>[];
+    final createdManagedKiroSourcePaths = <String>[];
+
+    for (final entry in accounts) {
+      final providerState = entry.kiroManagedCredentialState;
+      if (entry.profile.provider != AccountProvider.kiro || providerState == null) {
+        restoredAccounts.add(entry);
+        continue;
+      }
+
+      final restoredSnapshot = await persistKiroAuthSourceSnapshot(
+        providerState.toSnapshot(),
+        supportDirectoryProvider: _supportDirectoryProvider,
+      );
+      createdManagedKiroSourcePaths.add(restoredSnapshot.sourcePath);
+      restoredAccounts.add(
+        _ConfigurationBackupAccount(
+          profile: entry.profile.copyWith(
+            credentialSourcePath: restoredSnapshot.sourcePath,
+            credentialSourceType: restoredSnapshot.sourceType,
+            providerRegion: restoredSnapshot.effectiveRegion,
+            providerProfileArn: restoredSnapshot.profileArn ?? entry.profile.providerProfileArn,
+          ),
+          tokens: entry.tokens,
+          kiroManagedCredentialState: providerState,
+        ),
+      );
+    }
+
+    return _PreparedRestoreAccounts(
+      accounts: restoredAccounts,
+      createdManagedKiroSourcePaths: createdManagedKiroSourcePaths,
+    );
+  }
+
   Future<void> _rollbackRestore({
     required AppSettings? settings,
     required List<AccountProfile> accounts,
     required Map<String, OAuthTokens?> tokensByRef,
     required Set<String> importedTokenRefs,
+    required List<String> createdManagedKiroSourcePaths,
   }) async {
     try {
       await _replaceAccounts(accounts);
@@ -456,6 +559,17 @@ class ConfigurationBackupService {
         } else {
           await _writeTokens(tokenRef, tokens);
         }
+      } catch (_) {
+        // Best-effort rollback; preserve the original restore error.
+      }
+    }
+
+    for (final sourcePath in createdManagedKiroSourcePaths) {
+      try {
+        await deleteManagedKiroCredentialSource(
+          sourcePath,
+          supportDirectoryProvider: _supportDirectoryProvider,
+        );
       } catch (_) {
         // Best-effort rollback; preserve the original restore error.
       }
@@ -567,11 +681,17 @@ class _ConfigurationBackupDocument {
     required AppSettings settings,
     required List<AccountProfile> accounts,
     required ConfigurationBackupReadTokens readTokens,
+    required Future<_KiroManagedCredentialBackupState?> Function(AccountProfile account)
+    readKiroManagedCredentialState,
   }) async {
     final exportedAccounts = <_ConfigurationBackupAccount>[];
     for (final account in accounts) {
       exportedAccounts.add(
-        _ConfigurationBackupAccount(profile: account, tokens: await readTokens(account.tokenRef)),
+        _ConfigurationBackupAccount(
+          profile: account,
+          tokens: account.usesSecretStoreTokens ? await readTokens(account.tokenRef) : null,
+          kiroManagedCredentialState: await readKiroManagedCredentialState(account),
+        ),
       );
     }
 
@@ -624,14 +744,30 @@ class _ConfigurationBackupDocument {
   }
 }
 
+class _PreparedRestoreAccounts {
+  const _PreparedRestoreAccounts({
+    required this.accounts,
+    required this.createdManagedKiroSourcePaths,
+  });
+
+  final List<_ConfigurationBackupAccount> accounts;
+  final List<String> createdManagedKiroSourcePaths;
+}
+
 class _ConfigurationBackupAccount {
-  const _ConfigurationBackupAccount({required this.profile, required this.tokens});
+  const _ConfigurationBackupAccount({
+    required this.profile,
+    required this.tokens,
+    this.kiroManagedCredentialState,
+  });
 
   final AccountProfile profile;
   final OAuthTokens? tokens;
+  final _KiroManagedCredentialBackupState? kiroManagedCredentialState;
 
   factory _ConfigurationBackupAccount.fromJson(Map<String, Object?> json) {
     final tokensJson = json['tokens'];
+    final providerStateJson = json['provider_state'];
     return _ConfigurationBackupAccount(
       profile: AccountProfile.fromBackupJson(json),
       tokens: tokensJson is Map<String, Object?>
@@ -639,10 +775,127 @@ class _ConfigurationBackupAccount {
           : tokensJson is Map
           ? OAuthTokens.fromJson(tokensJson.cast<String, Object?>())
           : null,
+      kiroManagedCredentialState: providerStateJson is Map<String, Object?>
+          ? _KiroManagedCredentialBackupState.fromJson(providerStateJson)
+          : providerStateJson is Map
+          ? _KiroManagedCredentialBackupState.fromJson(providerStateJson.cast<String, Object?>())
+          : null,
     );
   }
 
-  Map<String, Object?> toJson() => profile.toBackupJson(tokens: tokens);
+  Map<String, Object?> toJson() {
+    return {
+      ...profile.toBackupJson(tokens: tokens),
+      if (kiroManagedCredentialState != null) 'provider_state': kiroManagedCredentialState!.toJson(),
+    };
+  }
+}
+
+class _KiroManagedCredentialBackupState {
+  const _KiroManagedCredentialBackupState({
+    required this.sourceType,
+    required this.accessToken,
+    required this.refreshToken,
+    required this.expiry,
+    this.region,
+    this.profileArn,
+    this.authMethod,
+    this.provider,
+    this.clientId,
+    this.clientSecret,
+    this.startUrl,
+  });
+
+  factory _KiroManagedCredentialBackupState.fromSnapshot(KiroAuthSourceSnapshot snapshot) {
+    return _KiroManagedCredentialBackupState(
+      sourceType: snapshot.sourceType,
+      accessToken: snapshot.accessToken,
+      refreshToken: snapshot.refreshToken,
+      expiry: snapshot.expiry,
+      region: snapshot.region,
+      profileArn: snapshot.profileArn,
+      authMethod: snapshot.authMethod,
+      provider: snapshot.provider,
+      clientId: snapshot.clientId,
+      clientSecret: snapshot.clientSecret,
+      startUrl: snapshot.startUrl,
+    );
+  }
+
+  factory _KiroManagedCredentialBackupState.fromJson(Map<String, Object?> json) {
+    final accessToken = _readString(json['access_token']);
+    final refreshToken = _readString(json['refresh_token']);
+    final expiryText = _readString(json['expires_at']);
+    final expiry = expiryText == null ? null : DateTime.tryParse(expiryText);
+    final sourceType = _readString(json['source_type']);
+    if ((json['kind'] as String? ?? '') != 'kiro_auth_source' ||
+        accessToken == null ||
+        refreshToken == null ||
+        expiry == null ||
+        sourceType == null) {
+      throw const ConfigurationBackupException(ConfigurationBackupErrorCode.invalidFormat);
+    }
+
+    return _KiroManagedCredentialBackupState(
+      sourceType: sourceType,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      expiry: expiry,
+      region: _readString(json['region']),
+      profileArn: _readString(json['profile_arn']),
+      authMethod: _readString(json['auth_method']),
+      provider: _readString(json['provider']),
+      clientId: _readString(json['client_id']),
+      clientSecret: _readString(json['client_secret']),
+      startUrl: _readString(json['start_url']),
+    );
+  }
+
+  final String sourceType;
+  final String accessToken;
+  final String refreshToken;
+  final DateTime expiry;
+  final String? region;
+  final String? profileArn;
+  final String? authMethod;
+  final String? provider;
+  final String? clientId;
+  final String? clientSecret;
+  final String? startUrl;
+
+  Map<String, Object?> toJson() {
+    return {
+      'kind': 'kiro_auth_source',
+      'source_type': sourceType,
+      'access_token': accessToken,
+      'refresh_token': refreshToken,
+      'expires_at': expiry.toUtc().toIso8601String(),
+      'region': region,
+      'profile_arn': profileArn,
+      'auth_method': authMethod,
+      'provider': provider,
+      'client_id': clientId,
+      'client_secret': clientSecret,
+      'start_url': startUrl,
+    };
+  }
+
+  KiroAuthSourceSnapshot toSnapshot() {
+    return KiroAuthSourceSnapshot(
+      sourcePath: '',
+      sourceType: sourceType,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      expiry: expiry,
+      region: region,
+      profileArn: profileArn,
+      authMethod: authMethod,
+      provider: provider,
+      clientId: clientId,
+      clientSecret: clientSecret,
+      startUrl: startUrl,
+    );
+  }
 }
 
 class _EncryptedConfigurationBackupEnvelope {

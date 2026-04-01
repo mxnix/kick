@@ -20,6 +20,8 @@ import '../../proxy/gemini/gemini_oauth_service.dart';
 import '../../proxy/gemini/gemini_project_diagnostics_service.dart';
 import '../../proxy/gemini/gemini_usage_models.dart';
 import '../../proxy/gemini/gemini_usage_service.dart';
+import '../../proxy/kiro/kiro_auth_source.dart';
+import '../../proxy/kiro/kiro_link_auth_service.dart';
 import '../logs/log_export_service.dart';
 import '../settings/app_update_checker.dart';
 import '../settings/configuration_backup_service.dart';
@@ -85,6 +87,12 @@ final geminiProjectDiagnosticsServiceProvider = Provider<GeminiProjectDiagnostic
   return service;
 });
 
+final kiroLinkAuthServiceProvider = Provider<KiroLinkAuthService>((ref) {
+  final service = KiroLinkAuthService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
 final accountUsageQueryProvider = FutureProvider.autoDispose.family<GeminiUsageSnapshot, String>((
   ref,
   accountId,
@@ -104,6 +112,9 @@ final accountUsageQueryProvider = FutureProvider.autoDispose.family<GeminiUsageS
     }
     if (account == null) {
       throw StateError('Account not found.');
+    }
+    if (!account.supportsUsageDiagnostics) {
+      throw StateError('Usage details are not available for this provider.');
     }
 
     return await ref.watch(geminiUsageServiceProvider).fetchUsage(account);
@@ -231,6 +242,85 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
     }
   }
 
+  Future<void> connectKiroAccount({
+    String? label,
+    String? credentialSourcePath,
+    int priority = defaultAccountPriority,
+    List<String> notSupportedModels = const [],
+    AccountProfile? existing,
+  }) async {
+    final bootstrap = ref.read(appBootstrapProvider);
+    final reauthorization = existing != null;
+    unawaited(bootstrap.analytics.trackAccountConnectStarted(reauthorization: reauthorization));
+    try {
+      var source = await loadKiroAuthSource(sourcePath: credentialSourcePath);
+      if (source == null) {
+        throw StateError('Kiro credentials were not found at the configured path.');
+      }
+
+      final existingManagedPath = existing?.credentialSourcePath?.trim();
+      if (source.sourceType == builderIdKiroCredentialSourceType &&
+          existingManagedPath != null &&
+          existingManagedPath.isNotEmpty &&
+          existingManagedPath != source.sourcePath &&
+          await isManagedKiroCredentialSourcePath(existingManagedPath)) {
+        final previousSourcePath = source.sourcePath;
+        source = await persistKiroAuthSourceSnapshot(source, outputPath: existingManagedPath);
+        if (previousSourcePath.trim() != source.sourcePath.trim()) {
+          try {
+            await deleteManagedKiroCredentialSource(previousSourcePath);
+          } catch (_) {
+            // Best-effort cleanup for the temporary Builder ID snapshot.
+          }
+        }
+      }
+
+      final resolvedLabel = label?.trim().isNotEmpty == true
+          ? label!.trim()
+          : source.displayIdentity;
+      final profile = AccountProfile(
+        id: existing?.id ?? _uuid.v4(),
+        label: resolvedLabel,
+        email: source.displayIdentity,
+        projectId: '',
+        provider: AccountProvider.kiro,
+        providerRegion: source.effectiveRegion,
+        credentialSourceType: source.sourceType,
+        credentialSourcePath: source.sourcePath,
+        providerProfileArn: source.profileArn ?? existing?.providerProfileArn,
+        enabled: true,
+        priority: normalizeAccountPriority(priority),
+        notSupportedModels: notSupportedModels,
+        runtimeNotSupportedModels: existing?.runtimeNotSupportedModels ?? const <String>[],
+        lastUsedAt: existing?.lastUsedAt,
+        usageCount: existing?.usageCount ?? 0,
+        errorCount: existing?.errorCount ?? 0,
+        cooldownUntil: existing?.cooldownUntil,
+        lastQuotaSnapshot: existing?.lastQuotaSnapshot,
+        tokenRef: existing?.tokenRef ?? 'kick.kiro.${_uuid.v4()}',
+      );
+      await bootstrap.accountsRepository.upsert(profile);
+      await refreshState();
+      final enabledAccounts = (state.asData?.value ?? const <AccountProfile>[])
+          .where((account) => account.enabled)
+          .length;
+      unawaited(
+        bootstrap.analytics.trackAccountConnectSucceeded(
+          reauthorization: reauthorization,
+          enabledAccounts: enabledAccounts,
+        ),
+      );
+    } catch (error) {
+      unawaited(
+        bootstrap.analytics.trackAccountConnectFailed(
+          reauthorization: reauthorization,
+          errorKind: _analyticsErrorKind(error),
+        ),
+      );
+      rethrow;
+    }
+  }
+
   Future<void> saveAccount(AccountProfile account) async {
     final bootstrap = ref.read(appBootstrapProvider);
     await bootstrap.accountsRepository.upsert(
@@ -242,7 +332,11 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
   Future<void> deleteAccount(AccountProfile account) async {
     final bootstrap = ref.read(appBootstrapProvider);
     await bootstrap.accountsRepository.delete(account.id);
-    await bootstrap.secretStore.deleteOAuthTokens(account.tokenRef);
+    if (account.usesSecretStoreTokens) {
+      await bootstrap.secretStore.deleteOAuthTokens(account.tokenRef);
+    } else {
+      await deleteManagedKiroCredentialSource(account.credentialSourcePath);
+    }
     await refreshState();
   }
 

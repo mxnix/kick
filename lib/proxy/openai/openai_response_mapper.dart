@@ -181,11 +181,10 @@ class OpenAiResponseMapper {
             'finish_reason': extracted.toolCalls.isNotEmpty ? 'tool_calls' : extracted.finishReason,
           },
         ],
-        'usage':
-            _extractResponsePayload(
-              payload,
-              renderGoogleGroundingInMessage: renderGoogleGroundingInMessage,
-            ).usage,
+        'usage': _extractResponsePayload(
+          payload,
+          renderGoogleGroundingInMessage: renderGoogleGroundingInMessage,
+        ).usage,
       });
     }
 
@@ -238,15 +237,15 @@ class OpenAiResponseMapper {
       );
     }
 
-      output.add({
-        'id': 'msg_$requestId',
-        'type': 'message',
-        'role': 'assistant',
-        'status': 'completed',
-        if (extracted.googleGrounding.isNotEmpty) 'google_grounding': extracted.googleGrounding,
-        'content': [
-          {
-            'type': 'output_text',
+    output.add({
+      'id': 'msg_$requestId',
+      'type': 'message',
+      'role': 'assistant',
+      'status': 'completed',
+      if (extracted.googleGrounding.isNotEmpty) 'google_grounding': extracted.googleGrounding,
+      'content': [
+        {
+          'type': 'output_text',
           'text': extracted.text,
           'annotations': const [],
           'logprobs': const [],
@@ -471,8 +470,7 @@ class OpenAiResponseMapper {
             'type': 'message',
             'role': 'assistant',
             'status': 'completed',
-            if (extracted.googleGrounding.isNotEmpty)
-              'google_grounding': extracted.googleGrounding,
+            if (extracted.googleGrounding.isNotEmpty) 'google_grounding': extracted.googleGrounding,
             'content': [
               {
                 'type': 'output_text',
@@ -871,7 +869,9 @@ class OpenAiResponseMapper {
         for (var index = 0; index < grounding.chunks.length; index += 1)
           {
             'index': index + 1,
-            'title': grounding.chunks[index].title.isEmpty ? 'Untitled' : grounding.chunks[index].title,
+            'title': grounding.chunks[index].title.isEmpty
+                ? 'Untitled'
+                : grounding.chunks[index].title,
             'uri': grounding.chunks[index].uri,
           },
       ],

@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 import '../../core/logging/log_sanitizer.dart';
+import '../../data/models/account_profile.dart';
 import '../../data/models/oauth_tokens.dart';
 import '../account_pool/account_pool.dart';
 import '../model_catalog.dart';
@@ -58,6 +59,7 @@ class GeminiGatewayException implements Exception {
     required this.kind,
     required this.message,
     required this.statusCode,
+    this.provider = AccountProvider.gemini,
     this.quotaSnapshot,
     this.retryAfter,
     this.detail,
@@ -71,6 +73,7 @@ class GeminiGatewayException implements Exception {
   final GeminiGatewayFailureKind kind;
   final String message;
   final int statusCode;
+  final AccountProvider provider;
   final String? quotaSnapshot;
   final Duration? retryAfter;
   final GeminiGatewayFailureDetail? detail;
@@ -81,7 +84,7 @@ class GeminiGatewayException implements Exception {
   final String? rawResponseBody;
 
   @override
-  String toString() => 'GeminiGatewayException($statusCode, $kind, $message)';
+  String toString() => 'GeminiGatewayException($provider, $statusCode, $kind, $message)';
 }
 
 class GeminiRetryPolicy {

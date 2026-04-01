@@ -14,6 +14,7 @@ import '../../data/repositories/logs_repository.dart';
 import '../../data/repositories/secret_store.dart';
 import '../../observability/glitchtip.dart';
 import '../engine/proxy_isolate.dart';
+import '../kiro/kiro_auth_source.dart';
 
 typedef ProxyIsolateSpawner =
     Future<Isolate> Function(SendPort messagePort, SendPort errorPort, SendPort exitPort);
@@ -239,11 +240,28 @@ class KickProxyController {
     }
     final runtimeAccounts = <Map<String, Object?>>[];
     for (final account in accounts) {
-      final tokens = await _secretStore.readOAuthTokens(account.tokenRef);
+      OAuthTokens? tokens;
+      var runtimeAccount = account;
+      if (account.provider == AccountProvider.kiro) {
+        final source = await loadKiroAuthSource(sourcePath: account.credentialSourcePath);
+        if (source == null) {
+          continue;
+        }
+        tokens = source.toOAuthTokens();
+        runtimeAccount = account.copyWith(
+          providerRegion: source.effectiveRegion,
+          credentialSourceType: source.sourceType,
+          credentialSourcePath: source.sourcePath,
+          providerProfileArn: source.profileArn ?? account.providerProfileArn,
+          email: account.email.trim().isNotEmpty ? account.email : source.displayIdentity,
+        );
+      } else {
+        tokens = await _secretStore.readOAuthTokens(account.tokenRef);
+      }
       if (tokens == null) {
         continue;
       }
-      runtimeAccounts.add(account.toRuntimeJson(tokens: tokens));
+      runtimeAccounts.add(runtimeAccount.toRuntimeJson(tokens: tokens));
     }
 
     final payload = {

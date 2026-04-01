@@ -13,9 +13,8 @@ abstract interface class SecretStoreBackend {
 }
 
 class FlutterSecureStorageBackend implements SecretStoreBackend {
-  const FlutterSecureStorageBackend({
-    FlutterSecureStorage storage = const FlutterSecureStorage(),
-  }) : _storage = storage;
+  const FlutterSecureStorageBackend({FlutterSecureStorage storage = const FlutterSecureStorage()})
+    : _storage = storage;
 
   final FlutterSecureStorage _storage;
 
@@ -30,9 +29,8 @@ class FlutterSecureStorageBackend implements SecretStoreBackend {
 }
 
 class SecretStore {
-  const SecretStore({
-    SecretStoreBackend backend = const FlutterSecureStorageBackend(),
-  }) : _backend = backend;
+  const SecretStore({SecretStoreBackend backend = const FlutterSecureStorageBackend()})
+    : _backend = backend;
 
   final SecretStoreBackend _backend;
 

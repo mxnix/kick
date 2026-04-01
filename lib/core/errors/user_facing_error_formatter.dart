@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import '../../data/models/account_profile.dart';
 import '../../l10n/kick_localizations.dart';
 import '../../proxy/gemini/gemini_code_assist_client.dart';
 
@@ -116,6 +117,21 @@ String formatUserFacingMessage(KickLocalizations l10n, String rawMessage) {
 }
 
 String _formatGatewayError(KickLocalizations l10n, GeminiGatewayException error) {
+  if (error.provider == AccountProvider.kiro) {
+    return switch (error.kind) {
+      GeminiGatewayFailureKind.auth => l10n.errorKiroAuthExpired,
+      GeminiGatewayFailureKind.quota =>
+        error.retryAfter != null
+            ? l10n.errorKiroRateLimitedRetry(_formatDuration(l10n, error.retryAfter!))
+            : l10n.errorKiroRateLimitedLater,
+      GeminiGatewayFailureKind.capacity ||
+      GeminiGatewayFailureKind.serviceUnavailable => l10n.errorKiroServiceUnavailable,
+      GeminiGatewayFailureKind.unsupportedModel => l10n.errorUnsupportedModel,
+      GeminiGatewayFailureKind.invalidRequest => l10n.errorInvalidRequestRejected,
+      GeminiGatewayFailureKind.unknown => formatUserFacingMessage(l10n, error.message),
+    };
+  }
+
   switch (error.kind) {
     case GeminiGatewayFailureKind.auth:
       switch (error.detail) {
@@ -260,8 +276,22 @@ bool _looksLikePortInUseError(String message) {
 }
 
 String? _unwrapGeminiGatewayException(String message) {
-  final match = RegExp(r'^GeminiGatewayException\([^,]+,\s*[^,]+,\s*(.+)\)$').firstMatch(message);
-  return match?.group(1)?.trim();
+  const prefix = 'GeminiGatewayException(';
+  if (!message.startsWith(prefix) || !message.endsWith(')')) {
+    return null;
+  }
+  final inner = message.substring(prefix.length, message.length - 1);
+  var commaCount = 0;
+  for (var index = 0; index < inner.length; index += 1) {
+    if (inner[index] != ',') {
+      continue;
+    }
+    commaCount += 1;
+    if (commaCount == 3) {
+      return inner.substring(index + 1).trim();
+    }
+  }
+  return null;
 }
 
 String? _retryHintFromMessage(KickLocalizations l10n, String message) {

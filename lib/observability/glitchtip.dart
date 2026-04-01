@@ -11,9 +11,7 @@ import '../data/models/app_log_entry.dart';
 
 const _defaultGlitchTipTracesSampleRate = 0.0;
 const _maxSanitizedStringLength = 4096;
-const _ignoredGlitchTipProxyLogCategories = <String>{
-  'chat.completions',
-};
+const _ignoredGlitchTipProxyLogCategories = <String>{'chat.completions'};
 final GlitchTipBuildConfig _glitchTipBuildConfig = GlitchTipBuildConfig.fromEnvironment();
 
 class GlitchTipBuildConfig {

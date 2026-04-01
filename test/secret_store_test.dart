@@ -4,8 +4,7 @@ import 'package:kick/data/repositories/secret_store.dart';
 
 void main() {
   test('returns null for invalid OAuth token JSON payloads', () async {
-    final backend = _MemorySecretStoreBackend()
-      ..values['token.invalid'] = '{"access_token":';
+    final backend = _MemorySecretStoreBackend()..values['token.invalid'] = '{"access_token":';
     final store = SecretStore(backend: backend);
 
     final tokens = await store.readOAuthTokens('token.invalid');

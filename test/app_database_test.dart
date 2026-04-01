@@ -92,6 +92,11 @@ void main() {
         .customSelect(
           '''
           SELECT
+            provider,
+            provider_region,
+            credential_source_type,
+            credential_source_path,
+            provider_profile_arn,
             enabled,
             priority,
             not_supported_models,
@@ -113,6 +118,11 @@ void main() {
       containsAll(<String>{
         'enabled',
         'priority',
+        'provider',
+        'provider_region',
+        'credential_source_type',
+        'credential_source_path',
+        'provider_profile_arn',
         'not_supported_models',
         'runtime_not_supported_models',
         'google_subject_id',
@@ -126,6 +136,11 @@ void main() {
       }),
     );
     expect(logColumns, containsAll(<String>{'route', 'masked_payload', 'raw_payload'}));
+    expect(accountRow.read<String>('provider'), 'gemini');
+    expect(accountRow.read<String?>('provider_region'), anyOf(equals(null), isEmpty));
+    expect(accountRow.read<String?>('credential_source_type'), anyOf(equals(null), isEmpty));
+    expect(accountRow.read<String?>('credential_source_path'), anyOf(equals(null), isEmpty));
+    expect(accountRow.read<String?>('provider_profile_arn'), anyOf(equals(null), isEmpty));
     expect(accountRow.read<int>('enabled'), 1);
     expect(accountRow.read<int>('priority'), 0);
     expect(accountRow.read<String>('not_supported_models'), '');

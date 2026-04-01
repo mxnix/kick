@@ -17,19 +17,26 @@ class AccountsRepository {
   }
 
   Future<void> upsert(AccountProfile account) async {
+    final normalizedAccount = _normalizeStoredAccount(account);
     await _database.customInsert('''
       INSERT INTO accounts (
-        id, label, email, project_id, google_subject_id, avatar_url,
-        enabled, priority, not_supported_models, runtime_not_supported_models,
-        last_used_at, usage_count, error_count, cooldown_until,
-        last_quota_snapshot, token_ref
+        id, label, email, project_id, provider, provider_region,
+        credential_source_type, credential_source_path, provider_profile_arn,
+        google_subject_id, avatar_url, enabled, priority,
+        not_supported_models, runtime_not_supported_models, last_used_at,
+        usage_count, error_count, cooldown_until, last_quota_snapshot, token_ref
       ) VALUES (
-        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16
+        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21
       )
       ON CONFLICT(id) DO UPDATE SET
         label = excluded.label,
         email = excluded.email,
         project_id = excluded.project_id,
+        provider = excluded.provider,
+        provider_region = excluded.provider_region,
+        credential_source_type = excluded.credential_source_type,
+        credential_source_path = excluded.credential_source_path,
+        provider_profile_arn = excluded.provider_profile_arn,
         google_subject_id = excluded.google_subject_id,
         avatar_url = excluded.avatar_url,
         enabled = excluded.enabled,
@@ -42,7 +49,7 @@ class AccountsRepository {
         cooldown_until = excluded.cooldown_until,
         last_quota_snapshot = excluded.last_quota_snapshot,
         token_ref = excluded.token_ref
-      ''', variables: _accountVariables(account));
+      ''', variables: _accountVariables(normalizedAccount));
   }
 
   Future<void> upsertMany(List<AccountProfile> accounts) async {
@@ -85,6 +92,13 @@ class AccountsRepository {
             projectId: current.projectId.trim().isNotEmpty
                 ? current.projectId
                 : runtimeAccount.projectId.trim(),
+            provider: runtimeAccount.provider,
+            providerRegion: current.providerRegion?.trim().isNotEmpty == true
+                ? current.providerRegion
+                : runtimeAccount.providerRegion,
+            providerProfileArn: current.providerProfileArn?.trim().isNotEmpty == true
+                ? current.providerProfileArn
+                : runtimeAccount.providerProfileArn,
             runtimeNotSupportedModels: _extractRuntimeNotSupportedModels(
               current.notSupportedModels,
               runtimeAccount.notSupportedModels,
@@ -110,6 +124,11 @@ class AccountsRepository {
       Variable<String>(map['label'] as String),
       Variable<String>(map['email'] as String),
       Variable<String>(map['project_id'] as String),
+      Variable<String>(map['provider'] as String? ?? 'gemini'),
+      Variable<String>((map['provider_region'] as String?) ?? ''),
+      Variable<String>((map['credential_source_type'] as String?) ?? ''),
+      Variable<String>((map['credential_source_path'] as String?) ?? ''),
+      Variable<String>((map['provider_profile_arn'] as String?) ?? ''),
       Variable<String>((map['google_subject_id'] as String?) ?? ''),
       Variable<String>((map['avatar_url'] as String?) ?? ''),
       Variable<int>((map['enabled'] as int?) ?? 1),
@@ -123,6 +142,29 @@ class AccountsRepository {
       Variable<String>((map['last_quota_snapshot'] as String?) ?? ''),
       Variable<String>(map['token_ref'] as String),
     ];
+  }
+
+  AccountProfile _normalizeStoredAccount(AccountProfile account) {
+    return account.copyWith(
+      notSupportedModels: _normalizeStoredModels(account.notSupportedModels, account.provider),
+      runtimeNotSupportedModels: _normalizeStoredModels(
+        account.runtimeNotSupportedModels,
+        account.provider,
+      ),
+    );
+  }
+
+  List<String> _normalizeStoredModels(List<String> models, AccountProvider provider) {
+    final normalized = <String>[];
+    final seen = <String>{};
+    for (final model in models) {
+      final publicModel = ModelCatalog.normalizePublicModel(model, defaultProvider: provider);
+      if (publicModel.isEmpty || !seen.add(publicModel.toLowerCase())) {
+        continue;
+      }
+      normalized.add(publicModel);
+    }
+    return normalized;
   }
 
   List<String> _extractRuntimeNotSupportedModels(List<String> manual, List<String> combined) {

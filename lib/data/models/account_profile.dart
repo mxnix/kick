@@ -1,11 +1,28 @@
 import 'oauth_tokens.dart';
 
+enum AccountProvider {
+  gemini,
+  kiro;
+
+  static AccountProvider fromValue(String? value) {
+    return switch (value?.trim().toLowerCase()) {
+      'kiro' => AccountProvider.kiro,
+      _ => AccountProvider.gemini,
+    };
+  }
+}
+
 class AccountProfile {
   const AccountProfile({
     required this.id,
     required this.label,
     required this.email,
     required this.projectId,
+    this.provider = AccountProvider.gemini,
+    this.providerRegion,
+    this.credentialSourceType,
+    this.credentialSourcePath,
+    this.providerProfileArn,
     this.googleSubjectId,
     this.avatarUrl,
     required this.enabled,
@@ -24,6 +41,11 @@ class AccountProfile {
   final String label;
   final String email;
   final String projectId;
+  final AccountProvider provider;
+  final String? providerRegion;
+  final String? credentialSourceType;
+  final String? credentialSourcePath;
+  final String? providerProfileArn;
   final String? googleSubjectId;
   final String? avatarUrl;
   final bool enabled;
@@ -38,6 +60,19 @@ class AccountProfile {
   final String tokenRef;
 
   bool get isCoolingDown => cooldownUntil != null && cooldownUntil!.isAfter(DateTime.now());
+  bool get usesSecretStoreTokens => provider == AccountProvider.gemini;
+  bool get supportsUsageDiagnostics => provider == AccountProvider.gemini;
+  String get displayIdentity {
+    if (provider == AccountProvider.kiro) {
+      final path = credentialSourcePath?.trim();
+      final sourceName = path == null || path.isEmpty
+          ? null
+          : path.replaceAll('\\', '/').split('/').last.trim();
+      return _firstNonEmpty(email, providerProfileArn, sourceName, 'Kiro local session');
+    }
+    return email;
+  }
+
   List<String> get effectiveNotSupportedModels =>
       _mergeModelLists(notSupportedModels, runtimeNotSupportedModels);
 
@@ -46,6 +81,15 @@ class AccountProfile {
     String? label,
     String? email,
     String? projectId,
+    AccountProvider? provider,
+    String? providerRegion,
+    bool clearProviderRegion = false,
+    String? credentialSourceType,
+    bool clearCredentialSourceType = false,
+    String? credentialSourcePath,
+    bool clearCredentialSourcePath = false,
+    String? providerProfileArn,
+    bool clearProviderProfileArn = false,
     String? googleSubjectId,
     bool clearGoogleSubjectId = false,
     String? avatarUrl,
@@ -69,6 +113,17 @@ class AccountProfile {
       label: label ?? this.label,
       email: email ?? this.email,
       projectId: projectId ?? this.projectId,
+      provider: provider ?? this.provider,
+      providerRegion: clearProviderRegion ? null : (providerRegion ?? this.providerRegion),
+      credentialSourceType: clearCredentialSourceType
+          ? null
+          : (credentialSourceType ?? this.credentialSourceType),
+      credentialSourcePath: clearCredentialSourcePath
+          ? null
+          : (credentialSourcePath ?? this.credentialSourcePath),
+      providerProfileArn: clearProviderProfileArn
+          ? null
+          : (providerProfileArn ?? this.providerProfileArn),
       googleSubjectId: clearGoogleSubjectId ? null : (googleSubjectId ?? this.googleSubjectId),
       avatarUrl: clearAvatarUrl ? null : (avatarUrl ?? this.avatarUrl),
       enabled: enabled ?? this.enabled,
@@ -90,6 +145,11 @@ class AccountProfile {
       'label': label,
       'email': email,
       'project_id': projectId,
+      'provider': provider.name,
+      'provider_region': providerRegion,
+      'credential_source_type': credentialSourceType,
+      'credential_source_path': credentialSourcePath,
+      'provider_profile_arn': providerProfileArn,
       'google_subject_id': googleSubjectId,
       'avatar_url': avatarUrl,
       'enabled': enabled ? 1 : 0,
@@ -109,6 +169,7 @@ class AccountProfile {
     return {
       ...toDatabaseMap(),
       'email': email,
+      'provider': provider.name,
       'enabled': enabled,
       'google_subject_id': googleSubjectId,
       'avatar_url': avatarUrl,
@@ -125,6 +186,11 @@ class AccountProfile {
       'label': label,
       'email': email,
       'project_id': projectId,
+      'provider': provider.name,
+      'provider_region': providerRegion,
+      'credential_source_type': credentialSourceType,
+      'credential_source_path': credentialSourcePath,
+      'provider_profile_arn': providerProfileArn,
       'google_subject_id': googleSubjectId,
       'avatar_url': avatarUrl,
       'enabled': enabled,
@@ -148,6 +214,11 @@ class AccountProfile {
       label: map['label'] as String? ?? '',
       email: map['email'] as String? ?? '',
       projectId: map['project_id'] as String? ?? '',
+      provider: AccountProvider.fromValue(map['provider'] as String?),
+      providerRegion: _readOptionalString(map['provider_region']),
+      credentialSourceType: _readOptionalString(map['credential_source_type']),
+      credentialSourcePath: _readOptionalString(map['credential_source_path']),
+      providerProfileArn: _readOptionalString(map['provider_profile_arn']),
       googleSubjectId: _readOptionalString(map['google_subject_id']),
       avatarUrl: _readOptionalString(map['avatar_url']),
       enabled: (map['enabled'] as int? ?? 1) == 1,
@@ -172,6 +243,11 @@ class AccountProfile {
       label: _readRequiredString(json['label'], fieldName: 'label'),
       email: _readRequiredString(json['email'], fieldName: 'email'),
       projectId: _readString(json['project_id']) ?? '',
+      provider: AccountProvider.fromValue(_readString(json['provider'])),
+      providerRegion: _readNullableString(json['provider_region']),
+      credentialSourceType: _readNullableString(json['credential_source_type']),
+      credentialSourcePath: _readNullableString(json['credential_source_path']),
+      providerProfileArn: _readNullableString(json['provider_profile_arn']),
       googleSubjectId: _readNullableString(json['google_subject_id']),
       avatarUrl: _readNullableString(json['avatar_url']),
       enabled: _readBool(json['enabled'], defaultValue: true),
@@ -207,6 +283,16 @@ class AccountProfile {
     final merged = <String>{...primary, ...secondary};
     return merged.toList(growable: false);
   }
+}
+
+String _firstNonEmpty(String? first, [String? second, String? third, String? fallback]) {
+  for (final candidate in [first, second, third, fallback]) {
+    final trimmed = candidate?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return trimmed;
+    }
+  }
+  return '';
 }
 
 String _readRequiredString(Object? value, {required String fieldName}) {

@@ -4,8 +4,13 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 
 class AppDatabase extends DatabaseConnectionUser {
-  static const schemaVersionValue = 3;
+  static const schemaVersionValue = 4;
   static const Map<String, String> _accountsAdditiveColumns = {
+    'provider': "TEXT NOT NULL DEFAULT 'gemini'",
+    'provider_region': 'TEXT',
+    'credential_source_type': 'TEXT',
+    'credential_source_path': 'TEXT',
+    'provider_profile_arn': 'TEXT',
     'enabled': 'INTEGER NOT NULL DEFAULT 1',
     'priority': 'INTEGER NOT NULL DEFAULT 0',
     'not_supported_models': "TEXT NOT NULL DEFAULT ''",
@@ -60,6 +65,11 @@ class AppDatabase extends DatabaseConnectionUser {
         label TEXT NOT NULL,
         email TEXT NOT NULL,
         project_id TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        provider_region TEXT,
+        credential_source_type TEXT,
+        credential_source_path TEXT,
+        provider_profile_arn TEXT,
         google_subject_id TEXT,
         avatar_url TEXT,
         enabled INTEGER NOT NULL,
@@ -127,6 +137,13 @@ class AppDatabase extends DatabaseConnectionUser {
   Future<void> _backfillLegacyAccounts() async {
     final columns = await _tableColumns('accounts');
 
+    if (columns.contains('provider')) {
+      await customStatement("""
+        UPDATE accounts
+        SET provider = 'gemini'
+        WHERE provider IS NULL OR TRIM(provider) = ''
+      """);
+    }
     if (columns.contains('enabled')) {
       await customStatement('UPDATE accounts SET enabled = 1 WHERE enabled IS NULL');
     }

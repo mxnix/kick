@@ -10,9 +10,11 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/accounts/account_runtime_notice.dart';
 import '../../core/logging/log_sanitizer.dart';
+import '../../data/models/account_profile.dart';
 import '../account_pool/account_pool.dart';
 import '../gemini/gemini_code_assist_client.dart';
 import '../gemini/gemini_installation_identity.dart';
+import '../kiro/kiro_code_assist_client.dart';
 import '../model_catalog.dart';
 import '../openai/openai_request_parser.dart';
 import '../openai/openai_response_mapper.dart';
@@ -212,7 +214,7 @@ class _ProxyIsolateHost {
     _privilegedUserIdLoader = GeminiInstallationIdLoader(
       installationIdPathProvider: () => _geminiInstallationIdPath,
     );
-    _client = GeminiCodeAssistClient(
+    _geminiClient = GeminiCodeAssistClient(
       onTokensUpdated: (account, tokens) async {
         _sendPort.send({
           'type': 'token_updated',
@@ -225,17 +227,19 @@ class _ProxyIsolateHost {
       privilegedUserIdLoader: _privilegedUserIdLoader,
       warmupEnabled: true,
     );
+    _kiroClient = KiroCodeAssistClient();
   }
 
   final SendPort _sendPort;
   late final GeminiInstallationIdLoader _privilegedUserIdLoader;
-  late final GeminiCodeAssistClient _client;
+  late final GeminiCodeAssistClient _geminiClient;
+  late final KiroCodeAssistClient _kiroClient;
   final _uuid = const Uuid();
 
   Map<String, Object?>? _settings;
   String? _geminiInstallationIdPath;
   ModelCatalog _catalog = ModelCatalog(customModels: const []);
-  GeminiAccountPool _pool = GeminiAccountPool(<ProxyRuntimeAccount>[]);
+  ProxyAccountPool _pool = ProxyAccountPool(<ProxyRuntimeAccount>[]);
   final Set<String> _pendingTermsOfServiceChecks = <String>{};
   HttpServer? _server;
   DateTime? _startedAt;
@@ -261,15 +265,30 @@ class _ProxyIsolateHost {
             .whereType<Map>()
             .map((item) => ProxyRuntimeAccount.fromJson(item.cast<String, Object?>()))
             .toList(growable: true);
-        _pool = GeminiAccountPool(accounts);
-        _catalog = ModelCatalog(
-          customModels: ((_settings?['custom_models'] as List?) ?? const []).cast<String>(),
-        );
-        _client.updateRetryPolicy(
+        _pool = ProxyAccountPool(accounts);
+        _geminiClient.updateRetryPolicy(
           GeminiRetryPolicy(
             maxRetries: _settings?['request_max_retries'] as int? ?? defaultGeminiRequestMaxRetries,
             default429Delay: Duration(seconds: _settings?['retry_429_delay_seconds'] as int? ?? 30),
           ),
+        );
+        _kiroClient.updateRetryPolicy(
+          GeminiRetryPolicy(
+            maxRetries: _settings?['request_max_retries'] as int? ?? defaultGeminiRequestMaxRetries,
+            default429Delay: Duration(seconds: _settings?['retry_429_delay_seconds'] as int? ?? 30),
+          ),
+        );
+        final hasGeminiAccounts = _pool.accounts.any(
+          (account) => account.provider == AccountProvider.gemini && account.enabled,
+        );
+        final hasKiroAccounts = _pool.accounts.any(
+          (account) => account.provider == AccountProvider.kiro && account.enabled,
+        );
+        _catalog = ModelCatalog(
+          customModels: ((_settings?['custom_models'] as List?) ?? const []).cast<String>(),
+          kiroModels: hasKiroAccounts ? await _discoverKiroModels() : const <String>[],
+          enableGemini: hasGeminiAccounts,
+          enableKiro: hasKiroAccounts,
         );
         await _publishAccounts();
         if (_server != null &&
@@ -408,7 +427,7 @@ class _ProxyIsolateHost {
         await _logTrace(
           category: 'chat.completions',
           route: route,
-          message: 'Dispatching streaming request to Gemini gateway',
+          message: 'Dispatching streaming request to upstream provider',
           details: _requestContextPayload(prompt: resolvedPrompt),
         );
         var previousText = '';
@@ -442,14 +461,14 @@ class _ProxyIsolateHost {
       await _logTrace(
         category: 'chat.completions',
         route: route,
-        message: 'Dispatching request to Gemini gateway',
+        message: 'Dispatching request to upstream provider',
         details: _requestContextPayload(prompt: resolvedPrompt),
       );
       final payload = await _executeNonStreamRequest(resolvedPrompt, retryTracker: retryTracker);
       await _logTrace(
         category: 'chat.completions',
         route: route,
-        message: 'Gemini gateway returned a payload',
+        message: 'Upstream provider returned a payload',
         details: _requestContextPayload(prompt: resolvedPrompt),
       );
       final responseBody = OpenAiResponseMapper.toChatCompletion(
@@ -461,7 +480,7 @@ class _ProxyIsolateHost {
       await _logTrace(
         category: 'chat.completions',
         route: route,
-        message: 'Mapped Gemini payload to OpenAI chat completion',
+        message: 'Mapped upstream payload to OpenAI chat completion',
         details: _requestContextPayload(prompt: resolvedPrompt),
       );
       await _logResponsePreview(
@@ -530,6 +549,7 @@ class _ProxyIsolateHost {
       return _gatewayErrorResponse(error);
     } catch (error, stackTrace) {
       final gatewayError = GeminiGatewayException(
+        provider: prompt == null ? AccountProvider.gemini : _catalog.resolve(prompt.model).provider,
         kind: GeminiGatewayFailureKind.unknown,
         message: error.toString(),
         statusCode: 500,
@@ -605,7 +625,7 @@ class _ProxyIsolateHost {
         await _logTrace(
           category: 'responses',
           route: route,
-          message: 'Dispatching streaming request to Gemini gateway',
+          message: 'Dispatching streaming request to upstream provider',
           details: _requestContextPayload(prompt: resolvedPrompt),
         );
         var previousText = '';
@@ -713,6 +733,7 @@ class _ProxyIsolateHost {
       return _gatewayErrorResponse(error);
     } catch (error, stackTrace) {
       final gatewayError = GeminiGatewayException(
+        provider: prompt == null ? AccountProvider.gemini : _catalog.resolve(prompt.model).provider,
         kind: GeminiGatewayFailureKind.unknown,
         message: error.toString(),
         statusCode: 500,
@@ -752,15 +773,22 @@ class _ProxyIsolateHost {
     _RequestRetryTracker? retryTracker,
   }) async {
     final route = _routeForSource(request.source);
+    final resolvedModel = _catalog.resolve(request.model);
     final triedIds = <String>{};
     GeminiGatewayException? lastError;
     while (true) {
-      final account = _pool.select(request.model, excludedIds: triedIds);
+      final account = _pool.select(
+        resolvedModel.upstreamModel,
+        provider: resolvedModel.provider,
+        excludedIds: triedIds,
+      );
       if (account == null) {
         throw lastError ??
             GeminiGatewayException(
+              provider: resolvedModel.provider,
               kind: GeminiGatewayFailureKind.serviceUnavailable,
-              message: 'No healthy account is available for `${request.model}`.',
+              message:
+                  'No healthy ${resolvedModel.provider.name} account is available for `${request.model}`.',
               statusCode: 503,
               detail: GeminiGatewayFailureDetail.noHealthyAccountAvailable,
               source: GeminiGatewayFailureSource.accountPool,
@@ -783,7 +811,7 @@ class _ProxyIsolateHost {
           message: 'Using account `$maskedAccountEmail`$accountLabelSuffix for `${request.model}`',
           details: _requestContextPayload(prompt: request),
         );
-        final payload = await _client.generateContent(
+        final payload = await _generateContentForAccount(
           account: account,
           request: request,
           onRetry: (event) {
@@ -840,15 +868,22 @@ class _ProxyIsolateHost {
     mapper,
     required String Function() doneEvent,
   }) async {
+    final resolvedModel = _catalog.resolve(request.model);
     final triedIds = <String>{};
     GeminiGatewayException? lastError;
     while (true) {
-      final account = _pool.select(request.model, excludedIds: triedIds);
+      final account = _pool.select(
+        resolvedModel.upstreamModel,
+        provider: resolvedModel.provider,
+        excludedIds: triedIds,
+      );
       if (account == null) {
         throw lastError ??
             GeminiGatewayException(
+              provider: resolvedModel.provider,
               kind: GeminiGatewayFailureKind.serviceUnavailable,
-              message: 'No healthy account is available for `${request.model}`.',
+              message:
+                  'No healthy ${resolvedModel.provider.name} account is available for `${request.model}`.',
               statusCode: 503,
               detail: GeminiGatewayFailureDetail.noHealthyAccountAvailable,
               source: GeminiGatewayFailureSource.accountPool,
@@ -859,7 +894,7 @@ class _ProxyIsolateHost {
       await _publishAccounts();
 
       try {
-        final upstream = await _client.generateContentStream(
+        final upstream = await _generateContentStreamForAccount(
           account: account,
           request: request,
           onRetry: (event) {
@@ -951,6 +986,7 @@ class _ProxyIsolateHost {
           } catch (error, stackTrace) {
             failed = true;
             final gatewayError = GeminiGatewayException(
+              provider: account.provider,
               kind: GeminiGatewayFailureKind.unknown,
               message: error.toString(),
               statusCode: 500,
@@ -1027,6 +1063,61 @@ class _ProxyIsolateHost {
     }
   }
 
+  Future<Map<String, Object?>> _generateContentForAccount({
+    required ProxyRuntimeAccount account,
+    required UnifiedPromptRequest request,
+    void Function(GeminiRetryEvent event)? onRetry,
+  }) {
+    return switch (account.provider) {
+      AccountProvider.kiro => _kiroClient.generateContent(
+        account: account,
+        request: request,
+        onRetry: onRetry,
+      ),
+      AccountProvider.gemini => _geminiClient.generateContent(
+        account: account,
+        request: request,
+        onRetry: onRetry,
+      ),
+    };
+  }
+
+  Future<Stream<Map<String, Object?>>> _generateContentStreamForAccount({
+    required ProxyRuntimeAccount account,
+    required UnifiedPromptRequest request,
+    void Function(GeminiRetryEvent event)? onRetry,
+  }) {
+    return switch (account.provider) {
+      AccountProvider.kiro => _kiroClient.generateContentStream(
+        account: account,
+        request: request,
+        onRetry: onRetry,
+      ),
+      AccountProvider.gemini => _geminiClient.generateContentStream(
+        account: account,
+        request: request,
+        onRetry: onRetry,
+      ),
+    };
+  }
+
+  Future<List<String>> _discoverKiroModels() async {
+    final discoveredModels = <String>{};
+    for (final account in _pool.accounts) {
+      if (account.provider != AccountProvider.kiro || !account.enabled) {
+        continue;
+      }
+      try {
+        final models = await _kiroClient.listModels(account: account);
+        discoveredModels.addAll(models.where((item) => item.trim().isNotEmpty));
+      } catch (_) {
+        continue;
+      }
+    }
+    final sorted = discoveredModels.toList()..sort();
+    return sorted;
+  }
+
   void _registerFailure(
     ProxyRuntimeAccount account,
     String requestedModel,
@@ -1039,7 +1130,8 @@ class _ProxyIsolateHost {
       error: error,
       mark429AsUnhealthy: _settings?['mark_429_as_unhealthy'] == true,
     );
-    if (error.detail == GeminiGatewayFailureDetail.indefiniteQuotaExhausted) {
+    if (account.provider == AccountProvider.gemini &&
+        error.detail == GeminiGatewayFailureDetail.indefiniteQuotaExhausted) {
       _scheduleTermsOfServiceCheck(account, error);
     }
     _publishAccounts();
@@ -1389,6 +1481,7 @@ class _ProxyIsolateHost {
     return {
       'request_id': prompt.requestId,
       'model': prompt.model,
+      'provider': _catalog.resolve(prompt.model).provider.name,
       'stream': prompt.stream,
       'google_web_search': prompt.googleWebSearchEnabled,
     };
@@ -1406,6 +1499,7 @@ class _ProxyIsolateHost {
 
   Map<String, Object?> _gatewayErrorContext(GeminiGatewayException error) {
     return {
+      'provider': error.provider.name,
       'error_kind': error.kind.name,
       'error_source': error.source.name,
       'status_code': error.statusCode,
@@ -1591,7 +1685,9 @@ class _ProxyIsolateHost {
           if (currentAccount == null) {
             return;
           }
-          final violation = await _client.probeTermsOfServiceViolation(account: currentAccount);
+          final violation = await _geminiClient.probeTermsOfServiceViolation(
+            account: currentAccount,
+          );
           final refreshedAccount = _findRuntimeAccount(account.id, account.tokenRef);
           if (refreshedAccount == null) {
             return;

@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/account_pool/account_pool.dart';
 import 'package:kick/proxy/gemini/gemini_auth_constants.dart';
@@ -51,6 +52,7 @@ void main() {
         label: 'Primary',
         email: 'user@example.com',
         projectId: projectId,
+        provider: AccountProvider.gemini,
         enabled: true,
         priority: 0,
         notSupportedModels: const [],

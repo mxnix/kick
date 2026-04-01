@@ -4,17 +4,24 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/accounts/account_priority.dart';
 import '../../data/models/account_profile.dart';
 import '../../l10n/kick_localizations.dart';
+import '../../proxy/kiro/kiro_auth_source.dart';
 
 class AccountEditorResult {
   const AccountEditorResult({
+    required this.provider,
     required this.projectId,
     required this.label,
+    required this.kiroBuilderIdStartUrl,
+    required this.kiroRegion,
     required this.priority,
     required this.notSupportedModels,
   });
 
+  final AccountProvider provider;
   final String projectId;
   final String label;
+  final String kiroBuilderIdStartUrl;
+  final String kiroRegion;
   final int priority;
   final List<String> notSupportedModels;
 }
@@ -44,7 +51,10 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _projectController;
   late final TextEditingController _labelController;
+  late final TextEditingController _kiroBuilderIdStartUrlController;
+  late final TextEditingController _kiroRegionController;
   late final TextEditingController _modelsController;
+  late AccountProvider _selectedProvider;
   late AccountPriorityLevel _selectedPriority;
   late bool _advancedExpanded;
 
@@ -53,9 +63,14 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
     super.initState();
     _projectController = TextEditingController(text: widget.initial?.projectId ?? '');
     _labelController = TextEditingController(text: widget.initial?.label ?? '');
+    _kiroBuilderIdStartUrlController = TextEditingController(text: defaultKiroBuilderIdStartUrl);
+    _kiroRegionController = TextEditingController(
+      text: widget.initial?.providerRegion ?? defaultKiroRegion,
+    );
     _modelsController = TextEditingController(
       text: widget.initial?.notSupportedModels.join('\n') ?? '',
     );
+    _selectedProvider = widget.initial?.provider ?? AccountProvider.gemini;
     _selectedPriority = AccountPriorityLevel.fromStoredValue(
       widget.initial?.priority ?? AccountPriorityLevel.normal.storedValue,
     );
@@ -69,6 +84,8 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
   void dispose() {
     _projectController.dispose();
     _labelController.dispose();
+    _kiroBuilderIdStartUrlController.dispose();
+    _kiroRegionController.dispose();
     _modelsController.dispose();
     super.dispose();
   }
@@ -99,25 +116,76 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
                   ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 14),
-                TextFormField(
-                  controller: _projectController,
-                  decoration: InputDecoration(
-                    labelText: l10n.projectIdLabel,
-                    hintText: l10n.projectIdHint,
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l10n.accountProviderLabel,
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
-                const SizedBox(height: 6),
-                TextButton.icon(
-                  onPressed: _openProjectConsole,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<AccountProvider>(
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment(
+                        value: AccountProvider.gemini,
+                        label: Text(l10n.accountProviderGemini),
+                      ),
+                      ButtonSegment(
+                        value: AccountProvider.kiro,
+                        label: Text(l10n.accountProviderKiro),
+                      ),
+                    ],
+                    selected: {_selectedProvider},
+                    onSelectionChanged: widget.initial != null
+                        ? null
+                        : (value) {
+                            setState(() => _selectedProvider = value.first);
+                          },
                   ),
-                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                  label: Text(l10n.projectIdConsoleLinkLabel),
                 ),
+                const SizedBox(height: 14),
+                if (_selectedProvider == AccountProvider.gemini) ...[
+                  TextFormField(
+                    controller: _projectController,
+                    decoration: InputDecoration(
+                      labelText: l10n.projectIdLabel,
+                      hintText: l10n.projectIdHint,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextButton.icon(
+                    onPressed: _openProjectConsole,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                    label: Text(l10n.projectIdConsoleLinkLabel),
+                  ),
+                ] else ...[
+                  TextField(
+                    controller: _kiroBuilderIdStartUrlController,
+                    decoration: InputDecoration(
+                      labelText: l10n.kiroBuilderIdStartUrlLabel,
+                      hintText: defaultKiroBuilderIdStartUrl,
+                      helperText: l10n.kiroBuilderIdStartUrlHelperText,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _kiroRegionController,
+                    decoration: InputDecoration(
+                      labelText: l10n.kiroRegionLabel,
+                      hintText: defaultKiroRegion,
+                      helperText: l10n.kiroRegionHelperText,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 TextField(
                   controller: _labelController,
@@ -246,8 +314,11 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
 
     Navigator.of(context).pop(
       AccountEditorResult(
+        provider: _selectedProvider,
         projectId: _projectController.text.trim(),
         label: _labelController.text.trim(),
+        kiroBuilderIdStartUrl: _kiroBuilderIdStartUrlController.text.trim(),
+        kiroRegion: _kiroRegionController.text.trim(),
         priority: _selectedPriority.storedValue,
         notSupportedModels: _modelsController.text
             .split('\n')

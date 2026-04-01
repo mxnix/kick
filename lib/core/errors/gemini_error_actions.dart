@@ -1,3 +1,4 @@
+import '../../data/models/account_profile.dart';
 import '../../proxy/gemini/gemini_code_assist_client.dart';
 
 enum GeminiErrorActionKind { accountVerification, accountAppeal, projectConfiguration }
@@ -11,6 +12,9 @@ class GeminiErrorAction {
 
 GeminiErrorAction? primaryActionForError(Object error) {
   if (error is! GeminiGatewayException) {
+    return null;
+  }
+  if (error.provider != AccountProvider.gemini) {
     return null;
   }
 

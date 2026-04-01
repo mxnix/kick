@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/app_settings.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/features/settings/configuration_backup_service.dart';
+import 'package:kick/proxy/kiro/kiro_auth_source.dart';
 
 void main() {
   AccountProfile buildAccount({
@@ -15,6 +17,10 @@ void main() {
     required String email,
     required String projectId,
     required String tokenRef,
+    AccountProvider provider = AccountProvider.gemini,
+    String? credentialSourcePath,
+    String? credentialSourceType,
+    String? providerProfileArn,
     bool enabled = true,
     int priority = 0,
     List<String> notSupportedModels = const [],
@@ -25,6 +31,10 @@ void main() {
       label: label,
       email: email,
       projectId: projectId,
+      provider: provider,
+      credentialSourcePath: credentialSourcePath,
+      credentialSourceType: credentialSourceType,
+      providerProfileArn: providerProfileArn,
       enabled: enabled,
       priority: priority,
       notSupportedModels: notSupportedModels,
@@ -154,6 +164,184 @@ void main() {
     expect(contents, isNot(contains('kick-secret')));
     expect(contents, isNot(contains('access-1')));
     expect(contents, isNot(contains('primary@example.com')));
+  });
+
+  test('exports Kiro accounts with source metadata but without external tokens', () async {
+    Uint8List? exportedBytes;
+    final tokenReads = <String>[];
+    final service = ConfigurationBackupService(
+      readTokens: (tokenRef) async {
+        tokenReads.add(tokenRef);
+        return tokenRef == 'primary-ref' ? buildTokens('access-1') : null;
+      },
+      readCurrentAccounts: () async => const [],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'kick-secret'),
+      saveSettings: (_) async {},
+      replaceAccounts: (_) async {},
+      writeTokens: (_, _) async {},
+      deleteTokens: (_) async {},
+      useNativeSaveDialog: true,
+      saveFileCallback:
+          ({required String fileName, required Uint8List bytes, String? dialogTitle}) async {
+            exportedBytes = bytes;
+            return 'content://downloads/document/primary%3ADownload%2Fkick-transfer.json';
+          },
+    );
+
+    final result = await service.export(
+      settings: AppSettings.defaults(apiKey: 'kick-secret'),
+      accounts: [
+        buildAccount(
+          id: 'primary',
+          label: 'Primary',
+          email: 'primary@example.com',
+          projectId: 'proj-primary',
+          tokenRef: 'primary-ref',
+        ),
+        buildAccount(
+          id: 'kiro',
+          label: 'Kiro',
+          email: 'Kiro local session',
+          projectId: '',
+          provider: AccountProvider.kiro,
+          credentialSourcePath: r'C:\Users\demo\.aws\sso\cache\kiro-auth-token.json',
+          credentialSourceType: 'local_json',
+          providerProfileArn: 'arn:aws:iam::123456789012:user/demo',
+          tokenRef: 'kiro-ref',
+        ),
+      ],
+      options: const ConfigurationBackupExportOptions.plainJson(),
+      dialogTitle: 'Save backup',
+    );
+
+    expect(result, isNotNull);
+    expect(result!.accountsWithTokens, 1);
+    expect(tokenReads, ['primary-ref']);
+
+    final decoded = jsonDecode(utf8.decode(exportedBytes!)) as Map<String, Object?>;
+    final accounts = (decoded['accounts'] as List).cast<Map<String, Object?>>();
+    final kiroAccount = accounts.singleWhere((account) => account['id'] == 'kiro');
+
+    expect(kiroAccount['provider'], 'kiro');
+    expect(kiroAccount['credential_source_type'], 'local_json');
+    expect(
+      kiroAccount['credential_source_path'],
+      r'C:\Users\demo\.aws\sso\cache\kiro-auth-token.json',
+    );
+    expect(kiroAccount['provider_profile_arn'], 'arn:aws:iam::123456789012:user/demo');
+    expect(kiroAccount['tokens'], isNull);
+  });
+
+  test('restores managed Builder ID Kiro sessions into a new local managed path', () async {
+    final exportSupportDirectory = await Directory.systemTemp.createTemp('kick_kiro_backup_export');
+    final restoreSupportDirectory = await Directory.systemTemp.createTemp(
+      'kick_kiro_backup_restore',
+    );
+    addTearDown(() => exportSupportDirectory.delete(recursive: true));
+    addTearDown(() => restoreSupportDirectory.delete(recursive: true));
+
+    final savedSource = await persistKiroAuthSourceSnapshot(
+      KiroAuthSourceSnapshot(
+        sourcePath: '',
+        sourceType: builderIdKiroCredentialSourceType,
+        accessToken: 'kiro-access',
+        refreshToken: 'kiro-refresh',
+        expiry: DateTime.parse('2026-04-01T12:00:00Z'),
+        region: 'us-east-1',
+        profileArn: 'arn:aws:iam::123456789012:user/demo',
+        authMethod: builderIdKiroAuthMethod,
+        provider: 'kiro',
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        startUrl: defaultKiroBuilderIdStartUrl,
+      ),
+      supportDirectoryProvider: () async => exportSupportDirectory,
+    );
+
+    Uint8List? exportedBytes;
+    final exportService = ConfigurationBackupService(
+      readTokens: (_) async => null,
+      readCurrentAccounts: () async => const [],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'kick-secret'),
+      saveSettings: (_) async {},
+      replaceAccounts: (_) async {},
+      writeTokens: (_, _) async {},
+      deleteTokens: (_) async {},
+      useNativeSaveDialog: true,
+      supportDirectoryProvider: () async => exportSupportDirectory,
+      saveFileCallback:
+          ({required String fileName, required Uint8List bytes, String? dialogTitle}) async {
+            exportedBytes = bytes;
+            return 'content://downloads/document/primary%3ADownload%2Fkick-transfer.json';
+          },
+    );
+
+    await exportService.export(
+      settings: AppSettings.defaults(apiKey: 'kick-secret'),
+      accounts: [
+        buildAccount(
+          id: 'kiro',
+          label: 'Kiro',
+          email: 'AWS Builder ID',
+          projectId: '',
+          provider: AccountProvider.kiro,
+          credentialSourcePath: savedSource.sourcePath,
+          credentialSourceType: builderIdKiroCredentialSourceType,
+          providerProfileArn: 'arn:aws:iam::123456789012:user/demo',
+          tokenRef: 'kiro-ref',
+        ),
+      ],
+      options: const ConfigurationBackupExportOptions.plainJson(),
+    );
+
+    final restoredAccounts = <List<AccountProfile>>[];
+    final restoreService = ConfigurationBackupService(
+      readTokens: (_) async => null,
+      readCurrentAccounts: () async => const [],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'old-api-key'),
+      saveSettings: (_) async {},
+      replaceAccounts: (accounts) async {
+        restoredAccounts.add(accounts);
+      },
+      writeTokens: (_, _) async {},
+      deleteTokens: (_) async {},
+      supportDirectoryProvider: () async => restoreSupportDirectory,
+      pickFileCallback: ({String? dialogTitle}) async {
+        return ConfigurationBackupPickedFile(
+          fileName: 'kick-restore.json',
+          bytes: exportedBytes,
+        );
+      },
+    );
+
+    final result = await restoreService.restore();
+
+    expect(result, isNotNull);
+    expect(result!.accountsWithTokens, 0);
+    expect(restoredAccounts, hasLength(1));
+    expect(restoredAccounts.single, hasLength(1));
+
+    final restoredAccount = restoredAccounts.single.single;
+    expect(restoredAccount.provider, AccountProvider.kiro);
+    expect(restoredAccount.credentialSourceType, builderIdKiroCredentialSourceType);
+    expect(restoredAccount.credentialSourcePath, isNot(savedSource.sourcePath));
+    expect(
+      await isManagedKiroCredentialSourcePath(
+        restoredAccount.credentialSourcePath,
+        supportDirectoryProvider: () async => restoreSupportDirectory,
+      ),
+      isTrue,
+    );
+
+    final restoredSnapshot = await loadKiroAuthSource(
+      sourcePath: restoredAccount.credentialSourcePath,
+    );
+    expect(restoredSnapshot, isNotNull);
+    expect(restoredSnapshot!.accessToken, 'kiro-access');
+    expect(restoredSnapshot.refreshToken, 'kiro-refresh');
+    expect(restoredSnapshot.clientId, 'client-id');
+    expect(restoredSnapshot.clientSecret, 'client-secret');
+    expect(restoredSnapshot.profileArn, 'arn:aws:iam::123456789012:user/demo');
   });
 
   test('restores settings, replaces accounts and cleans up stale tokens', () async {

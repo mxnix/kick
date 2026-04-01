@@ -12,7 +12,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appTitle => 'KiCk';
 
   @override
-  String get shellSubtitle => 'Локальный прокси для Gemini CLI';
+  String get shellSubtitle => 'Локальный прокси для Gemini CLI и Kiro';
 
   @override
   String get connectGoogleAccountTitle => 'Подключить Google-аккаунт';
@@ -90,7 +90,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountsTitle => 'Аккаунты';
 
   @override
-  String get accountsSubtitle => 'Подключайте Google-аккаунты и управляйте ими';
+  String get accountsSubtitle => 'Подключайте аккаунты Gemini и Kiro и управляйте ими';
 
   @override
   String get addButton => 'Добавить';
@@ -99,13 +99,42 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountsEmptyTitle => 'Аккаунтов пока нет';
 
   @override
-  String get accountsEmptyMessage => 'Подключите хотя бы один Google-аккаунт';
+  String get accountsEmptyMessage => 'Подключите хотя бы один аккаунт Gemini или Kiro';
 
   @override
-  String get connectAccountButton => 'Подключить Google-аккаунт';
+  String get connectAccountButton => 'Подключить аккаунт';
+
+  @override
+  String get connectAccountDialogTitle => 'Подключить аккаунт';
 
   @override
   String get accountsLoadErrorTitle => 'Не удалось загрузить аккаунты';
+
+  @override
+  String get accountProviderLabel => 'Тип аккаунта';
+
+  @override
+  String get accountProviderGemini => 'Gemini';
+
+  @override
+  String get accountProviderKiro => 'Kiro';
+
+  @override
+  String get kiroBuilderIdStartUrlLabel => 'Ссылка Builder ID';
+
+  @override
+  String get kiroBuilderIdStartUrlHelperText => 'Обычно менять не нужно.';
+
+  @override
+  String get kiroRegionLabel => 'Регион AWS';
+
+  @override
+  String get kiroRegionHelperText => 'Обычно оставьте значение us-east-1.';
+
+  @override
+  String kiroCredentialSourceChip(String value) {
+    return 'Источник: $value';
+  }
 
   @override
   String projectIdChip(String projectId) {
@@ -251,6 +280,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountUsageEmptyMessage => 'Google не прислал данные по лимитам для этого аккаунта';
 
   @override
+  String get accountUsageUnavailableTitle => 'Лимиты для этого аккаунта недоступны';
+
+  @override
+  String get accountUsageUnavailableMessage =>
+      'Страница лимитов пока работает только для аккаунтов Gemini.';
+
+  @override
   String get accountUsageMissingTitle => 'Аккаунт не найден';
 
   @override
@@ -394,10 +430,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsModelsSectionSummary => 'Пользовательские ID моделей';
 
   @override
-  String get settingsGoogleSectionTitle => 'Поиск Google';
+  String get settingsGoogleSectionTitle => 'Поиск Google (только Gemini)';
 
   @override
-  String get settingsGoogleSectionSummary => 'Веб-поиск в Google и настройка источников';
+  String get settingsGoogleSectionSummary => 'Веб-поиск Google и параметры Gemini';
 
   @override
   String get settingsBackupSectionTitle => 'Резервная копия и восстановление';
@@ -527,7 +563,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get customModelsLabel => 'Пользовательские ID моделей';
 
   @override
-  String get customModelsHelperText => 'Указывайте точный ID модели, по одному на строке';
+  String get customModelsHelperText => 'По одному ID на строку, например google/... или kiro/...';
 
   @override
   String get settingsSavingStatus => 'Сохраняем изменения...';
@@ -659,7 +695,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'Локальный OpenAI-совместимый прокси для Gemini CLI в нативном Flutter-приложении';
+      'Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном Flutter-приложении';
 
   @override
   String get aboutUpdatesTitle => 'Обновления';
@@ -724,7 +760,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get homeOnboardingAccountsMessage =>
-      'Без активного аккаунта KiCk не сможет обрабатывать запросы.';
+      'Без активного аккаунта Gemini или Kiro KiCk не сможет обрабатывать запросы.';
 
   @override
   String get homeOnboardingEndpointTitle => 'Проверьте адрес прокси';
@@ -785,14 +821,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get welcomeSubtitle =>
-      'KiCk помогает запустить локальный прокси для Gemini CLI без терминала и лишних настроек.';
+      'KiCk помогает запустить локальный прокси для Gemini CLI и Kiro без терминала и лишних настроек.';
 
   @override
-  String get welcomeStepAccountsTitle => 'Подключите Google-аккаунт';
+  String get welcomeStepAccountsTitle => 'Подключите аккаунт';
 
   @override
   String get welcomeStepAccountsMessage =>
-      'Это можно сделать на экране аккаунтов. Если аккаунт уже есть, просто включите его.';
+      'Это можно сделать на экране аккаунтов. Можно подключить Gemini или Kiro.';
 
   @override
   String get welcomeStepHomeTitle => 'Откройте главную';
@@ -940,13 +976,13 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get accountDialogTitle => 'Google-аккаунт';
+  String get accountDialogTitle => 'Аккаунт';
 
   @override
   String get accountDialogBasicsTitle => 'Основное';
 
   @override
-  String get accountDialogBasicsSubtitle => 'Эти поля нужны для подключения аккаунта';
+  String get accountDialogBasicsSubtitle => 'Поля для подключения выбранного типа аккаунта';
 
   @override
   String get accountDialogAdvancedTitle => 'Расширенные настройки';
@@ -980,7 +1016,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountNameHint => 'Например, основной аккаунт';
 
   @override
-  String get accountNameHelperText => 'Если оставить поле пустым, KiCk подставит имя из Google.';
+  String get accountNameHelperText => 'Если оставить поле пустым, KiCk подставит имя аккаунта.';
 
   @override
   String get priorityLabel => 'Приоритет';
@@ -1002,7 +1038,32 @@ class AppLocalizationsRu extends AppLocalizations {
   String get blockedModelsLabel => 'Недоступные модели';
 
   @override
-  String get blockedModelsHelperText => 'Укажите по одному ID модели на строке';
+  String get blockedModelsHelperText => 'По одному ID на строку, например google/... или kiro/...';
+
+  @override
+  String get kiroLinkAuthDialogTitle => 'Авторизация Kiro';
+
+  @override
+  String get kiroLinkAuthDialogMessage =>
+      'Откройте ссылку, войдите через AWS Builder ID и подтвердите вход для Kiro. Код нужен только для сверки, вводить его не нужно. KiCk сам дождётся завершения.';
+
+  @override
+  String get kiroLinkAuthUserCodeLabel => 'Код для сверки';
+
+  @override
+  String get kiroLinkAuthVerificationUrlLabel => 'Ссылка для входа';
+
+  @override
+  String get kiroLinkAuthWaitingMessage => 'Ждём, пока вы подтвердите вход в браузере...';
+
+  @override
+  String get kiroLinkAuthOpenLinkButton => 'Открыть ссылку';
+
+  @override
+  String get kiroLinkAuthOpenLinkAgainButton => 'Открыть ещё раз';
+
+  @override
+  String get kiroLinkAuthOpenLinkFailedMessage => 'Не удалось открыть ссылку для входа в Kiro.';
 
   @override
   String get cancelButton => 'Отмена';
@@ -1081,6 +1142,22 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get errorGoogleRateLimitedLater =>
       'Google временно ограничил запросы для этого аккаунта. Попробуйте снова позже.';
+
+  @override
+  String get errorKiroAuthExpired => 'Сессия Kiro истекла. Войдите заново и попробуйте снова.';
+
+  @override
+  String errorKiroRateLimitedRetry(String retryHint) {
+    return 'Kiro временно ограничил запросы. Попробуйте снова через $retryHint.';
+  }
+
+  @override
+  String get errorKiroRateLimitedLater =>
+      'Kiro временно ограничил запросы. Попробуйте снова позже.';
+
+  @override
+  String get errorKiroServiceUnavailable =>
+      'Сервис Kiro временно недоступен. Повторите попытку позже.';
 
   @override
   String get errorGoogleAccountVerificationRequired =>

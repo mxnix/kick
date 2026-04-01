@@ -51,6 +51,18 @@ class AccountUsagePage extends ConsumerWidget {
           );
         }
 
+        if (!resolvedAccount.supportsUsageDiagnostics) {
+          return _UsageScaffold(
+            title: l10n.accountUsageTitle,
+            subtitle: resolvedAccount.displayIdentity,
+            child: EmptyStateCard(
+              icon: Icons.info_outline_rounded,
+              title: l10n.accountUsageUnavailableTitle,
+              message: l10n.accountUsageUnavailableMessage,
+            ),
+          );
+        }
+
         final usageValue = ref.watch(accountUsageQueryProvider(resolvedAccount.id));
         final usageSnapshot = usageValue.asData?.value;
         return _UsageScaffold(
@@ -238,7 +250,7 @@ class _UsageAccountCard extends StatelessWidget {
                     Text(account.label, style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 6),
                     Text(
-                      account.email,
+                      account.displayIdentity,
                       style: Theme.of(
                         context,
                       ).textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),

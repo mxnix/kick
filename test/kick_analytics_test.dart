@@ -69,9 +69,10 @@ void main() {
   });
 
   test('model family buckets custom models without leaking exact ids', () {
-    expect(KickAnalytics.modelFamily('gemini-2.5-pro-preview'), 'gemini-2.5-pro');
-    expect(KickAnalytics.modelFamily('gemini-3-flash'), 'gemini-3');
-    expect(KickAnalytics.modelFamily('gemini-3.1-pro-preview'), 'gemini-3');
+    expect(KickAnalytics.modelFamily('google/gemini-2.5-pro-preview'), 'gemini-2.5-pro');
+    expect(KickAnalytics.modelFamily('google/gemini-3-flash'), 'gemini-3');
+    expect(KickAnalytics.modelFamily('google/gemini-3.1-pro-preview'), 'gemini-3');
+    expect(KickAnalytics.modelFamily('kiro/claude-opus-4.5'), 'kiro');
     expect(KickAnalytics.modelFamily('my-private-model-id'), 'custom');
   });
 

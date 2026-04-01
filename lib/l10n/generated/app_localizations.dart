@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @shellSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Локальный прокси для Gemini CLI'**
+  /// **'Локальный прокси для Gemini CLI и Kiro'**
   String get shellSubtitle;
 
   /// No description provided for @connectGoogleAccountTitle.
@@ -245,7 +245,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountsSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Подключайте Google-аккаунты и управляйте ими'**
+  /// **'Подключайте аккаунты Gemini и Kiro и управляйте ими'**
   String get accountsSubtitle;
 
   /// No description provided for @addButton.
@@ -263,20 +263,74 @@ abstract class AppLocalizations {
   /// No description provided for @accountsEmptyMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Подключите хотя бы один Google-аккаунт'**
+  /// **'Подключите хотя бы один аккаунт Gemini или Kiro'**
   String get accountsEmptyMessage;
 
   /// No description provided for @connectAccountButton.
   ///
   /// In ru, this message translates to:
-  /// **'Подключить Google-аккаунт'**
+  /// **'Подключить аккаунт'**
   String get connectAccountButton;
+
+  /// No description provided for @connectAccountDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подключить аккаунт'**
+  String get connectAccountDialogTitle;
 
   /// No description provided for @accountsLoadErrorTitle.
   ///
   /// In ru, this message translates to:
   /// **'Не удалось загрузить аккаунты'**
   String get accountsLoadErrorTitle;
+
+  /// No description provided for @accountProviderLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тип аккаунта'**
+  String get accountProviderLabel;
+
+  /// No description provided for @accountProviderGemini.
+  ///
+  /// In ru, this message translates to:
+  /// **'Gemini'**
+  String get accountProviderGemini;
+
+  /// No description provided for @accountProviderKiro.
+  ///
+  /// In ru, this message translates to:
+  /// **'Kiro'**
+  String get accountProviderKiro;
+
+  /// No description provided for @kiroBuilderIdStartUrlLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ссылка Builder ID'**
+  String get kiroBuilderIdStartUrlLabel;
+
+  /// No description provided for @kiroBuilderIdStartUrlHelperText.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обычно менять не нужно.'**
+  String get kiroBuilderIdStartUrlHelperText;
+
+  /// No description provided for @kiroRegionLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Регион AWS'**
+  String get kiroRegionLabel;
+
+  /// No description provided for @kiroRegionHelperText.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обычно оставьте значение us-east-1.'**
+  String get kiroRegionHelperText;
+
+  /// No description provided for @kiroCredentialSourceChip.
+  ///
+  /// In ru, this message translates to:
+  /// **'Источник: {value}'**
+  String kiroCredentialSourceChip(String value);
 
   /// No description provided for @projectIdChip.
   ///
@@ -542,6 +596,18 @@ abstract class AppLocalizations {
   /// **'Google не прислал данные по лимитам для этого аккаунта'**
   String get accountUsageEmptyMessage;
 
+  /// No description provided for @accountUsageUnavailableTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Лимиты для этого аккаунта недоступны'**
+  String get accountUsageUnavailableTitle;
+
+  /// No description provided for @accountUsageUnavailableMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Страница лимитов пока работает только для аккаунтов Gemini.'**
+  String get accountUsageUnavailableMessage;
+
   /// No description provided for @accountUsageMissingTitle.
   ///
   /// In ru, this message translates to:
@@ -791,13 +857,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsGoogleSectionTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Поиск Google'**
+  /// **'Поиск Google (только Gemini)'**
   String get settingsGoogleSectionTitle;
 
   /// No description provided for @settingsGoogleSectionSummary.
   ///
   /// In ru, this message translates to:
-  /// **'Веб-поиск в Google и настройка источников'**
+  /// **'Веб-поиск Google и параметры Gemini'**
   String get settingsGoogleSectionSummary;
 
   /// No description provided for @settingsBackupSectionTitle.
@@ -1031,7 +1097,7 @@ abstract class AppLocalizations {
   /// No description provided for @customModelsHelperText.
   ///
   /// In ru, this message translates to:
-  /// **'Указывайте точный ID модели, по одному на строке'**
+  /// **'По одному ID на строку, например google/... или kiro/...'**
   String get customModelsHelperText;
 
   /// No description provided for @settingsSavingStatus.
@@ -1253,7 +1319,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutDescription.
   ///
   /// In ru, this message translates to:
-  /// **'Локальный OpenAI-совместимый прокси для Gemini CLI в нативном Flutter-приложении'**
+  /// **'Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном Flutter-приложении'**
   String get aboutDescription;
 
   /// No description provided for @aboutUpdatesTitle.
@@ -1373,7 +1439,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeOnboardingAccountsMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Без активного аккаунта KiCk не сможет обрабатывать запросы.'**
+  /// **'Без активного аккаунта Gemini или Kiro KiCk не сможет обрабатывать запросы.'**
   String get homeOnboardingAccountsMessage;
 
   /// No description provided for @homeOnboardingEndpointTitle.
@@ -1481,19 +1547,19 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'KiCk помогает запустить локальный прокси для Gemini CLI без терминала и лишних настроек.'**
+  /// **'KiCk помогает запустить локальный прокси для Gemini CLI и Kiro без терминала и лишних настроек.'**
   String get welcomeSubtitle;
 
   /// No description provided for @welcomeStepAccountsTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Подключите Google-аккаунт'**
+  /// **'Подключите аккаунт'**
   String get welcomeStepAccountsTitle;
 
   /// No description provided for @welcomeStepAccountsMessage.
   ///
   /// In ru, this message translates to:
-  /// **'Это можно сделать на экране аккаунтов. Если аккаунт уже есть, просто включите его.'**
+  /// **'Это можно сделать на экране аккаунтов. Можно подключить Gemini или Kiro.'**
   String get welcomeStepAccountsMessage;
 
   /// No description provided for @welcomeStepHomeTitle.
@@ -1757,7 +1823,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountDialogTitle.
   ///
   /// In ru, this message translates to:
-  /// **'Google-аккаунт'**
+  /// **'Аккаунт'**
   String get accountDialogTitle;
 
   /// No description provided for @accountDialogBasicsTitle.
@@ -1769,7 +1835,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountDialogBasicsSubtitle.
   ///
   /// In ru, this message translates to:
-  /// **'Эти поля нужны для подключения аккаунта'**
+  /// **'Поля для подключения выбранного типа аккаунта'**
   String get accountDialogBasicsSubtitle;
 
   /// No description provided for @accountDialogAdvancedTitle.
@@ -1835,7 +1901,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountNameHelperText.
   ///
   /// In ru, this message translates to:
-  /// **'Если оставить поле пустым, KiCk подставит имя из Google.'**
+  /// **'Если оставить поле пустым, KiCk подставит имя аккаунта.'**
   String get accountNameHelperText;
 
   /// No description provided for @priorityLabel.
@@ -1877,8 +1943,56 @@ abstract class AppLocalizations {
   /// No description provided for @blockedModelsHelperText.
   ///
   /// In ru, this message translates to:
-  /// **'Укажите по одному ID модели на строке'**
+  /// **'По одному ID на строку, например google/... или kiro/...'**
   String get blockedModelsHelperText;
+
+  /// No description provided for @kiroLinkAuthDialogTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Авторизация Kiro'**
+  String get kiroLinkAuthDialogTitle;
+
+  /// No description provided for @kiroLinkAuthDialogMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Откройте ссылку, войдите через AWS Builder ID и подтвердите вход для Kiro. Код нужен только для сверки, вводить его не нужно. KiCk сам дождётся завершения.'**
+  String get kiroLinkAuthDialogMessage;
+
+  /// No description provided for @kiroLinkAuthUserCodeLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Код для сверки'**
+  String get kiroLinkAuthUserCodeLabel;
+
+  /// No description provided for @kiroLinkAuthVerificationUrlLabel.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ссылка для входа'**
+  String get kiroLinkAuthVerificationUrlLabel;
+
+  /// No description provided for @kiroLinkAuthWaitingMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ждём, пока вы подтвердите вход в браузере...'**
+  String get kiroLinkAuthWaitingMessage;
+
+  /// No description provided for @kiroLinkAuthOpenLinkButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть ссылку'**
+  String get kiroLinkAuthOpenLinkButton;
+
+  /// No description provided for @kiroLinkAuthOpenLinkAgainButton.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть ещё раз'**
+  String get kiroLinkAuthOpenLinkAgainButton;
+
+  /// No description provided for @kiroLinkAuthOpenLinkFailedMessage.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось открыть ссылку для входа в Kiro.'**
+  String get kiroLinkAuthOpenLinkFailedMessage;
 
   /// No description provided for @cancelButton.
   ///
@@ -2017,6 +2131,30 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Google временно ограничил запросы для этого аккаунта. Попробуйте снова позже.'**
   String get errorGoogleRateLimitedLater;
+
+  /// No description provided for @errorKiroAuthExpired.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сессия Kiro истекла. Войдите заново и попробуйте снова.'**
+  String get errorKiroAuthExpired;
+
+  /// No description provided for @errorKiroRateLimitedRetry.
+  ///
+  /// In ru, this message translates to:
+  /// **'Kiro временно ограничил запросы. Попробуйте снова через {retryHint}.'**
+  String errorKiroRateLimitedRetry(String retryHint);
+
+  /// No description provided for @errorKiroRateLimitedLater.
+  ///
+  /// In ru, this message translates to:
+  /// **'Kiro временно ограничил запросы. Попробуйте снова позже.'**
+  String get errorKiroRateLimitedLater;
+
+  /// No description provided for @errorKiroServiceUnavailable.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сервис Kiro временно недоступен. Повторите попытку позже.'**
+  String get errorKiroServiceUnavailable;
 
   /// No description provided for @errorGoogleAccountVerificationRequired.
   ///
