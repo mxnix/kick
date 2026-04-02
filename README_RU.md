@@ -39,11 +39,11 @@
 <summary><strong>Интерфейс</strong></summary>
 
 <p align="center">
-  <img src="static/github/screenshots/desktop.png" alt="KiCk на Windows: экран управления аккаунтами" width="100%">
+  <img src="static/github/screenshots/desktop_ru.png" alt="KiCk на Windows: экран управления аккаунтами" width="100%">
 </p>
 
 <p align="center">
-  <img src="static/github/screenshots/mobile.png" alt="KiCk на Android: быстрый запуск локального прокси" width="100%">
+  <img src="static/github/screenshots/mobile_ru.png" alt="KiCk на Android: быстрый запуск локального прокси" width="100%">
 </p>
 
 </details>
