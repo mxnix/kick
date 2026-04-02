@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kick/analytics/android_background_session_log.dart';
 import 'package:kick/analytics/kick_analytics.dart';
 import 'package:kick/app/bootstrap.dart';
 import 'package:kick/data/app_database.dart';
@@ -56,6 +57,51 @@ void main() {
     final afterLoadMore = await container.read(logsControllerProvider.future);
     expect(afterLoadMore.entries, hasLength(130));
     expect(afterLoadMore.hasMore, isFalse);
+  });
+
+  test('hides internal lifecycle logs from the visible log state and export', () async {
+    final bootstrap = await _createBootstrap();
+    final baseTime = DateTime.utc(2026, 4, 2, 10);
+    await bootstrap.logsRepository.insert(
+      AppLogEntry(
+        id: 'visible-log',
+        timestamp: baseTime,
+        level: AppLogLevel.info,
+        category: 'proxy',
+        route: '/v1/chat/completions',
+        message: 'Visible entry',
+        maskedPayload: '{"index":1}',
+      ),
+    );
+    await bootstrap.logsRepository.insert(
+      AppLogEntry(
+        id: 'hidden-log',
+        timestamp: baseTime.add(const Duration(minutes: 1)),
+        level: AppLogLevel.info,
+        category: androidBackgroundSessionCategory,
+        route: '/android/background',
+        message: androidBackgroundSessionStartedMessage,
+        maskedPayload: '{"session_id":"bg-1"}',
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [appBootstrapProvider.overrideWithValue(bootstrap)],
+    );
+
+    addTearDown(() async {
+      container.dispose();
+      await bootstrap.dispose();
+    });
+
+    final state = await container.read(logsControllerProvider.future);
+    expect(state.totalCount, 1);
+    expect(state.filteredCount, 1);
+    expect(state.categories, ['proxy']);
+    expect(state.entries.map((entry) => entry.id), ['visible-log']);
+
+    final exported = await container.read(logsControllerProvider.notifier).readAllMatchingEntries();
+    expect(exported.map((entry) => entry.id), ['visible-log']);
   });
 }
 

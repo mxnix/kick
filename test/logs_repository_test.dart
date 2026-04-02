@@ -107,4 +107,46 @@ void main() {
     expect(firstPage.map((entry) => entry.id), ['log-4', 'log-3']);
     expect(secondPage.map((entry) => entry.id), ['log-1', 'log-0']);
   });
+
+  test('excludes internal categories from reads, counts, and category filters', () async {
+    final database = AppDatabase(NativeDatabase.memory());
+    await database.ensureSchema();
+    addTearDown(database.close);
+
+    final repository = LogsRepository(database, retentionLimit: 20);
+    final baseTime = DateTime.utc(2026, 4, 2, 10);
+    await repository.insert(
+      AppLogEntry(
+        id: 'visible-log',
+        timestamp: baseTime,
+        level: AppLogLevel.info,
+        category: 'proxy',
+        route: '/v1/chat/completions',
+        message: 'Visible request',
+        maskedPayload: '{"step":"request"}',
+      ),
+    );
+    await repository.insert(
+      AppLogEntry(
+        id: 'hidden-log',
+        timestamp: baseTime.add(const Duration(minutes: 1)),
+        level: AppLogLevel.info,
+        category: 'app.lifecycle',
+        route: '/android/background',
+        message: 'Android background session started',
+        maskedPayload: '{"session_id":"bg-1"}',
+      ),
+    );
+
+    expect(await repository.count(), 2);
+    expect(await repository.count(excludedCategories: {'app.lifecycle'}), 1);
+    expect(await repository.readCategories(excludedCategories: {'app.lifecycle'}), ['proxy']);
+    expect(
+      (await repository.readAll(
+        limit: null,
+        excludedCategories: {'app.lifecycle'},
+      )).map((entry) => entry.id),
+      ['visible-log'],
+    );
+  });
 }

@@ -7,17 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../app/bootstrap.dart';
+import '../core/logging/internal_log_visibility.dart';
 import '../data/models/app_log_entry.dart';
 import '../data/models/app_settings.dart';
 import '../data/repositories/logs_repository.dart';
 import '../features/app_state/providers.dart';
+import 'android_background_session_log.dart';
 import 'kick_analytics.dart';
-
-const androidBackgroundSessionCategory = 'app.lifecycle';
-const androidBackgroundSessionStartedMessage = 'Android background session started';
-const androidBackgroundSessionEndedMessage = 'Android background session ended';
-const androidBackgroundSessionRecoveredMessage =
-    'Android background session recovered after process restart';
 
 class AndroidBackgroundSessionTracker {
   AndroidBackgroundSessionTracker({
@@ -145,7 +141,12 @@ class AndroidBackgroundSessionTracker {
   }
 
   Future<_BackgroundSessionState?> _findRecoverableSession() async {
-    final entries = await _logsRepository.readAll(limit: 500);
+    final entries = await _logsRepository.readAll(
+      limit: 500,
+      excludedCategories: internalUserHiddenLogCategories.difference({
+        androidBackgroundSessionCategory,
+      }),
+    );
     if (entries.isEmpty) {
       return null;
     }

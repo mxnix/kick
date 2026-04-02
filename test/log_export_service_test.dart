@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kick/analytics/android_background_session_tracker.dart';
+import 'package:kick/analytics/android_background_session_log.dart';
 import 'package:kick/data/models/app_log_entry.dart';
 import 'package:kick/data/models/app_settings.dart';
 import 'package:kick/features/logs/log_export_service.dart';

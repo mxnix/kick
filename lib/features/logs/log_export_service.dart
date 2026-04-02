@@ -7,7 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../analytics/android_background_session_tracker.dart';
+import '../../analytics/android_background_session_log.dart';
 import '../../core/logging/log_sanitizer.dart';
 import '../../data/models/app_log_entry.dart';
 import '../../data/models/app_settings.dart';

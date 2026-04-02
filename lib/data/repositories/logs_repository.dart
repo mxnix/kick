@@ -18,8 +18,14 @@ class LogsRepository {
     String query = '',
     AppLogLevel? level,
     String? category,
+    Iterable<String> excludedCategories = const <String>[],
   }) async {
-    final parts = _buildQueryParts(query: query, level: level, category: category);
+    final parts = _buildQueryParts(
+      query: query,
+      level: level,
+      category: category,
+      excludedCategories: excludedCategories,
+    );
     final sql = StringBuffer('SELECT * FROM logs${parts.whereClause} ORDER BY timestamp DESC');
     final variables = <Variable>[...parts.variables];
 
@@ -39,8 +45,18 @@ class LogsRepository {
     return rows.map((row) => AppLogEntry.fromDatabaseMap(row.data)).toList(growable: false);
   }
 
-  Future<int> count({String query = '', AppLogLevel? level, String? category}) async {
-    final parts = _buildQueryParts(query: query, level: level, category: category);
+  Future<int> count({
+    String query = '',
+    AppLogLevel? level,
+    String? category,
+    Iterable<String> excludedCategories = const <String>[],
+  }) async {
+    final parts = _buildQueryParts(
+      query: query,
+      level: level,
+      category: category,
+      excludedCategories: excludedCategories,
+    );
     final row = await _database
         .customSelect(
           'SELECT COUNT(*) AS total FROM logs${parts.whereClause}',
@@ -50,13 +66,27 @@ class LogsRepository {
     return row.read<int>('total');
   }
 
-  Future<List<String>> readCategories() async {
+  Future<List<String>> readCategories({
+    Iterable<String> excludedCategories = const <String>[],
+  }) async {
+    final normalizedExcludedCategories = _normalizeCategories(excludedCategories);
+    final clauses = <String>["TRIM(category) != ''"];
+    final variables = <Variable>[];
+    if (normalizedExcludedCategories.isNotEmpty) {
+      final placeholders = List.generate(
+        normalizedExcludedCategories.length,
+        (index) => '?${index + 1}',
+      ).join(', ');
+      clauses.add('category NOT IN ($placeholders)');
+      variables.addAll(normalizedExcludedCategories.map(Variable<String>.new));
+    }
+
     final rows = await _database.customSelect('''
           SELECT DISTINCT category
           FROM logs
-          WHERE TRIM(category) != ''
+          WHERE ${clauses.join(' AND ')}
           ORDER BY category COLLATE NOCASE
-          ''').get();
+          ''', variables: variables).get();
     return rows
         .map((row) => row.read<String>('category').trim())
         .where((value) => value.isNotEmpty)
@@ -146,6 +176,7 @@ class LogsRepository {
     required String query,
     required AppLogLevel? level,
     required String? category,
+    required Iterable<String> excludedCategories,
   }) {
     final clauses = <String>[];
     final variables = <Variable>[];
@@ -164,6 +195,17 @@ class LogsRepository {
       nextIndex += 1;
     }
 
+    final normalizedExcludedCategories = _normalizeCategories(excludedCategories);
+    if (normalizedExcludedCategories.isNotEmpty) {
+      final placeholders = List.generate(
+        normalizedExcludedCategories.length,
+        (index) => '?${nextIndex + index}',
+      ).join(', ');
+      clauses.add('category NOT IN ($placeholders)');
+      variables.addAll(normalizedExcludedCategories.map(Variable<String>.new));
+      nextIndex += normalizedExcludedCategories.length;
+    }
+
     final normalizedQuery = query.trim().toLowerCase();
     if (normalizedQuery.isNotEmpty) {
       clauses.add('''
@@ -180,6 +222,14 @@ class LogsRepository {
 
     final whereClause = clauses.isEmpty ? '' : ' WHERE ${clauses.join(' AND ')}';
     return _LogQueryParts(whereClause: whereClause, variables: variables, nextIndex: nextIndex);
+  }
+
+  List<String> _normalizeCategories(Iterable<String> categories) {
+    return categories
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
   }
 
   String _escapeLikePattern(String value) {

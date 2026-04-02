@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kick/analytics/android_background_session_log.dart';
 import 'package:kick/analytics/android_background_session_tracker.dart';
 import 'package:kick/analytics/kick_analytics.dart';
 import 'package:kick/data/app_database.dart';

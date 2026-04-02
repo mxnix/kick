@@ -8,6 +8,7 @@ import '../../analytics/kick_analytics.dart';
 import '../../app/app_version_reader.dart';
 import '../../app/bootstrap.dart';
 import '../../core/accounts/account_priority.dart';
+import '../../core/logging/internal_log_visibility.dart';
 import '../../core/platform/android_auth_keep_alive.dart';
 import '../../core/platform/windows_desktop_runtime.dart';
 import '../../core/security/proxy_api_key.dart';
@@ -529,6 +530,7 @@ class LogsController extends AsyncNotifier<LogsViewState> {
         query: current.query,
         level: current.selectedLevel,
         category: current.selectedCategory,
+        excludedCategories: internalUserHiddenLogCategories,
       );
       if (revision != _loadRevision) {
         return;
@@ -556,6 +558,7 @@ class LogsController extends AsyncNotifier<LogsViewState> {
       query: current?.query ?? '',
       level: current?.selectedLevel,
       category: current?.selectedCategory,
+      excludedCategories: internalUserHiddenLogCategories,
     );
   }
 
@@ -591,19 +594,25 @@ class LogsController extends AsyncNotifier<LogsViewState> {
     String? category,
   }) async {
     final bootstrap = ref.read(appBootstrapProvider);
-    final categories = await bootstrap.logsRepository.readCategories();
+    final categories = await bootstrap.logsRepository.readCategories(
+      excludedCategories: internalUserHiddenLogCategories,
+    );
     final normalizedCategory = categories.contains(category) ? category : null;
-    final totalCount = await bootstrap.logsRepository.count();
+    final totalCount = await bootstrap.logsRepository.count(
+      excludedCategories: internalUserHiddenLogCategories,
+    );
     final filteredCount = await bootstrap.logsRepository.count(
       query: query,
       level: level,
       category: normalizedCategory,
+      excludedCategories: internalUserHiddenLogCategories,
     );
     final entries = await bootstrap.logsRepository.readAll(
       limit: _logsPageSize,
       query: query,
       level: level,
       category: normalizedCategory,
+      excludedCategories: internalUserHiddenLogCategories,
     );
 
     return LogsViewState(
