@@ -24,6 +24,15 @@ class WindowBootstrap {
     await _revealWindow();
   }
 
+  static Future<void> refreshTitle() async {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    await configure();
+    await windowManager.setTitle(lookupKickLocalizations().appTitle);
+  }
+
   static Future<void> _configureWindow() async {
     await windowManager.ensureInitialized();
     final options = WindowOptions(

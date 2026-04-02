@@ -374,6 +374,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsSubtitle => 'Сеть, оформление, API-ключ и работа прокси';
 
   @override
+  String get languageLabel => 'Language';
+
+  @override
+  String get languageHelperText => 'System follows your device language';
+
+  @override
+  String get languageOptionSystem => 'System';
+
+  @override
+  String get languageOptionEnglish => 'English';
+
+  @override
+  String get languageOptionRussian => 'Русский';
+
+  @override
   String get themeLabel => 'Тема';
 
   @override

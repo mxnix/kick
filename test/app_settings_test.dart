@@ -14,6 +14,7 @@ void main() {
     expect(settings.apiKeyRequired, isTrue);
     expect(settings.defaultGoogleWebSearchEnabled, isFalse);
     expect(settings.renderGoogleGroundingInMessage, isFalse);
+    expect(settings.appLocale, isNull);
     expect(settings.logRetentionCount, defaultLogRetentionCount);
   });
 
@@ -21,6 +22,7 @@ void main() {
     const settings = AppSettings(
       apiKey: 'kick_test',
       apiKeyRequired: false,
+      appLocale: Locale('ru'),
       themeMode: ThemeMode.dark,
       useDynamicColor: false,
       hasAcknowledgedDisclaimer: true,
@@ -46,6 +48,7 @@ void main() {
     expect(restored.hasAcknowledgedDisclaimer, isTrue);
     expect(restored.analyticsConsentEnabled, isFalse);
     expect(restored.apiKeyRequired, isFalse);
+    expect(restored.appLocale, const Locale('ru'));
     expect(restored.themeMode, ThemeMode.dark);
     expect(restored.allowLan, isTrue);
     expect(restored.requestMaxRetries, 7);
@@ -63,6 +66,7 @@ void main() {
     const settings = AppSettings(
       apiKey: 'kick_backup',
       apiKeyRequired: false,
+      appLocale: Locale('en'),
       themeMode: ThemeMode.dark,
       useDynamicColor: false,
       hasAcknowledgedDisclaimer: true,
@@ -86,6 +90,7 @@ void main() {
     final restored = AppSettings.fromBackupJson(settings.toBackupJson());
 
     expect(restored.apiKey, 'kick_backup');
+    expect(restored.appLocale, const Locale('en'));
     expect(restored.analyticsConsentEnabled, isTrue);
     expect(restored.host, '192.168.1.10');
     expect(restored.port, 4010);
@@ -109,5 +114,11 @@ void main() {
     }, apiKey: 'kick_test');
 
     expect(restored.analyticsConsentEnabled, isFalse);
+  });
+
+  test('treats the system language marker as no explicit locale', () {
+    final restored = AppSettings.fromStorageMap({'app_locale': 'system'}, apiKey: 'kick_test');
+
+    expect(restored.appLocale, isNull);
   });
 }

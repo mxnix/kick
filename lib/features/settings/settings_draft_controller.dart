@@ -36,6 +36,7 @@ class SettingsDraftController extends ChangeNotifier {
   final logRetentionController = TextEditingController();
   final customModelsController = TextEditingController();
 
+  Locale? _appLocale;
   ThemeMode _themeMode = ThemeMode.system;
   KickLogVerbosity _verbosity = KickLogVerbosity.normal;
   bool _useDynamicColor = true;
@@ -59,6 +60,7 @@ class SettingsDraftController extends ChangeNotifier {
   Timer? _saveDebounce;
   Timer? _saveStatusHideTimer;
 
+  Locale? get appLocale => _appLocale;
   ThemeMode get themeMode => _themeMode;
   KickLogVerbosity get verbosity => _verbosity;
   bool get useDynamicColor => _useDynamicColor;
@@ -92,6 +94,15 @@ class SettingsDraftController extends ChangeNotifier {
       _idleCompleter ??= Completer<void>();
       await _idleCompleter!.future;
     }
+  }
+
+  void setAppLocale(Locale? value) {
+    if (_appLocale == value) {
+      return;
+    }
+    _appLocale = value;
+    notifyListeners();
+    saveImmediately();
   }
 
   void setThemeMode(ThemeMode value) {
@@ -291,6 +302,7 @@ class SettingsDraftController extends ChangeNotifier {
     logRetentionController.text = settings.logRetentionCount.toString();
     customModelsController.text = settings.customModels.join('\n');
     _apiKeyRequired = settings.apiKeyRequired;
+    _appLocale = settings.appLocale;
     _themeMode = settings.themeMode;
     _verbosity = settings.loggingVerbosity;
     _useDynamicColor = settings.useDynamicColor;
@@ -336,6 +348,7 @@ class SettingsDraftController extends ChangeNotifier {
     }
 
     final updated = currentSettings.copyWith(
+      appLocale: _appLocale,
       themeMode: _themeMode,
       useDynamicColor: _useDynamicColor,
       host: hostController.text.trim(),
@@ -443,6 +456,7 @@ class SettingsDraftController extends ChangeNotifier {
   bool _settingsEqual(AppSettings left, AppSettings right) {
     return left.apiKey == right.apiKey &&
         left.apiKeyRequired == right.apiKeyRequired &&
+        left.appLocale == right.appLocale &&
         left.themeMode == right.themeMode &&
         left.useDynamicColor == right.useDynamicColor &&
         left.hasAcknowledgedDisclaimer == right.hasAcknowledgedDisclaimer &&

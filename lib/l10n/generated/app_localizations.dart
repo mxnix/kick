@@ -741,6 +741,36 @@ abstract class AppLocalizations {
   /// **'Network, appearance, API key, and proxy behavior'**
   String get settingsSubtitle;
 
+  /// No description provided for @languageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get languageLabel;
+
+  /// No description provided for @languageHelperText.
+  ///
+  /// In en, this message translates to:
+  /// **'System follows your device language'**
+  String get languageHelperText;
+
+  /// No description provided for @languageOptionSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get languageOptionSystem;
+
+  /// No description provided for @languageOptionEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageOptionEnglish;
+
+  /// No description provided for @languageOptionRussian.
+  ///
+  /// In en, this message translates to:
+  /// **'Русский'**
+  String get languageOptionRussian;
+
   /// No description provided for @themeLabel.
   ///
   /// In en, this message translates to:
@@ -786,7 +816,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAppearanceSectionSummary.
   ///
   /// In en, this message translates to:
-  /// **'Theme, logs, and app behavior'**
+  /// **'Language, theme, logs, and app behavior'**
   String get settingsAppearanceSectionSummary;
 
   /// No description provided for @settingsNetworkSectionTitle.

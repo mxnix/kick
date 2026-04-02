@@ -8,11 +8,22 @@ export 'generated/app_localizations.dart';
 
 typedef KickLocalizations = AppLocalizations;
 
+Locale? _kickLocaleOverride;
+
 extension KickLocalizationsBuildContext on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
 }
 
+void setKickLocaleOverride(Locale? locale) {
+  _kickLocaleOverride = _normalizeKickLocale(locale);
+}
+
 Locale resolveKickLocale([Iterable<Locale>? preferredLocales]) {
+  final override = _kickLocaleOverride;
+  if (override != null) {
+    return override;
+  }
+
   final supportedLocales = AppLocalizations.supportedLocales;
   final dispatcher = _currentPlatformDispatcher();
   final candidates = (preferredLocales ?? dispatcher.locales).toList(growable: false);
@@ -65,4 +76,17 @@ bool _matchesLocaleExactly(Locale candidate, Locale supportedLocale) {
   }
 
   return supportedCountryCode?.isNotEmpty != true;
+}
+
+Locale? _normalizeKickLocale(Locale? locale) {
+  if (locale == null) {
+    return null;
+  }
+
+  for (final supportedLocale in AppLocalizations.supportedLocales) {
+    if (locale.languageCode == supportedLocale.languageCode) {
+      return supportedLocale;
+    }
+  }
+  return null;
 }

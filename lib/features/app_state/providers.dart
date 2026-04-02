@@ -10,11 +10,13 @@ import '../../app/bootstrap.dart';
 import '../../core/accounts/account_priority.dart';
 import '../../core/logging/internal_log_visibility.dart';
 import '../../core/platform/android_auth_keep_alive.dart';
+import '../../core/platform/window_bootstrap.dart';
 import '../../core/platform/windows_desktop_runtime.dart';
 import '../../core/security/proxy_api_key.dart';
 import '../../data/models/account_profile.dart';
 import '../../data/models/app_log_entry.dart';
 import '../../data/models/app_settings.dart';
+import '../../l10n/kick_localizations.dart';
 import '../../proxy/engine/proxy_controller.dart';
 import '../../proxy/gemini/gemini_installation_identity.dart';
 import '../../proxy/gemini/gemini_oauth_service.dart';
@@ -137,7 +139,9 @@ final settingsControllerProvider = AsyncNotifierProvider<SettingsController, App
 class SettingsController extends AsyncNotifier<AppSettings> {
   @override
   AppSettings build() {
-    return ref.read(appBootstrapProvider).initialSettings;
+    final initialSettings = ref.read(appBootstrapProvider).initialSettings;
+    setKickLocaleOverride(initialSettings.appLocale);
+    return initialSettings;
   }
 
   Future<void> save(AppSettings settings) async {
@@ -145,6 +149,12 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     await bootstrap.secretStore.writeProxyApiKey(settings.apiKey);
     await bootstrap.settingsRepository.writeSettings(settings);
     await bootstrap.logsRepository.setRetentionLimit(settings.logRetentionCount);
+    setKickLocaleOverride(settings.appLocale);
+    try {
+      await WindowBootstrap.refreshTitle();
+    } catch (_) {
+      // Best-effort update for the native window title.
+    }
     await WindowsDesktopRuntime.applySettings(settings);
     await bootstrap.analytics.setTrackingAllowed(analyticsTrackingAllowed(settings));
     state = AsyncData(settings);

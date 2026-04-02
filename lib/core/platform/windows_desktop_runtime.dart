@@ -126,6 +126,8 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
       return;
     }
 
+    await _refreshLocalizedUi();
+
     final isEnabled = await launchAtStartup.isEnabled();
     if (settings.windowsLaunchAtStartup) {
       if (refreshRegistration && isEnabled) {
@@ -138,6 +140,13 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
     if (isEnabled) {
       await launchAtStartup.disable();
     }
+  }
+
+  Future<void> _refreshLocalizedUi() async {
+    final windowVisible = await windowManager.isVisible();
+    final l10n = lookupKickLocalizations();
+    await trayManager.setToolTip(l10n.appTitle);
+    await _setTrayContextMenu(windowVisible: windowVisible);
   }
 
   Future<void> _dispose() async {

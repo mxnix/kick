@@ -34,6 +34,7 @@ class KickApp extends ConsumerWidget {
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: settings.themeMode,
+          locale: settings.appLocale,
           themeAnimationCurve: Curves.easeOutCubic,
           themeAnimationDuration: const Duration(milliseconds: 420),
           supportedLocales: AppLocalizations.supportedLocales,

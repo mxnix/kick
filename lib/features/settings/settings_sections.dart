@@ -34,6 +34,25 @@ class SettingsAppearanceSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(l10n.languageLabel, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<Locale?>(
+            key: ValueKey(controller.appLocale?.languageCode ?? 'system'),
+            initialValue: controller.appLocale,
+            isExpanded: true,
+            decoration: InputDecoration(helperText: l10n.languageHelperText),
+            items: [
+              DropdownMenuItem<Locale?>(value: null, child: Text(l10n.languageOptionSystem)),
+              ...AppLocalizations.supportedLocales.map(
+                (locale) => DropdownMenuItem<Locale?>(
+                  value: locale,
+                  child: Text(_settingsLanguageLabel(l10n, locale)),
+                ),
+              ),
+            ],
+            onChanged: controller.setAppLocale,
+          ),
+          const SizedBox(height: 18),
           Text(l10n.themeLabel, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           SegmentedButton<ThemeMode>(
@@ -115,6 +134,14 @@ class SettingsAppearanceSection extends StatelessWidget {
       ),
     );
   }
+}
+
+String _settingsLanguageLabel(KickLocalizations l10n, Locale locale) {
+  return switch (locale.languageCode) {
+    'ru' => l10n.languageOptionRussian,
+    'en' => l10n.languageOptionEnglish,
+    _ => locale.toLanguageTag(),
+  };
 }
 
 class SettingsNetworkSection extends StatelessWidget {

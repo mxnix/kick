@@ -17,6 +17,7 @@ import '../data/repositories/accounts_repository.dart';
 import '../data/repositories/logs_repository.dart';
 import '../data/repositories/secret_store.dart';
 import '../data/repositories/settings_repository.dart';
+import '../l10n/kick_localizations.dart';
 import '../observability/glitchtip.dart';
 import '../proxy/engine/proxy_controller.dart';
 import '../proxy/gemini/gemini_oauth_service.dart';
@@ -63,11 +64,6 @@ class AppBootstrap {
 Future<AppBootstrap> initializeAppBootstrap() async {
   final timings = _BootstrapTimings()..mark('initialize:start');
   try {
-    await WindowBootstrap.configure();
-    timings.mark('window_bootstrap_ready');
-    await AndroidForegroundRuntime.configure();
-    timings.mark('android_runtime_ready');
-
     final supportDirectory = await getApplicationSupportDirectory();
     timings.mark('support_directory_ready');
     final databasePath = p.join(supportDirectory.path, 'kick.sqlite');
@@ -90,9 +86,14 @@ Future<AppBootstrap> initializeAppBootstrap() async {
     if (currentSettings == null) {
       await settingsRepository.writeSettings(AppSettings.defaults(apiKey: apiKey));
     }
-    timings.mark('settings_ready');
     final effectiveSettings =
         currentSettings?.copyWith(apiKey: apiKey) ?? AppSettings.defaults(apiKey: apiKey);
+    setKickLocaleOverride(effectiveSettings.appLocale);
+    timings.mark('settings_ready');
+    await WindowBootstrap.configure();
+    timings.mark('window_bootstrap_ready');
+    await AndroidForegroundRuntime.configure();
+    timings.mark('android_runtime_ready');
     await logsRepository.setRetentionLimit(effectiveSettings.logRetentionCount);
     await WindowsDesktopRuntime.configure(
       settings: effectiveSettings,

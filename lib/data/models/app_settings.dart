@@ -5,6 +5,8 @@ enum KickLogVerbosity { quiet, normal, verbose }
 const defaultLogRetentionCount = 500;
 const minLogRetentionCount = 1;
 const maxLogRetentionCount = 50000;
+const _systemAppLocaleStorageValue = 'system';
+const Object _appLocaleUnset = Object();
 const _defaultRequestMaxRetries = 10;
 const _minRequestMaxRetries = 0;
 const _maxRequestMaxRetries = 20;
@@ -15,6 +17,7 @@ const _maxRetry429DelaySeconds = 3600;
 class AppSettings {
   static const Set<String> storageKeys = {
     'api_key_required',
+    'app_locale',
     'theme_mode',
     'use_dynamic_color',
     'has_acknowledged_disclaimer',
@@ -38,6 +41,7 @@ class AppSettings {
   const AppSettings({
     required this.apiKey,
     required this.apiKeyRequired,
+    this.appLocale,
     required this.themeMode,
     required this.useDynamicColor,
     required this.hasAcknowledgedDisclaimer,
@@ -60,6 +64,7 @@ class AppSettings {
 
   final String apiKey;
   final bool apiKeyRequired;
+  final Locale? appLocale;
   final ThemeMode themeMode;
   final bool useDynamicColor;
   final bool hasAcknowledgedDisclaimer;
@@ -83,6 +88,7 @@ class AppSettings {
     return AppSettings(
       apiKey: apiKey,
       apiKeyRequired: true,
+      appLocale: null,
       themeMode: ThemeMode.system,
       useDynamicColor: true,
       hasAcknowledgedDisclaimer: false,
@@ -107,6 +113,7 @@ class AppSettings {
   AppSettings copyWith({
     String? apiKey,
     bool? apiKeyRequired,
+    Object? appLocale = _appLocaleUnset,
     ThemeMode? themeMode,
     bool? useDynamicColor,
     bool? hasAcknowledgedDisclaimer,
@@ -130,6 +137,9 @@ class AppSettings {
     return AppSettings(
       apiKey: apiKey ?? this.apiKey,
       apiKeyRequired: apiKeyRequired ?? this.apiKeyRequired,
+      appLocale: identical(appLocale, _appLocaleUnset)
+          ? this.appLocale
+          : _normalizeAppLocale(appLocale as Locale?),
       themeMode: themeMode ?? this.themeMode,
       useDynamicColor: useDynamicColor ?? this.useDynamicColor,
       hasAcknowledgedDisclaimer: hasAcknowledgedDisclaimer ?? this.hasAcknowledgedDisclaimer,
@@ -158,6 +168,7 @@ class AppSettings {
   Map<String, String> toStorageMap() {
     return {
       'api_key_required': apiKeyRequired.toString(),
+      'app_locale': _appLocaleToStorageValue(appLocale),
       'theme_mode': themeMode.name,
       'use_dynamic_color': useDynamicColor.toString(),
       'has_acknowledged_disclaimer': hasAcknowledgedDisclaimer.toString(),
@@ -183,6 +194,7 @@ class AppSettings {
     return {
       'api_key': apiKey,
       'api_key_required': apiKeyRequired,
+      'app_locale': _appLocaleToStorageValue(appLocale),
       'theme_mode': themeMode.name,
       'use_dynamic_color': useDynamicColor,
       'has_acknowledged_disclaimer': hasAcknowledgedDisclaimer,
@@ -210,6 +222,7 @@ class AppSettings {
     return AppSettings(
       apiKey: apiKey,
       apiKeyRequired: _readBool(json['api_key_required'], defaultValue: true),
+      appLocale: _readAppLocale(json['app_locale']),
       themeMode: ThemeMode.values.firstWhere(
         (value) => value.name == json['theme_mode'],
         orElse: () => ThemeMode.system,
@@ -253,6 +266,7 @@ class AppSettings {
     return AppSettings(
       apiKey: apiKey,
       apiKeyRequired: values['api_key_required'] != 'false',
+      appLocale: _readAppLocale(values['app_locale']),
       themeMode: ThemeMode.values.firstWhere(
         (value) => value.name == values['theme_mode'],
         orElse: () => ThemeMode.system,
@@ -289,6 +303,19 @@ class AppSettings {
           .toList(growable: false),
     );
   }
+}
+
+String _appLocaleToStorageValue(Locale? value) {
+  return _normalizeAppLocale(value)?.languageCode ?? _systemAppLocaleStorageValue;
+}
+
+Locale? _normalizeAppLocale(Locale? value) {
+  final languageCode = value?.languageCode.trim().toLowerCase();
+  return switch (languageCode) {
+    'en' => const Locale('en'),
+    'ru' => const Locale('ru'),
+    _ => null,
+  };
 }
 
 String _normalizeHost(String? value, {required bool allowLan}) {
@@ -354,6 +381,16 @@ String? _readString(Object? value) {
     String text => text.trim(),
     _ => null,
   };
+}
+
+Locale? _readAppLocale(Object? value) {
+  final text = _readString(value);
+  if (text == null || text.isEmpty || text.toLowerCase() == _systemAppLocaleStorageValue) {
+    return null;
+  }
+
+  final languageCode = text.replaceAll('_', '-').split('-').first;
+  return _normalizeAppLocale(Locale(languageCode));
 }
 
 bool _readBool(Object? value, {required bool defaultValue}) {

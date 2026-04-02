@@ -375,6 +375,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSubtitle => 'Network, appearance, API key, and proxy behavior';
 
   @override
+  String get languageLabel => 'Language';
+
+  @override
+  String get languageHelperText => 'System follows your device language';
+
+  @override
+  String get languageOptionSystem => 'System';
+
+  @override
+  String get languageOptionEnglish => 'English';
+
+  @override
+  String get languageOptionRussian => 'Русский';
+
+  @override
   String get themeLabel => 'Theme';
 
   @override
@@ -396,7 +411,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAppearanceSectionTitle => 'Appearance and behavior';
 
   @override
-  String get settingsAppearanceSectionSummary => 'Theme, logs, and app behavior';
+  String get settingsAppearanceSectionSummary => 'Language, theme, logs, and app behavior';
 
   @override
   String get settingsNetworkSectionTitle => 'Network';
