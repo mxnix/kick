@@ -124,7 +124,7 @@
             }
         }
     },
-    "accountProjectCheckTraceIdValue": "Trace ID: {traceId}",
+    "accountProjectCheckTraceIdValue": "ID трассировки: {traceId}",
     "@accountProjectCheckTraceIdValue": {
         "description": "Shown in the successful project diagnostics dialog when Google returns a trace identifier.",
         "placeholders": {
@@ -710,5 +710,74 @@
                 "type": "int"
             }
         }
-    }
+    },
+    "languageLabel": "Язык",
+    "languageHelperText": "\"Системный\" следует языку устройства",
+    "languageOptionSystem": "Системный",
+    "languageOptionEnglish": "English",
+    "languageOptionRussian": "Русский",
+    "logsExportFileTitle": "Экспортированный лог из KiCk",
+    "logsExportShareSubject": "Логи KiCk",
+    "logsExportGeneratedAtLabel": "Сгенерировано в",
+    "logsExportEntriesCount": "Записей: {count}",
+    "@logsExportEntriesCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "logsExportSectionEnvironment": "Окружение",
+    "logsExportAppLabel": "Приложение",
+    "logsExportFiltersLabel": "Фильтры",
+    "logsExportScopeLabel": "Область",
+    "logsExportRuntimeSettingsLabel": "Настройки рантайма",
+    "logsExportNoneValue": "нет",
+    "logsExportNoneDetectedValue": "ничего не найдено",
+    "logsExportSectionDiagnostics": "Общая сводка диагностики",
+    "logsExportTimeRangeLabel": "Временной диапазон",
+    "logsExportLevelsLabel": "Уровни",
+    "logsExportCategoriesLabel": "Категории",
+    "logsExportRoutesLabel": "Маршруты",
+    "logsExportModelsLabel": "Модели",
+    "logsExportStatusCodesLabel": "Коды состояния",
+    "logsExportErrorDetailsLabel": "Подробности ошибки",
+    "logsExportRetriedRequestsLabel": "Повторено запросов",
+    "logsExportTokensLabel": "Токены",
+    "logsExportAndroidBackgroundSessionsLabel": "Фоновые сессии Android",
+    "logsExportTimestampLabel": "Время события",
+    "logsExportLevelLabel": "Уровень",
+    "logsExportCategoryLabel": "Категория",
+    "logsExportRouteLabel": "Маршрут",
+    "logsExportMessageLabel": "Сообщение",
+    "logsExportMaskedPayloadLabel": "Маскированная сводка",
+    "logsExportRawPayloadLabel": "Сырая сводка",
+    "logMessageRequestReceived": "Запрос получен",
+    "logMessageParsedRequest": "Разобранный запрос",
+    "logMessageResponseCompleted": "Ответ завершен",
+    "logMessageStreamClientAborted": "Потоковый ответ прерван клиентом",
+    "logMessageRetryScheduled": "Повторная попытка запланирована после сбоя запроса",
+    "logMessageRetryWithAnotherAccount": "Повторная попытка с другим аккаунтом после сбоя запроса",
+    "logMessageRequestSucceededAfterRetries": "Запрос успешно выполнен после повторных попыток",
+    "logMessageRequestFailedAfterRetries": "Запрос не удался после повторных попыток",
+    "logMessageUsingAccountForModel": "Используется аккаунт {account} для {model}",
+    "@logMessageUsingAccountForModel": {
+        "placeholders": {
+            "account": {
+                "type": "String"
+            },
+            "model": {
+                "type": "String"
+            }
+        }
+    },
+    "logsExportUpstreamReasonsLabel": "Причины на стороне апстрима",
+    "logMessageDispatchingStreamingRequest": "Отправка потокового запроса апстриму",
+    "logMessageDispatchingRequest": "Отправка запроса апстрим провайдеру",
+    "logMessageUpstreamPayloadReturned": "Апстрим вернул сводку",
+    "logMessageMappedChatCompletion": "Сводка от апстрима сопоставлена с форматом OpenAI chat completion",
+    "logMessageProxySessionSummary": "Сводка по прокси-сессии",
+    "logMessageAndroidBackgroundSessionStarted": "Фоновая сессия Android началась",
+    "logMessageAndroidBackgroundSessionEnded": "Фоновая сессия Android завершилась",
+    "logMessageAndroidBackgroundSessionRecovered": "Фоновая сессия Android восстановлена после перезапуска процесса"
 }

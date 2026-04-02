@@ -201,7 +201,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String accountProjectCheckTraceIdValue(String traceId) {
-    return 'Trace ID: $traceId';
+    return 'ID трассировки: $traceId';
   }
 
   @override
@@ -374,19 +374,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsSubtitle => 'Сеть, оформление, API-ключ и работа прокси';
 
   @override
-  String get languageLabel => 'Language';
+  String get languageLabel => 'Язык';
 
   @override
-  String get languageHelperText => 'System follows your device language';
+  String get languageHelperText => '\"Системный\" следует языку устройства';
 
   @override
-  String get languageOptionSystem => 'System';
+  String get languageOptionSystem => 'Системный';
 
   @override
   String get languageOptionEnglish => 'English';
 
   @override
-  String get languageOptionRussian => 'Russian';
+  String get languageOptionRussian => 'Русский';
 
   @override
   String get themeLabel => 'Тема';
@@ -1010,152 +1010,153 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get logsExportFileTitle => 'KiCk log export';
+  String get logsExportFileTitle => 'Экспортированный лог из KiCk';
 
   @override
-  String get logsExportShareSubject => 'KiCk logs';
+  String get logsExportShareSubject => 'Логи KiCk';
 
   @override
-  String get logsExportGeneratedAtLabel => 'Generated at';
+  String get logsExportGeneratedAtLabel => 'Сгенерировано в';
 
   @override
   String logsExportEntriesCount(int count) {
-    return 'Entries: $count';
+    return 'Записей: $count';
   }
 
   @override
-  String get logsExportSectionEnvironment => 'Environment';
+  String get logsExportSectionEnvironment => 'Окружение';
 
   @override
-  String get logsExportAppLabel => 'App';
+  String get logsExportAppLabel => 'Приложение';
 
   @override
-  String get logsExportFiltersLabel => 'Filters';
+  String get logsExportFiltersLabel => 'Фильтры';
 
   @override
-  String get logsExportScopeLabel => 'Scope';
+  String get logsExportScopeLabel => 'Область';
 
   @override
-  String get logsExportRuntimeSettingsLabel => 'Runtime settings';
+  String get logsExportRuntimeSettingsLabel => 'Настройки рантайма';
 
   @override
-  String get logsExportNoneValue => 'none';
+  String get logsExportNoneValue => 'нет';
 
   @override
-  String get logsExportNoneDetectedValue => 'none detected';
+  String get logsExportNoneDetectedValue => 'ничего не найдено';
 
   @override
-  String get logsExportSectionDiagnostics => 'Diagnostics summary';
+  String get logsExportSectionDiagnostics => 'Общая сводка диагностики';
 
   @override
-  String get logsExportTimeRangeLabel => 'Time range';
+  String get logsExportTimeRangeLabel => 'Временной диапазон';
 
   @override
-  String get logsExportLevelsLabel => 'Levels';
+  String get logsExportLevelsLabel => 'Уровни';
 
   @override
-  String get logsExportCategoriesLabel => 'Categories';
+  String get logsExportCategoriesLabel => 'Категории';
 
   @override
-  String get logsExportRoutesLabel => 'Routes';
+  String get logsExportRoutesLabel => 'Маршруты';
 
   @override
-  String get logsExportModelsLabel => 'Models';
+  String get logsExportModelsLabel => 'Модели';
 
   @override
-  String get logsExportStatusCodesLabel => 'Status codes';
+  String get logsExportStatusCodesLabel => 'Коды состояния';
 
   @override
-  String get logsExportErrorDetailsLabel => 'Error details';
+  String get logsExportErrorDetailsLabel => 'Подробности ошибки';
 
   @override
-  String get logsExportUpstreamReasonsLabel => 'Upstream reasons';
+  String get logsExportUpstreamReasonsLabel => 'Причины на стороне апстрима';
 
   @override
-  String get logsExportRetriedRequestsLabel => 'Retried requests';
+  String get logsExportRetriedRequestsLabel => 'Повторено запросов';
 
   @override
-  String get logsExportTokensLabel => 'Tokens';
+  String get logsExportTokensLabel => 'Токены';
 
   @override
-  String get logsExportAndroidBackgroundSessionsLabel => 'Android background sessions';
+  String get logsExportAndroidBackgroundSessionsLabel => 'Фоновые сессии Android';
 
   @override
-  String get logsExportTimestampLabel => 'Timestamp';
+  String get logsExportTimestampLabel => 'Время события';
 
   @override
-  String get logsExportLevelLabel => 'Level';
+  String get logsExportLevelLabel => 'Уровень';
 
   @override
-  String get logsExportCategoryLabel => 'Category';
+  String get logsExportCategoryLabel => 'Категория';
 
   @override
-  String get logsExportRouteLabel => 'Route';
+  String get logsExportRouteLabel => 'Маршрут';
 
   @override
-  String get logsExportMessageLabel => 'Message';
+  String get logsExportMessageLabel => 'Сообщение';
 
   @override
-  String get logsExportMaskedPayloadLabel => 'Masked payload';
+  String get logsExportMaskedPayloadLabel => 'Маскированная сводка';
 
   @override
-  String get logsExportRawPayloadLabel => 'Raw payload';
+  String get logsExportRawPayloadLabel => 'Сырая сводка';
 
   @override
-  String get logMessageRequestReceived => 'Request received';
+  String get logMessageRequestReceived => 'Запрос получен';
 
   @override
-  String get logMessageParsedRequest => 'Parsed request';
+  String get logMessageParsedRequest => 'Разобранный запрос';
 
   @override
-  String get logMessageResponseCompleted => 'Response completed';
+  String get logMessageResponseCompleted => 'Ответ завершен';
 
   @override
-  String get logMessageStreamClientAborted => 'Streaming response aborted by client';
+  String get logMessageStreamClientAborted => 'Потоковый ответ прерван клиентом';
 
   @override
-  String get logMessageRetryScheduled => 'Retry scheduled after request failure';
+  String get logMessageRetryScheduled => 'Повторная попытка запланирована после сбоя запроса';
 
   @override
   String get logMessageRetryWithAnotherAccount =>
-      'Retrying with another account after request failure';
+      'Повторная попытка с другим аккаунтом после сбоя запроса';
 
   @override
-  String get logMessageRequestSucceededAfterRetries => 'Request succeeded after retries';
+  String get logMessageRequestSucceededAfterRetries =>
+      'Запрос успешно выполнен после повторных попыток';
 
   @override
-  String get logMessageRequestFailedAfterRetries => 'Request failed after retries';
+  String get logMessageRequestFailedAfterRetries => 'Запрос не удался после повторных попыток';
 
   @override
-  String get logMessageDispatchingStreamingRequest =>
-      'Dispatching streaming request to upstream provider';
+  String get logMessageDispatchingStreamingRequest => 'Отправка потокового запроса апстриму';
 
   @override
-  String get logMessageDispatchingRequest => 'Dispatching request to upstream provider';
+  String get logMessageDispatchingRequest => 'Отправка запроса апстрим провайдеру';
 
   @override
-  String get logMessageUpstreamPayloadReturned => 'Upstream provider returned a payload';
+  String get logMessageUpstreamPayloadReturned => 'Апстрим вернул сводку';
 
   @override
-  String get logMessageMappedChatCompletion => 'Mapped upstream payload to OpenAI chat completion';
+  String get logMessageMappedChatCompletion =>
+      'Сводка от апстрима сопоставлена с форматом OpenAI chat completion';
 
   @override
   String logMessageUsingAccountForModel(String account, String model) {
-    return 'Using account $account for $model';
+    return 'Используется аккаунт $account для $model';
   }
 
   @override
-  String get logMessageProxySessionSummary => 'Proxy session summary';
+  String get logMessageProxySessionSummary => 'Сводка по прокси-сессии';
 
   @override
-  String get logMessageAndroidBackgroundSessionStarted => 'Android background session started';
+  String get logMessageAndroidBackgroundSessionStarted => 'Фоновая сессия Android началась';
 
   @override
-  String get logMessageAndroidBackgroundSessionEnded => 'Android background session ended';
+  String get logMessageAndroidBackgroundSessionEnded => 'Фоновая сессия Android завершилась';
 
   @override
   String get logMessageAndroidBackgroundSessionRecovered =>
-      'Android background session recovered after process restart';
+      'Фоновая сессия Android восстановлена после перезапуска процесса';
 
   @override
   String get accountDialogTitle => 'Аккаунт';
