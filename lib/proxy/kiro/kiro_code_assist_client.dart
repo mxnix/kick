@@ -319,7 +319,7 @@ class KiroCodeAssistClient {
     required UnifiedPromptRequest request,
     required String model,
   }) {
-    final normalizedTurns = _normalizeTurns(request);
+    final normalizedTurns = _normalizeTurns(request, model: model);
     final history = <Map<String, Object?>>[];
 
     if (normalizedTurns.isEmpty) {
@@ -373,9 +373,9 @@ class KiroCodeAssistClient {
     return payload;
   }
 
-  List<UnifiedTurn> _normalizeTurns(UnifiedPromptRequest request) {
+  List<UnifiedTurn> _normalizeTurns(UnifiedPromptRequest request, {required String model}) {
     final merged = <UnifiedTurn>[];
-    final systemInstruction = buildKiroSystemInstruction(request.systemInstruction);
+    final systemInstruction = buildKiroSystemInstruction(request.systemInstruction, model: model);
     for (final turn in request.turns) {
       if (merged.isNotEmpty && merged.last.role == turn.role) {
         final last = merged.removeLast();

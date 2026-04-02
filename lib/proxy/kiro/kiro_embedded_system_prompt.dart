@@ -1,3 +1,5 @@
+import '../model_catalog.dart';
+
 /// Edit this constant to change the hardcoded Kiro-only prompt.
 const String kiroEmbeddedSystemPrompt = r'''
 <user_facing_identity>
@@ -21,11 +23,20 @@ const String kiroEmbeddedSystemPrompt = r'''
 
 ''';
 
+bool shouldInjectKiroSystemPrompt(String model) {
+  final normalized = ModelCatalog.normalizeModel(model).trim().toLowerCase();
+  if (normalized.isEmpty) {
+    return false;
+  }
+  return normalized.startsWith('claude-') || normalized.startsWith('anthropic.');
+}
+
 /// Keep the embedded override last so it stays closest to the actual user turn.
-String? buildKiroSystemInstruction(String? requestSystemInstruction) {
+String? buildKiroSystemInstruction(String? requestSystemInstruction, {required String model}) {
   final mergedParts = <String>[
     if (requestSystemInstruction?.trim().isNotEmpty == true) requestSystemInstruction!.trim(),
-    if (kiroEmbeddedSystemPrompt.trim().isNotEmpty) kiroEmbeddedSystemPrompt.trim(),
+    if (shouldInjectKiroSystemPrompt(model) && kiroEmbeddedSystemPrompt.trim().isNotEmpty)
+      kiroEmbeddedSystemPrompt.trim(),
   ];
   if (mergedParts.isEmpty) {
     return null;

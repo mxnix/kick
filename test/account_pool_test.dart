@@ -72,7 +72,7 @@ void main() {
     expect(selected?.id, 'b');
   });
 
-  test('treats model aliases as the same capability when filtering accounts', () {
+  test('does not merge different model ids when filtering accounts', () {
     final pool = GeminiAccountPool([
       ProxyRuntimeAccount(
         id: 'alias',
@@ -93,7 +93,7 @@ void main() {
       ),
     ]);
 
-    expect(pool.select('gemini-3-flash', provider: AccountProvider.gemini), isNull);
+    expect(pool.select('gemini-3-flash', provider: AccountProvider.gemini)?.id, 'alias');
   });
 
   test('prefers account without recent quota warning inside same priority tier', () {

@@ -3,7 +3,7 @@ import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/proxy/model_catalog.dart';
 
 void main() {
-  test('normalizes and merges bundled and custom models', () {
+  test('preserves exact model ids when merging bundled and custom models', () {
     final catalog = ModelCatalog(
       customModels: const [
         'models/gemini-2.5-flash',
@@ -15,8 +15,7 @@ void main() {
     final models = catalog.all();
 
     expect(models, contains('google/gemini-2.5-flash'));
-    expect(models, contains('google/gemini-3-flash-preview'));
-    expect(models, isNot(contains('google/gemini-3-flash')));
+    expect(models, contains('google/gemini-3-flash'));
     expect(models, contains('google/gemini-4-experimental-preview'));
     expect(models.where((item) => item == 'google/gemini-2.5-flash').length, 1);
     expect(catalog.contains('google/gemini-3-flash'), isTrue);
@@ -55,11 +54,8 @@ void main() {
 
   test('builds canonical provider/model ids for user-facing storage', () {
     expect(
-      ModelCatalog.normalizePublicModel(
-        'gemini-3.1-pro-preview',
-        defaultProvider: AccountProvider.gemini,
-      ),
-      'google/gemini-3.1-pro-preview',
+      ModelCatalog.normalizePublicModel('gemini-3.1-pro', defaultProvider: AccountProvider.gemini),
+      'google/gemini-3.1-pro',
     );
     expect(
       ModelCatalog.normalizePublicModel('claude-opus-4.5', defaultProvider: AccountProvider.kiro),

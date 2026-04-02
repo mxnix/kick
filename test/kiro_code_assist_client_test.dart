@@ -41,10 +41,14 @@ void main() {
     );
   }
 
-  UnifiedPromptRequest sampleRequest({String? systemInstruction, List<UnifiedTurn>? turns}) {
+  UnifiedPromptRequest sampleRequest({
+    String? model,
+    String? systemInstruction,
+    List<UnifiedTurn>? turns,
+  }) {
     return UnifiedPromptRequest(
       requestId: 'req-1',
-      model: 'kiro/claude-sonnet-4',
+      model: model ?? 'kiro/claude-sonnet-4',
       stream: false,
       source: 'chat.completions',
       turns:
@@ -115,20 +119,23 @@ void main() {
     expect(waits, [const Duration(seconds: 12)]);
   });
 
-  test('returns an empty discovery list instead of a stale fallback when Kiro omits models', () async {
-    final client = KiroCodeAssistClient(
-      httpClient: QueueHttpClient([
-        (request) async {
-          expect(request.url.path, '/ListAvailableModels');
-          return http.Response(jsonEncode({'models': []}), 200);
-        },
-      ]),
-    );
+  test(
+    'returns an empty discovery list instead of a stale fallback when Kiro omits models',
+    () async {
+      final client = KiroCodeAssistClient(
+        httpClient: QueueHttpClient([
+          (request) async {
+            expect(request.url.path, '/ListAvailableModels');
+            return http.Response(jsonEncode({'models': []}), 200);
+          },
+        ]),
+      );
 
-    final models = await client.listModels(account: sampleAccount());
+      final models = await client.listModels(account: sampleAccount());
 
-    expect(models, isEmpty);
-  });
+      expect(models, isEmpty);
+    },
+  );
 
   test('retries Kiro generation after upstream service unavailable', () async {
     final waits = <Duration>[];
@@ -165,7 +172,7 @@ void main() {
     expect(waits, [const Duration(seconds: 2)]);
   });
 
-  test('injects the hardcoded Kiro prompt into the upstream request', () async {
+  test('injects the hardcoded Kiro prompt only for Claude models', () async {
     late Map<String, Object?> capturedBody;
     final client = KiroCodeAssistClient(
       httpClient: QueueHttpClient([
@@ -198,6 +205,76 @@ void main() {
       lessThan(content.indexOf(embeddedPrompt)),
     );
     expect(content.indexOf(embeddedPrompt), lessThan(content.indexOf('Hello')));
+  });
+
+  test('does not inject the hardcoded Kiro prompt for non-Claude models', () async {
+    late Map<String, Object?> capturedBody;
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          final typedRequest = request as http.Request;
+          capturedBody = (jsonDecode(typedRequest.body) as Map).cast<String, Object?>();
+          expect(request.url.path, '/generateAssistantResponse');
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('{"content":"Hello from Kiro"}')),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        model: 'kiro/deepseek-3.2',
+        systemInstruction: 'Follow repository conventions.',
+      ),
+    );
+
+    final conversationState = (capturedBody['conversationState'] as Map).cast<String, Object?>();
+    final currentMessage = (conversationState['currentMessage'] as Map).cast<String, Object?>();
+    final userInputMessage = (currentMessage['userInputMessage'] as Map).cast<String, Object?>();
+    final content = userInputMessage['content'] as String;
+    final embeddedPrompt = kiroEmbeddedSystemPrompt.trim();
+
+    expect(content, contains('Follow repository conventions.'));
+    expect(content, contains('Hello'));
+    expect(content, isNot(contains(embeddedPrompt)));
+  });
+
+  test('does not inject the hardcoded Kiro prompt for auto model', () async {
+    late Map<String, Object?> capturedBody;
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          final typedRequest = request as http.Request;
+          capturedBody = (jsonDecode(typedRequest.body) as Map).cast<String, Object?>();
+          expect(request.url.path, '/generateAssistantResponse');
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('{"content":"Hello from Kiro"}')),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        model: 'kiro/auto',
+        systemInstruction: 'Follow repository conventions.',
+      ),
+    );
+
+    final conversationState = (capturedBody['conversationState'] as Map).cast<String, Object?>();
+    final currentMessage = (conversationState['currentMessage'] as Map).cast<String, Object?>();
+    final userInputMessage = (currentMessage['userInputMessage'] as Map).cast<String, Object?>();
+    final content = userInputMessage['content'] as String;
+    final embeddedPrompt = kiroEmbeddedSystemPrompt.trim();
+
+    expect(content, contains('Follow repository conventions.'));
+    expect(content, contains('Hello'));
+    expect(content, isNot(contains(embeddedPrompt)));
   });
 
   test('derives usage metadata from Kiro context usage events', () async {

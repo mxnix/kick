@@ -1114,7 +1114,7 @@ void main() {
     ]);
   });
 
-  test('normalizes model aliases and builds advanced Gemini generation config', () async {
+  test('preserves requested model id and builds advanced Gemini generation config', () async {
     Map<String, Object?>? capturedBody;
 
     final client = GeminiCodeAssistClient(
@@ -1155,7 +1155,7 @@ void main() {
     final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
     final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
 
-    expect(capturedBody?['model'], 'gemini-3-flash-preview');
+    expect(capturedBody?['model'], 'gemini-3-flash');
     expect(generationConfig['topK'], 64);
     expect(generationConfig['stopSequences'], ['END']);
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
@@ -1334,7 +1334,7 @@ void main() {
     final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
     final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
 
-    expect(capturedBody?['model'], 'gemini-2.5-flash');
+    expect(capturedBody?['model'], 'gemini-2.5-flash-preview');
     expect(generationConfig['responseModalities'], ['TEXT']);
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingBudget': 2048,
