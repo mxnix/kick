@@ -9,7 +9,6 @@ import '../../app/app_version_reader.dart';
 import '../../app/bootstrap.dart';
 import '../../core/accounts/account_priority.dart';
 import '../../core/platform/android_auth_keep_alive.dart';
-import '../../core/platform/android_foreground_runtime.dart';
 import '../../core/platform/windows_desktop_runtime.dart';
 import '../../core/security/proxy_api_key.dart';
 import '../../data/models/account_profile.dart';

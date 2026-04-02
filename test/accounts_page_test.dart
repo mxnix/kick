@@ -205,7 +205,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(AccountsPage)))!;
+      final l10n = AppLocalizations.of(tester.element(find.byType(AccountsPage)));
       expect(find.text(l10n.kiroLinkAuthOpenLinkFailedMessage), findsOneWidget);
     },
   );
@@ -268,7 +268,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
-    final l10n = AppLocalizations.of(tester.element(find.byType(AccountsPage)))!;
+    final l10n = AppLocalizations.of(tester.element(find.byType(AccountsPage)));
     expect(find.text(l10n.kiroLinkAuthDialogTitle), findsOneWidget);
     expect(startedNotificationTitle, l10n.kiroLinkAuthDialogTitle);
     expect(stopCalls, 0);

@@ -89,6 +89,12 @@ android {
             }
         }
     }
+
+    lint {
+        // Flutter rewrites android/local.properties with Windows paths that
+        // trigger PropertyEscape even though builds resolve them correctly.
+        disable += "PropertyEscape"
+    }
 }
 
 flutter {
