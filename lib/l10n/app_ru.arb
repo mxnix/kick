@@ -716,7 +716,7 @@
     "languageOptionSystem": "Системный",
     "languageOptionEnglish": "English",
     "languageOptionRussian": "Русский",
-    "logsExportFileTitle": "Экспортированный лог из KiCK",
+    "logsExportFileTitle": "Экспортированный лог из KiCk",
     "logsExportShareSubject": "Логи KiCk",
     "logsExportGeneratedAtLabel": "Сгенерировано в",
     "logsExportEntriesCount": "Записей: {count}",
@@ -735,7 +735,7 @@
     "logsExportNoneValue": "нет",
     "logsExportNoneDetectedValue": "ничего не найдено",
     "logsExportSectionDiagnostics": "Общая сводка диагностики",
-    "logsExportTimeRangeLabel": "Временной диапозон",
+    "logsExportTimeRangeLabel": "Временной диапазон",
     "logsExportLevelsLabel": "Уровни",
     "logsExportCategoriesLabel": "Категории",
     "logsExportRoutesLabel": "Маршруты",
@@ -757,10 +757,10 @@
     "logMessageResponseCompleted": "Ответ завершен",
     "logMessageStreamClientAborted": "Потоковый ответ прерван клиентом",
     "logMessageRetryScheduled": "Повторная попытка запланирована после сбоя запроса",
-    "logMessageRetryWithAnotherAccount": "Повторная попытка с другой учётной записью после сбоя запроса",
+    "logMessageRetryWithAnotherAccount": "Повторная попытка с другим аккаунтом после сбоя запроса",
     "logMessageRequestSucceededAfterRetries": "Запрос успешно выполнен после повторных попыток",
     "logMessageRequestFailedAfterRetries": "Запрос не удался после повторных попыток",
-    "logMessageUsingAccountForModel": "Используется учётная запись {account} для {model}",
+    "logMessageUsingAccountForModel": "Используется аккаунт {account} для {model}",
     "@logMessageUsingAccountForModel": {
         "placeholders": {
             "account": {
