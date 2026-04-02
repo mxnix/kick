@@ -136,8 +136,8 @@ class GeminiUsageSnapshot {
   }
 
   static int _compareBuckets(GeminiUsageBucket left, GeminiUsageBucket right) {
-    final leftIndex = ModelCatalog.bundledModels.indexOf(left.modelId);
-    final rightIndex = ModelCatalog.bundledModels.indexOf(right.modelId);
+    final leftIndex = _bundledModelOrderIndex(left.modelId);
+    final rightIndex = _bundledModelOrderIndex(right.modelId);
     final leftKnown = leftIndex != -1;
     final rightKnown = rightIndex != -1;
 
@@ -148,5 +148,22 @@ class GeminiUsageSnapshot {
       return leftKnown ? -1 : 1;
     }
     return left.modelId.compareTo(right.modelId);
+  }
+
+  static int _bundledModelOrderIndex(String modelId) {
+    final trimmed = modelId.trim();
+    if (trimmed.isEmpty) {
+      return -1;
+    }
+
+    final direct = ModelCatalog.bundledModels.indexOf(trimmed);
+    if (direct != -1) {
+      return direct;
+    }
+
+    final previewVariant = trimmed.endsWith('-preview')
+        ? trimmed.substring(0, trimmed.length - '-preview'.length)
+        : '$trimmed-preview';
+    return ModelCatalog.bundledModels.indexOf(previewVariant);
   }
 }

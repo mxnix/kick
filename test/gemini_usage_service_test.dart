@@ -44,7 +44,7 @@ void main() {
     scope: null,
   );
 
-  test('parses buckets in bundled model order and computes total usage', () {
+  test('parses buckets in bundled model order without remapping ids and computes total usage', () {
     final snapshot = GeminiUsageSnapshot.fromApi({
       'buckets': [
         {
@@ -61,7 +61,7 @@ void main() {
     }, fetchedAt: DateTime.parse('2026-03-15T12:00:00Z'));
 
     expect(snapshot.buckets.map((bucket) => bucket.modelId), [
-      'gemini-2.5-flash',
+      'gemini-2.5-flash-preview',
       'gemini-3.1-pro-preview',
     ]);
     expect(snapshot.totalUsed, closeTo(8, 0.001));
