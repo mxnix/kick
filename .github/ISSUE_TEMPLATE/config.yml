@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Privacy policy
-    url: https://github.com/mxnix/kick/blob/main/PRIVACY.md
+    url: https://github.com/mxnix/kick/blob/main/docs/PRIVACY.md
     about: Политика конфиденциальности KiCk

@@ -133,7 +133,7 @@ curl http://127.0.0.1:3000/v1/chat/completions \
 - При сохранении и выгрузке журнала чувствительные данные маскируются.
 - Анонимная аналитика отключена по умолчанию.
 
-Подробности: [Политика конфиденциальности](PRIVACY.md).
+Подробности: [Политика конфиденциальности](docs/PRIVACY.md).
 
 </details>
 
@@ -179,7 +179,7 @@ flutter run -d android
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows-installer.ps1
 ```
 
-Подробности по сборке и выпуску: [CONTRIBUTING.md](CONTRIBUTING.md).
+Подробности по сборке и выпуску: [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 </details>
 
