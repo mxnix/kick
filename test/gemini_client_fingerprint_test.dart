@@ -74,6 +74,10 @@ void main() {
     expect(headers[HttpHeaders.contentTypeHeader], 'application/json');
     expect(headers[HttpHeaders.acceptHeader], 'application/json');
     expect(headers['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
+    expect(
+      headers[HttpHeaders.userAgentHeader],
+      startsWith('$geminiCodeAssistUserAgentPrefix/$geminiCodeAssistCliVersion/gemini-2.5-pro '),
+    );
     expect(headers.containsKey('x-gemini-api-privileged-user-id'), isFalse);
   });
 

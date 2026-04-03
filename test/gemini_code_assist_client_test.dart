@@ -304,6 +304,41 @@ void main() {
     expect(((capturedBodies[1]['request'] as Map)['session_id']), sessionIds[1]);
   });
 
+  test('sends a health-check setup payload when probing account restrictions', () async {
+    Map<String, Object?>? loadCodeAssistBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/v1internal:loadCodeAssist');
+          loadCodeAssistBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'currentTier': {'id': 'standard-tier'},
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final violation = await client.probeTermsOfServiceViolation(account: sampleAccount());
+
+    expect(violation, isNull);
+    expect(loadCodeAssistBody, {
+      'cloudaicompanionProject': 'project-1',
+      'metadata': {
+        'ideType': geminiCodeAssistIdeType,
+        'platform': geminiCodeAssistPlatformUnspecified,
+        'pluginType': geminiCodeAssistPluginType,
+        'duetProject': 'project-1',
+      },
+      'mode': 'HEALTH_CHECK',
+    });
+  });
+
   test('auto-discovers and persists project id before unary generation', () async {
     final seenPaths = <String>[];
     final resolvedProjectIds = <String>[];
@@ -1975,7 +2010,7 @@ void main() {
     expect(generationConfig.containsKey('thinkingConfig'), isFalse);
   });
 
-  test('uses a sane default max output token budget when client omits it', () async {
+  test('omits max output token budget when the client omits it', () async {
     Map<String, Object?>? capturedBody;
 
     final client = GeminiCodeAssistClient(
@@ -2012,7 +2047,181 @@ void main() {
     final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
     final generationConfig = (requestMap['generationConfig'] as Map).cast<String, Object?>();
 
-    expect(generationConfig['maxOutputTokens'], defaultGeminiMaxOutputTokens);
+    expect(generationConfig.containsKey('maxOutputTokens'), isFalse);
+  });
+
+  test('omits toolConfig for default AUTO tool choice', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        tools: const [
+          UnifiedToolDeclaration(
+            name: 'lookupWeather',
+            description: 'Weather lookup',
+            parameters: {
+              'type': 'object',
+              'properties': {
+                'city': {'type': 'string'},
+              },
+            },
+          ),
+        ],
+      ),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+
+    expect(requestMap.containsKey('toolConfig'), isFalse);
+  });
+
+  test('refreshes tokens and retries unary generation once after a 401', () async {
+    final seenTokens = <String>[];
+    final persistedTokens = <OAuthTokens>[];
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {
+        persistedTokens.add(tokens);
+      },
+      httpClient: QueueHttpClient([
+        (request) async {
+          seenTokens.add(request.headers[HttpHeaders.authorizationHeader] ?? '');
+          expect(request.url.path, '/v1internal:generateContent');
+          return http.Response(
+            jsonEncode({
+              'error': {'code': 401, 'message': 'Unauthorized.'},
+            }),
+            401,
+          );
+        },
+        (request) async {
+          expect(request.url.path, '/token');
+          return http.Response(
+            jsonEncode({
+              'access_token': 'fresh-access-token',
+              'expires_in': 3600,
+              'token_type': 'Bearer',
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenTokens.add(request.headers[HttpHeaders.authorizationHeader] ?? '');
+          expect(request.url.path, '/v1internal:generateContent');
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'Hi'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final response = await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(),
+    );
+
+    expect(OpenAiResponseMapper.currentText(response), 'Hi');
+    expect(seenTokens, ['Bearer access-token', 'Bearer fresh-access-token']);
+    expect(persistedTokens, hasLength(1));
+    expect(persistedTokens.single.accessToken, 'fresh-access-token');
+  });
+
+  test('refreshes tokens and retries streaming generation once after a 401', () async {
+    final seenTokens = <String>[];
+    final persistedTokens = <OAuthTokens>[];
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {
+        persistedTokens.add(tokens);
+      },
+      httpClient: QueueHttpClient([
+        (request) async {
+          seenTokens.add(request.headers[HttpHeaders.authorizationHeader] ?? '');
+          expect(request.url.path, '/v1internal:streamGenerateContent');
+          return http.Response(
+            jsonEncode({
+              'error': {'code': 401, 'message': 'Unauthorized.'},
+            }),
+            401,
+          );
+        },
+        (request) async {
+          expect(request.url.path, '/token');
+          return http.Response(
+            jsonEncode({
+              'access_token': 'fresh-stream-token',
+              'expires_in': 3600,
+              'token_type': 'Bearer',
+            }),
+            200,
+          );
+        },
+        (request) async {
+          seenTokens.add(request.headers[HttpHeaders.authorizationHeader] ?? '');
+          expect(request.url.path, '/v1internal:streamGenerateContent');
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode(
+                'data: {"response":{"candidates":[{"content":{"parts":[{"text":"Hello"}]},"finishReason":"STOP"}]}}\n\n',
+              ),
+            ),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final stream = await client.generateContentStream(
+      account: sampleAccount(),
+      request: sampleRequest(stream: true),
+    );
+    final payloads = await stream.toList();
+
+    expect(payloads, hasLength(1));
+    expect(OpenAiResponseMapper.currentText(payloads.single), 'Hello');
+    expect(seenTokens, ['Bearer access-token', 'Bearer fresh-stream-token']);
+    expect(persistedTokens, hasLength(1));
+    expect(persistedTokens.single.accessToken, 'fresh-stream-token');
   });
 
   test('continues unary generation when Gemini stops on max tokens', () async {

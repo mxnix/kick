@@ -431,20 +431,21 @@ class GeminiCodeAssistClient {
   }
 
   Future<List<String>> listModels({required ProxyRuntimeAccount account}) async {
-    await _ensureFreshTokens(account);
-    final projectId = await _ensureResolvedProjectId(
-      account,
-      headerModel: geminiCodeAssistAuxiliaryHeaderModel,
-    );
-    final response = await _executeWithRetry(
-      () => _callJsonMethod(
-        method: 'retrieveUserQuota',
-        accessToken: account.tokens.accessToken,
+    final response = await _executeWithTokenRefreshRetry(account, () async {
+      final projectId = await _ensureResolvedProjectId(
+        account,
         headerModel: geminiCodeAssistAuxiliaryHeaderModel,
-        body: {'project': projectId},
-        timeoutLabel: 'Gemini model discovery',
-      ),
-    );
+      );
+      return _executeWithRetry(
+        () => _callJsonMethod(
+          method: 'retrieveUserQuota',
+          accessToken: account.tokens.accessToken,
+          headerModel: geminiCodeAssistAuxiliaryHeaderModel,
+          body: {'project': projectId},
+          timeoutLabel: 'Gemini model discovery',
+        ),
+      );
+    });
     final models = _extractQuotaModelIds(response).toList()..sort();
     return models;
   }
@@ -454,12 +455,10 @@ class GeminiCodeAssistClient {
     required UnifiedPromptRequest request,
     void Function(GeminiRetryEvent event)? onRetry,
   }) async {
-    await _ensureFreshTokens(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
-    final resolvedProjectId = await _ensureResolvedProjectId(
+    final resolvedProjectId = await _executeWithTokenRefreshRetry(
       account,
-      headerModel: resolvedModel,
-      onRetry: onRetry,
+      () => _ensureResolvedProjectId(account, headerModel: resolvedModel, onRetry: onRetry),
     );
     _scheduleWarmupIfNeeded(account: account, headerModel: resolvedModel);
     final baseRequestBody = _buildRequestBody(request, resolvedModel: resolvedModel);
@@ -479,12 +478,10 @@ class GeminiCodeAssistClient {
     required UnifiedPromptRequest request,
     void Function(GeminiRetryEvent event)? onRetry,
   }) async {
-    await _ensureFreshTokens(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
-    final resolvedProjectId = await _ensureResolvedProjectId(
+    final resolvedProjectId = await _executeWithTokenRefreshRetry(
       account,
-      headerModel: resolvedModel,
-      onRetry: onRetry,
+      () => _ensureResolvedProjectId(account, headerModel: resolvedModel, onRetry: onRetry),
     );
     _scheduleWarmupIfNeeded(account: account, headerModel: resolvedModel);
     final baseRequestBody = _buildRequestBody(request, resolvedModel: resolvedModel);
@@ -509,20 +506,20 @@ class GeminiCodeAssistClient {
               break;
             }
             final accumulatedBeforePass = accumulatedText;
-            await _ensureFreshTokens(account);
-            if (canceled) {
-              break;
-            }
-            final response = await _executeWithRetry(
-              () => _sendStreamRequest(
-                accessToken: account.tokens.accessToken,
-                model: resolvedModel,
-                projectId: resolvedProjectId,
-                requestBody: currentRequestBody,
-                sessionState: sessionState,
+            final response = await _executeWithTokenRefreshRetry(
+              account,
+              () => _executeWithRetry(
+                () => _sendStreamRequest(
+                  accessToken: account.tokens.accessToken,
+                  model: resolvedModel,
+                  projectId: resolvedProjectId,
+                  requestBody: currentRequestBody,
+                  sessionState: sessionState,
+                  cancellation: cancellation,
+                ),
+                onRetry: onRetry,
                 cancellation: cancellation,
               ),
-              onRetry: onRetry,
               cancellation: cancellation,
             );
 
@@ -594,35 +591,41 @@ class GeminiCodeAssistClient {
   Future<GeminiGatewayException?> probeTermsOfServiceViolation({
     required ProxyRuntimeAccount account,
   }) async {
-    await _ensureFreshTokens(account);
     final headerModel = geminiCodeAssistAuxiliaryHeaderModel;
     final projectIdHint = account.projectId.trim();
     final setupBody = <String, Object?>{
       if (projectIdHint.isNotEmpty) 'cloudaicompanionProject': projectIdHint,
-      'metadata': _buildSetupMetadata(),
+      'metadata': _buildSetupMetadata(projectId: projectIdHint),
+      if (projectIdHint.isNotEmpty) 'mode': 'HEALTH_CHECK',
     };
     try {
-      final response = await _callJsonMethod(
-        method: 'loadCodeAssist',
-        accessToken: account.tokens.accessToken,
-        headerModel: headerModel,
-        body: setupBody,
-        timeoutLabel: 'Gemini account restriction check',
+      final response = await _executeWithTokenRefreshRetry(
+        account,
+        () => _callJsonMethod(
+          method: 'loadCodeAssist',
+          accessToken: account.tokens.accessToken,
+          headerModel: headerModel,
+          body: setupBody,
+          timeoutLabel: 'Gemini account restriction check',
+        ),
       );
       if (response['currentTier'] != null) {
         return null;
       }
 
-      await _callJsonMethod(
-        method: 'onboardUser',
-        accessToken: account.tokens.accessToken,
-        headerModel: headerModel,
-        body: <String, Object?>{
-          'tierId': _extractDefaultTierId(response['allowedTiers']),
-          if (projectIdHint.isNotEmpty) 'cloudaicompanionProject': projectIdHint,
-          'metadata': _buildSetupMetadata(),
-        },
-        timeoutLabel: 'Gemini account restriction check',
+      await _executeWithTokenRefreshRetry(
+        account,
+        () => _callJsonMethod(
+          method: 'onboardUser',
+          accessToken: account.tokens.accessToken,
+          headerModel: headerModel,
+          body: <String, Object?>{
+            'tierId': _extractDefaultTierId(response['allowedTiers']),
+            if (projectIdHint.isNotEmpty) 'cloudaicompanionProject': projectIdHint,
+            'metadata': _buildSetupMetadata(projectId: projectIdHint),
+          },
+          timeoutLabel: 'Gemini account restriction check',
+        ),
       );
       return null;
     } on GeminiGatewayException catch (error) {
@@ -647,17 +650,19 @@ class GeminiCodeAssistClient {
 
     for (var pass = 0; pass <= _maxContinuationPasses; pass++) {
       final accumulatedBeforePass = accumulatedText;
-      await _ensureFreshTokens(account);
-      lastPayload = await _executeWithRetry(
-        () => _sendUnaryRequest(
-          accessToken: account.tokens.accessToken,
-          model: model,
-          projectId: projectId,
-          requestBody: currentRequestBody,
-          sessionState: sessionState,
-          timeoutLabel: 'Gemini request',
+      lastPayload = await _executeWithTokenRefreshRetry(
+        account,
+        () => _executeWithRetry(
+          () => _sendUnaryRequest(
+            accessToken: account.tokens.accessToken,
+            model: model,
+            projectId: projectId,
+            requestBody: currentRequestBody,
+            sessionState: sessionState,
+            timeoutLabel: 'Gemini request',
+          ),
+          onRetry: onRetry,
         ),
-        onRetry: onRetry,
       );
 
       final generatedText = _extractGeneratedText(lastPayload);
@@ -774,7 +779,9 @@ class GeminiCodeAssistClient {
     if (request.topP != null) {
       generationConfig['topP'] = request.topP;
     }
-    generationConfig['maxOutputTokens'] = request.maxOutputTokens ?? defaultGeminiMaxOutputTokens;
+    if (request.maxOutputTokens != null) {
+      generationConfig['maxOutputTokens'] = request.maxOutputTokens;
+    }
     if (_isGemini3Model(resolvedModel)) {
       generationConfig['topK'] = _gemini3DefaultTopK;
     }
@@ -812,6 +819,8 @@ class GeminiCodeAssistClient {
     if (request.googleWebSearchEnabled) {
       tools.add({'googleSearch': const <String, Object?>{}});
     }
+    final toolConfig = request.tools.isEmpty ? null : _buildToolConfig(request.toolChoice);
+    final toolConfigEntry = toolConfig == null ? null : <String, Object?>{'toolConfig': toolConfig};
 
     return {
       'contents': contents,
@@ -823,13 +832,13 @@ class GeminiCodeAssistClient {
           ],
         },
       if (tools.isNotEmpty) 'tools': tools,
-      if (request.tools.isNotEmpty) ...{'toolConfig': _buildToolConfig(request.toolChoice)},
+      ...?toolConfigEntry,
       if (generationConfig.isNotEmpty) 'generationConfig': generationConfig,
       'session_id': sessionId,
     };
   }
 
-  Map<String, Object?> _buildToolConfig(Object? toolChoice) {
+  Map<String, Object?>? _buildToolConfig(Object? toolChoice) {
     if (toolChoice is String) {
       switch (toolChoice) {
         case 'required':
@@ -841,9 +850,7 @@ class GeminiCodeAssistClient {
             'functionCallingConfig': {'mode': 'NONE'},
           };
         default:
-          return {
-            'functionCallingConfig': {'mode': 'AUTO'},
-          };
+          return null;
       }
     }
 
@@ -861,13 +868,11 @@ class GeminiCodeAssistClient {
       }
     }
 
-    return {
-      'functionCallingConfig': {'mode': 'AUTO'},
-    };
+    return null;
   }
 
-  Future<void> _ensureFreshTokens(ProxyRuntimeAccount account) async {
-    if (!account.tokens.isExpired) {
+  Future<void> _ensureFreshTokens(ProxyRuntimeAccount account, {bool forceRefresh = false}) async {
+    if (!forceRefresh && !account.tokens.isExpired) {
       return;
     }
 
@@ -1252,11 +1257,13 @@ class GeminiCodeAssistClient {
     );
   }
 
-  Map<String, String> _buildSetupMetadata() {
-    return const <String, String>{
+  Map<String, String> _buildSetupMetadata({String projectId = ''}) {
+    final normalizedProjectId = projectId.trim();
+    return <String, String>{
       'ideType': geminiCodeAssistIdeType,
       'platform': geminiCodeAssistPlatformUnspecified,
       'pluginType': geminiCodeAssistPluginType,
+      if (normalizedProjectId.isNotEmpty) 'duetProject': normalizedProjectId,
     };
   }
 
@@ -1358,6 +1365,31 @@ class GeminiCodeAssistClient {
           message: 'Gemini request failed after retries.',
           statusCode: 500,
         );
+  }
+
+  Future<T> _executeWithTokenRefreshRetry<T>(
+    ProxyRuntimeAccount account,
+    Future<T> Function() operation, {
+    _RequestCancellation? cancellation,
+  }) async {
+    await _ensureFreshTokens(account);
+    cancellation?.throwIfCanceled();
+    try {
+      return await operation();
+    } on GeminiGatewayException catch (error) {
+      if (!_shouldRetryWithTokenRefresh(error)) {
+        rethrow;
+      }
+      await _ensureFreshTokens(account, forceRefresh: true);
+      cancellation?.throwIfCanceled();
+      return operation();
+    }
+  }
+
+  bool _shouldRetryWithTokenRefresh(GeminiGatewayException error) {
+    return error.kind == GeminiGatewayFailureKind.auth &&
+        error.statusCode == HttpStatus.unauthorized &&
+        error.detail == null;
   }
 
   Future<void> _waitForRetryDelay(Duration delay, {_RequestCancellation? cancellation}) async {
