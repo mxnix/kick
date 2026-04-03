@@ -44,39 +44,53 @@ class KiroCodeAssistClient {
 
   Future<List<String>> listModels({required ProxyRuntimeAccount account}) async {
     await _ensureFreshTokens(account);
-    final response = await _executeWithRetry(
-      () => _sendRetryable(
-        method: 'GET',
-        uri: _listModelsUri(account),
-        headers: _headers(accessToken: account.tokens.accessToken),
-        timeoutLabel: 'Kiro model discovery',
-      ),
-    );
-    final body = await response.stream.bytesToString();
-
-    final decoded = _tryDecodeJsonMap(body);
     final discoveredModels = <String>{};
-    for (final item in ((decoded['models'] as List?) ?? const [])) {
-      if (item is! Map) {
-        continue;
+    final seenTokens = <String>{};
+    var nextToken = '';
+
+    while (true) {
+      final response = await _executeWithRetry(
+        () => _sendRetryable(
+          method: 'GET',
+          uri: _listModelsUri(account, nextToken: nextToken),
+          headers: _headers(accessToken: account.tokens.accessToken),
+          timeoutLabel: 'Kiro model discovery',
+        ),
+      );
+      final body = await response.stream.bytesToString();
+      final decoded = _tryDecodeJsonMap(body);
+
+      for (final item in ((decoded['models'] as List?) ?? const [])) {
+        if (item is! Map) {
+          continue;
+        }
+        final modelId = (item.cast<String, Object?>()['modelId'] as String? ?? '').trim();
+        if (modelId.isEmpty) {
+          continue;
+        }
+        discoveredModels.add(ModelCatalog.normalizeModel(modelId));
       }
-      final modelId = (item.cast<String, Object?>()['modelId'] as String? ?? '').trim();
-      if (modelId.isEmpty) {
-        continue;
+      final defaultModel = (decoded['defaultModel'] as Map?)?.cast<String, Object?>();
+      final defaultModelId = (defaultModel?['modelId'] as String? ?? '').trim();
+      if (defaultModelId.isNotEmpty) {
+        discoveredModels.add(ModelCatalog.normalizeModel(defaultModelId));
       }
-      discoveredModels.add(ModelCatalog.normalizeModel(modelId));
-    }
-    final defaultModel = (decoded['defaultModel'] as Map?)?.cast<String, Object?>();
-    final defaultModelId = (defaultModel?['modelId'] as String? ?? '').trim();
-    if (defaultModelId.isNotEmpty) {
-      discoveredModels.add(ModelCatalog.normalizeModel(defaultModelId));
+
+      final pageToken = (decoded['nextToken'] as String? ?? '').trim();
+      if (pageToken.isEmpty || !seenTokens.add(pageToken)) {
+        if (discoveredModels.isNotEmpty ||
+            decoded.containsKey('models') ||
+            decoded.containsKey('defaultModel') ||
+            decoded.containsKey('nextToken')) {
+          break;
+        }
+        return const <String>[];
+      }
+      nextToken = pageToken;
     }
 
     final models = discoveredModels.toList()..sort();
-    if (models.isNotEmpty || decoded.containsKey('models') || decoded.containsKey('defaultModel')) {
-      return models;
-    }
-    return const <String>[];
+    return models;
   }
 
   Future<Map<String, Object?>> generateContent({
@@ -296,10 +310,11 @@ class KiroCodeAssistClient {
     return Uri.parse('https://q.$region.amazonaws.com/generateAssistantResponse');
   }
 
-  Uri _listModelsUri(ProxyRuntimeAccount account) {
+  Uri _listModelsUri(ProxyRuntimeAccount account, {String? nextToken}) {
     final region = (account.providerRegion ?? defaultKiroRegion).trim();
     return Uri.https('q.$region.amazonaws.com', '/ListAvailableModels', {
       'origin': 'AI_EDITOR',
+      if (nextToken?.trim().isNotEmpty == true) 'nextToken': nextToken!.trim(),
       if (account.providerProfileArn?.trim().isNotEmpty == true)
         'profileArn': account.providerProfileArn!.trim(),
     });
@@ -815,26 +830,35 @@ GeminiGatewayException decodeKiroGatewayError(int statusCode, String body) {
 class _KiroEvent {
   const _KiroEvent.content(this.text)
     : type = _KiroEventType.content,
+      thoughtSignature = null,
+      toolCall = null,
+      contextUsagePercentage = null;
+
+  const _KiroEvent.reasoning(this.text, this.thoughtSignature)
+    : type = _KiroEventType.reasoning,
       toolCall = null,
       contextUsagePercentage = null;
 
   const _KiroEvent.toolCall(this.toolCall)
     : type = _KiroEventType.toolCall,
       text = null,
+      thoughtSignature = null,
       contextUsagePercentage = null;
 
   const _KiroEvent.contextUsage(this.contextUsagePercentage)
     : type = _KiroEventType.contextUsage,
       text = null,
+      thoughtSignature = null,
       toolCall = null;
 
   final _KiroEventType type;
   final String? text;
+  final String? thoughtSignature;
   final Map<String, Object?>? toolCall;
   final double? contextUsagePercentage;
 }
 
-enum _KiroEventType { content, toolCall, contextUsage }
+enum _KiroEventType { content, reasoning, toolCall, contextUsage }
 
 class _KiroEventStreamParser {
   String _buffer = '';
@@ -871,6 +895,14 @@ class _KiroEventStreamParser {
           }
           _lastContent = content;
           events.add(_KiroEvent.content(content));
+          break;
+        case 'reasoning':
+          final text = (decoded['text'] as String? ?? '');
+          final signature = (decoded['signature'] as String?)?.trim();
+          if (text.isEmpty && (signature == null || signature.isEmpty)) {
+            continue;
+          }
+          events.add(_KiroEvent.reasoning(text, signature));
           break;
         case 'tool_start':
           _finalizeCurrentToolCall(events);
@@ -922,8 +954,13 @@ class _KiroEventStreamParser {
     final toolInputIndex = text.indexOf('{"input":');
     final toolStopIndex = text.indexOf('{"stop":');
     final contextUsageIndex = text.indexOf('{"contextUsagePercentage":');
+    final reasoningTextIndex = text.indexOf('{"text":');
+    final reasoningSignatureIndex = text.indexOf('{"signature":');
     final candidates = <({int index, String type})>[
       if (contentIndex >= 0) (index: contentIndex, type: 'content'),
+      if (reasoningTextIndex >= 0) (index: reasoningTextIndex, type: 'reasoning'),
+      if (reasoningSignatureIndex >= 0)
+        (index: reasoningSignatureIndex, type: 'reasoning'),
       if (toolStartIndex >= 0) (index: toolStartIndex, type: 'tool_start'),
       if (toolInputIndex >= 0) (index: toolInputIndex, type: 'tool_input'),
       if (toolStopIndex >= 0) (index: toolStopIndex, type: 'tool_stop'),
@@ -988,6 +1025,8 @@ class _KiroResponseAccumulator {
 
   final String model;
   final StringBuffer _text = StringBuffer();
+  final StringBuffer _reasoningText = StringBuffer();
+  final List<Map<String, Object?>> _thoughts = <Map<String, Object?>>[];
   final List<Map<String, Object?>> _toolCalls = <Map<String, Object?>>[];
   double? _contextUsagePercentage;
 
@@ -997,6 +1036,22 @@ class _KiroResponseAccumulator {
         final text = event.text;
         if (text != null && text.isNotEmpty) {
           _text.write(text);
+        }
+        break;
+      case _KiroEventType.reasoning:
+        final text = event.text;
+        final thoughtSignature = event.thoughtSignature;
+        if (text != null && text.isNotEmpty) {
+          _reasoningText.write(text);
+        }
+        if ((text != null && text.isNotEmpty) ||
+            (thoughtSignature != null && thoughtSignature.isNotEmpty)) {
+          _thoughts.add({
+            'thought': true,
+            if (text != null && text.isNotEmpty) 'text': text,
+            if (thoughtSignature != null && thoughtSignature.isNotEmpty)
+              'thoughtSignature': thoughtSignature,
+          });
         }
         break;
       case _KiroEventType.toolCall:
@@ -1019,6 +1074,7 @@ class _KiroResponseAccumulator {
           {
             'content': {
               'parts': [
+                for (final thought in _thoughts) thought,
                 if (_text.isNotEmpty) {'text': _text.toString()},
                 for (final toolCall in _toolCalls)
                   {
@@ -1040,7 +1096,9 @@ class _KiroResponseAccumulator {
   }
 
   Map<String, Object?> _buildUsageMetadata() {
-    final completionTokenCount = _estimateKiroTokenCount(_completionTokenSource());
+    final visibleTokenCount = _estimateKiroTokenCount(_completionTokenSource());
+    final reasoningTokenCount = _estimateKiroTokenCount(_reasoningText.toString());
+    final completionTokenCount = visibleTokenCount + reasoningTokenCount;
     final estimatedTotalTokenCount = _contextUsagePercentage != null && _contextUsagePercentage! > 0
         ? ((_contextUsagePercentage! / 100) * _maxInputTokensForModel(model)).floor()
         : completionTokenCount;
@@ -1052,7 +1110,7 @@ class _KiroResponseAccumulator {
       'candidatesTokenCount': completionTokenCount,
       'totalTokenCount': totalTokenCount,
       'cachedContentTokenCount': 0,
-      'thoughtsTokenCount': 0,
+      'thoughtsTokenCount': reasoningTokenCount,
     };
   }
 

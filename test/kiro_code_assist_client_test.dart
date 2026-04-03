@@ -137,6 +137,46 @@ void main() {
     },
   );
 
+  test('merges paginated Kiro model discovery results', () async {
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/ListAvailableModels');
+          expect(request.url.queryParameters['origin'], 'AI_EDITOR');
+          expect(request.url.queryParameters['nextToken'], isNull);
+          return http.Response(
+            jsonEncode({
+              'defaultModel': {'modelId': 'auto'},
+              'models': [
+                {'modelId': 'claude-sonnet-4'},
+              ],
+              'nextToken': 'page-2',
+            }),
+            200,
+          );
+        },
+        (request) async {
+          expect(request.url.path, '/ListAvailableModels');
+          expect(request.url.queryParameters['origin'], 'AI_EDITOR');
+          expect(request.url.queryParameters['nextToken'], 'page-2');
+          return http.Response(
+            jsonEncode({
+              'models': [
+                {'modelId': 'claude-sonnet-4.5'},
+                {'modelId': 'deepseek-3.2'},
+              ],
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final models = await client.listModels(account: sampleAccount());
+
+    expect(models, ['auto', 'claude-sonnet-4', 'claude-sonnet-4.5', 'deepseek-3.2']);
+  });
+
   test('retries Kiro generation after upstream service unavailable', () async {
     final waits = <Duration>[];
     var attempts = 0;
@@ -307,6 +347,44 @@ void main() {
     );
     expect(OpenAiResponseMapper.currentCachedTokenCount(response), 0);
     expect(OpenAiResponseMapper.currentReasoningTokenCount(response), 0);
+  });
+
+  test('maps Kiro reasoning stream events to reasoning content and token usage', () async {
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/generateAssistantResponse');
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"text":"Plan first.","signature":"sig-1"}'),
+              utf8.encode('\u0000\u0000{"content":"Done."}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final response = await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(),
+    );
+
+    expect(OpenAiResponseMapper.currentReasoningText(response), 'Plan first.');
+    expect(OpenAiResponseMapper.currentText(response), 'Done.');
+    expect(OpenAiResponseMapper.currentReasoningTokenCount(response), greaterThan(0));
+
+    final chatCompletion = OpenAiResponseMapper.toChatCompletion(
+      requestId: 'req-1',
+      model: 'kiro/claude-sonnet-4',
+      payload: response,
+    );
+    final choices = (chatCompletion['choices'] as List).cast<Map<String, Object?>>();
+    final message = (choices.single['message'] as Map).cast<String, Object?>();
+
+    expect(message['reasoning_content'], 'Plan first.');
+    expect(message['reasoning_signature'], 'sig-1');
+    expect(message['content'], 'Done.');
   });
 
   test('keeps Kiro total token usage at least as large as completion usage', () async {
