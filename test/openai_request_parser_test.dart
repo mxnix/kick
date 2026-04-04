@@ -161,7 +161,7 @@ void main() {
     expect(request.turns.last.parts.single.arguments?['result'], 'Bananas are berries.');
   });
 
-  test('keeps non-leading developer notes in system instruction', () {
+  test('keeps only leading system and developer notes in system instruction', () {
     final request = OpenAiRequestParser.parseChatRequest({
       'model': 'gemini-2.5-pro',
       'messages': [
@@ -172,12 +172,35 @@ void main() {
       ],
     }, requestId: 'req_late_system');
 
-    expect(request.systemInstruction, 'Lead instruction.\n\nLate policy update.');
-    expect(request.turns, hasLength(2));
+    expect(request.systemInstruction, 'Lead instruction.');
+    expect(request.turns, hasLength(3));
     expect(request.turns.first.role, 'user');
     expect(request.turns.first.parts.single.text, 'Hello');
+    expect(request.turns[1].role, 'user');
+    expect(request.turns[1].parts.single.text, 'Late policy update.');
     expect(request.turns.last.role, 'assistant');
     expect(request.turns.last.parts.single.text, 'Hi there');
+  });
+
+  test('preserves trailing system messages as user turns after assistant prefills', () {
+    final request = OpenAiRequestParser.parseChatRequest({
+      'model': 'gemini-3.1-pro-preview',
+      'messages': [
+        {'role': 'system', 'content': 'You are a roleplay director.'},
+        {'role': 'assistant', 'content': 'Previous character reply.'},
+        {'role': 'assistant', 'content': '<think>'},
+        {'role': 'system', 'content': 'Pause roleplay and write the memory book.'},
+      ],
+    }, requestId: 'req_trailing_system_after_assistant');
+
+    expect(request.systemInstruction, 'You are a roleplay director.');
+    expect(request.turns, hasLength(3));
+    expect(request.turns[0].role, 'assistant');
+    expect(request.turns[0].parts.single.text, 'Previous character reply.');
+    expect(request.turns[1].role, 'assistant');
+    expect(request.turns[1].parts.single.text, '<think>');
+    expect(request.turns[2].role, 'user');
+    expect(request.turns[2].parts.single.text, 'Pause roleplay and write the memory book.');
   });
 
   test('falls back to a user turn when chat contains only system messages', () {

@@ -1898,6 +1898,60 @@ void main() {
     expect((assistantParts[1]['functionCall'] as Map)['name'], 'lookupWeather');
   });
 
+  test('keeps trailing system prompts as the final user turn for Gemini requests', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'Memory book'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final parsed = OpenAiRequestParser.parseChatRequest({
+      'model': 'gemini-3.1-pro-preview',
+      'messages': [
+        {'role': 'system', 'content': 'You are a roleplay director.'},
+        {'role': 'assistant', 'content': 'Previous character reply.'},
+        {'role': 'user', 'content': 'Привет!'},
+        {'role': 'assistant', 'content': '<think>'},
+        {'role': 'system', 'content': 'Pause roleplay and write the memory book.'},
+      ],
+    }, requestId: 'req_trailing_system_regression');
+
+    await client.generateContent(account: sampleAccount(), request: parsed);
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final contents = (requestMap['contents'] as List).cast<Map>();
+
+    expect((requestMap['systemInstruction'] as Map)['parts'], [
+      {'text': 'You are a roleplay director.'},
+    ]);
+    expect(contents.map((entry) => entry['role']).toList(), ['model', 'user', 'model', 'user']);
+    expect((contents.last['parts'] as List).single, {
+      'text': 'Pause roleplay and write the memory book.',
+    });
+  });
+
   test('defaults short Gemini 3 flash text-only requests to high thinking', () async {
     Map<String, Object?>? capturedBody;
 

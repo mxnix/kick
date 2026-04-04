@@ -145,10 +145,11 @@ class OpenAiRequestParser {
       throw const FormatException('`messages` must be an array.');
     }
 
-    final systemParts = <String>[];
+    final leadingSystemParts = <String>[];
     final turns = <UnifiedTurn>[];
     final toolDeclarations = _parseTools(json['tools']);
     final toolCallNames = <String, String>{};
+    var seenNonSystemMessage = false;
 
     for (final rawMessage in messages) {
       if (rawMessage is! Map) {
@@ -161,9 +162,15 @@ class OpenAiRequestParser {
         if (text.isEmpty) {
           continue;
         }
-        systemParts.add(text);
+        if (!seenNonSystemMessage) {
+          leadingSystemParts.add(text);
+        } else {
+          turns.add(UnifiedTurn(role: 'user', parts: [UnifiedPart.text(text)]));
+        }
         continue;
       }
+
+      seenNonSystemMessage = true;
 
       if (role == 'tool') {
         final toolCallId = message['tool_call_id'] as String? ?? '';
@@ -226,7 +233,7 @@ class OpenAiRequestParser {
     if (toolDeclarations.isNotEmpty && googleWebSearchEnabled) {
       throw const FormatException('`google web search` cannot be used together with `tools` yet.');
     }
-    final mergedSystemInstruction = systemParts.join('\n\n').trim();
+    final mergedSystemInstruction = leadingSystemParts.join('\n\n').trim();
     var systemInstruction = mergedSystemInstruction.isEmpty ? null : mergedSystemInstruction;
     if (turns.isEmpty && systemInstruction != null) {
       turns.add(UnifiedTurn(role: 'user', parts: [UnifiedPart.text(systemInstruction)]));
