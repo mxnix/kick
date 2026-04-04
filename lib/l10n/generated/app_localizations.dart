@@ -249,6 +249,42 @@ abstract class AppLocalizations {
   /// **'Connect Gemini CLI and Kiro accounts and manage them'**
   String get accountsSubtitle;
 
+  /// No description provided for @accountsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name, email, or project ID'**
+  String get accountsSearchHint;
+
+  /// No description provided for @accountsSortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get accountsSortLabel;
+
+  /// No description provided for @accountsSortAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Attention'**
+  String get accountsSortAttention;
+
+  /// No description provided for @accountsSortPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get accountsSortPriority;
+
+  /// No description provided for @accountsSortAlphabetical.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get accountsSortAlphabetical;
+
+  /// No description provided for @accountsSortRecentActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent activity'**
+  String get accountsSortRecentActivity;
+
   /// No description provided for @addButton.
   ///
   /// In en, this message translates to:
@@ -290,6 +326,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to load accounts'**
   String get accountsLoadErrorTitle;
+
+  /// No description provided for @accountsTotalCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Total: {count}'**
+  String accountsTotalCount(int count);
+
+  /// No description provided for @accountsFilteredCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Shown: {count}'**
+  String accountsFilteredCount(int count);
+
+  /// No description provided for @accountsFilteredEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts matched the search'**
+  String get accountsFilteredEmptyTitle;
+
+  /// No description provided for @accountsFilteredEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another name, email, or project ID.'**
+  String get accountsFilteredEmptyMessage;
 
   /// No description provided for @accountProviderLabel.
   ///

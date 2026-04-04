@@ -93,6 +93,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountsSubtitle => 'Подключайте аккаунты Gemini CLI и Kiro и управляйте ими';
 
   @override
+  String get accountsSearchHint => 'Search by name, email, or project ID';
+
+  @override
+  String get accountsSortLabel => 'Sort by';
+
+  @override
+  String get accountsSortAttention => 'Attention';
+
+  @override
+  String get accountsSortPriority => 'Priority';
+
+  @override
+  String get accountsSortAlphabetical => 'Name';
+
+  @override
+  String get accountsSortRecentActivity => 'Recent activity';
+
+  @override
   String get addButton => 'Добавить';
 
   @override
@@ -112,6 +130,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accountsLoadErrorTitle => 'Не удалось загрузить аккаунты';
+
+  @override
+  String accountsTotalCount(int count) {
+    return 'Total: $count';
+  }
+
+  @override
+  String accountsFilteredCount(int count) {
+    return 'Shown: $count';
+  }
+
+  @override
+  String get accountsFilteredEmptyTitle => 'No accounts matched the search';
+
+  @override
+  String get accountsFilteredEmptyMessage => 'Try another name, email, or project ID.';
 
   @override
   String get accountProviderLabel => 'Тип аккаунта';

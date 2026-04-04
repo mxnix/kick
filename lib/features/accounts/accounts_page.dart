@@ -19,17 +19,43 @@ import 'account_editor_dialog.dart';
 import 'account_priority_presentation.dart';
 import 'account_provider_picker_dialog.dart';
 
-class AccountsPage extends ConsumerWidget {
+class AccountsPage extends ConsumerStatefulWidget {
   const AccountsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AccountsPage> createState() => _AccountsPageState();
+}
+
+enum _AccountSortOption { attention, priority, label, recentActivity }
+
+class _AccountsPageState extends ConsumerState<AccountsPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+  _AccountSortOption _sortOption = _AccountSortOption.priority;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final accountsValue = ref.watch(accountsControllerProvider);
 
     return accountsValue.when(
       data: (accounts) {
+        final filteredAccounts = _applyAccountSearchAndSort(
+          accounts,
+          query: _query,
+          sortOption: _sortOption,
+        );
+        final filteredEnabledCount = filteredAccounts.where((account) => account.enabled).length;
+        final hasSearch = _query.trim().isNotEmpty;
+
         return SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final useCompactHeader = constraints.maxWidth < 680;
@@ -58,6 +84,97 @@ class AccountsPage extends ConsumerWidget {
                     const SizedBox(height: 16),
                     buildAddButton(fullWidth: true),
                   ],
+                  if (accounts.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    KickPanel(
+                      tone: KickPanelTone.soft,
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+                      child: LayoutBuilder(
+                        builder: (context, panelConstraints) {
+                          final useHorizontalControls = panelConstraints.maxWidth >= 760;
+                          final searchField = TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search_rounded),
+                              hintText: l10n.accountsSearchHint,
+                              suffixIcon: hasSearch
+                                  ? IconButton(
+                                      onPressed: _clearSearch,
+                                      tooltip: MaterialLocalizations.of(context).clearButtonTooltip,
+                                      icon: const Icon(Icons.close_rounded),
+                                    )
+                                  : null,
+                            ),
+                            onChanged: (value) {
+                              setState(() => _query = value);
+                            },
+                          );
+                          final sortField = DropdownButtonFormField<_AccountSortOption>(
+                            initialValue: _sortOption,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: l10n.accountsSortLabel,
+                              prefixIcon: const Icon(Icons.sort_rounded),
+                            ),
+                            items: _AccountSortOption.values
+                                .map(
+                                  (option) => DropdownMenuItem<_AccountSortOption>(
+                                    value: option,
+                                    child: Text(_accountSortOptionLabel(l10n, option)),
+                                  ),
+                                )
+                                .toList(growable: false),
+                            onChanged: (value) {
+                              if (value == null) {
+                                return;
+                              }
+                              setState(() => _sortOption = value);
+                            },
+                          );
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (useHorizontalControls)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: searchField),
+                                    const SizedBox(width: 12),
+                                    SizedBox(width: 260, child: sortField),
+                                  ],
+                                )
+                              else ...[
+                                searchField,
+                                const SizedBox(height: 12),
+                                sortField,
+                              ],
+                              const SizedBox(height: 14),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  KickBadge(
+                                    label: l10n.accountsTotalCount(accounts.length),
+                                    leading: const Icon(Icons.manage_accounts_rounded),
+                                  ),
+                                  KickBadge(
+                                    label: l10n.activeAccounts(filteredEnabledCount),
+                                    leading: const Icon(Icons.check_circle_outline_rounded),
+                                  ),
+                                  KickBadge(
+                                    label: l10n.accountsFilteredCount(filteredAccounts.length),
+                                    leading: const Icon(Icons.filter_alt_rounded),
+                                    emphasis: hasSearch,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   if (accounts.isEmpty)
                     EmptyStateCard(
@@ -72,6 +189,12 @@ class AccountsPage extends ConsumerWidget {
                         ),
                       ),
                     )
+                  else if (filteredAccounts.isEmpty)
+                    EmptyStateCard(
+                      icon: Icons.manage_search_rounded,
+                      title: l10n.accountsFilteredEmptyTitle,
+                      message: l10n.accountsFilteredEmptyMessage,
+                    )
                   else
                     LayoutBuilder(
                       builder: (context, constraints) {
@@ -84,7 +207,7 @@ class AccountsPage extends ConsumerWidget {
                         return Wrap(
                           spacing: spacing,
                           runSpacing: spacing,
-                          children: accounts
+                          children: filteredAccounts
                               .map(
                                 (account) => SizedBox(
                                   width: cardWidth,
@@ -108,6 +231,11 @@ class AccountsPage extends ConsumerWidget {
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
     );
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _query = '');
   }
 
   Future<void> _authenticateNewAccount(BuildContext context, WidgetRef ref) async {
@@ -1014,4 +1142,107 @@ class _AccountMoreActionsButton extends StatelessWidget {
       },
     );
   }
+}
+
+List<AccountProfile> _applyAccountSearchAndSort(
+  List<AccountProfile> accounts, {
+  required String query,
+  required _AccountSortOption sortOption,
+}) {
+  final normalizedQuery = query.trim().toLowerCase();
+  final filtered = accounts.where((account) => _accountMatchesQuery(account, normalizedQuery));
+  final sorted = filtered.toList(growable: false)
+    ..sort((left, right) => _compareAccounts(left, right, sortOption));
+  return sorted;
+}
+
+bool _accountMatchesQuery(AccountProfile account, String query) {
+  if (query.isEmpty) {
+    return true;
+  }
+
+  final haystack = <String>[
+    account.label,
+    account.displayIdentity,
+    account.email,
+    account.projectId,
+    account.provider.name,
+    account.provider == AccountProvider.kiro ? 'aws builder id' : 'gemini cli',
+  ].join('\n').toLowerCase();
+
+  return haystack.contains(query);
+}
+
+int _compareAccounts(AccountProfile left, AccountProfile right, _AccountSortOption sortOption) {
+  final primary = switch (sortOption) {
+    _AccountSortOption.attention => _accountAttentionRank(
+      left,
+    ).compareTo(_accountAttentionRank(right)),
+    _AccountSortOption.priority => right.priority.compareTo(left.priority),
+    _AccountSortOption.label => _compareText(left.label, right.label),
+    _AccountSortOption.recentActivity => _compareDateDesc(left.lastUsedAt, right.lastUsedAt),
+  };
+  if (primary != 0) {
+    return primary;
+  }
+
+  final secondary = switch (sortOption) {
+    _AccountSortOption.attention => right.priority.compareTo(left.priority),
+    _AccountSortOption.priority => _accountAttentionRank(
+      left,
+    ).compareTo(_accountAttentionRank(right)),
+    _AccountSortOption.label => right.priority.compareTo(left.priority),
+    _AccountSortOption.recentActivity => right.usageCount.compareTo(left.usageCount),
+  };
+  if (secondary != 0) {
+    return secondary;
+  }
+
+  return _compareText(left.label, right.label);
+}
+
+int _accountAttentionRank(AccountProfile account) {
+  final runtimeNotice = parseAccountRuntimeNotice(account.lastQuotaSnapshot);
+  if (runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation) {
+    return 0;
+  }
+  if (runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending) {
+    return 1;
+  }
+  if (account.lastQuotaSnapshot?.trim().isNotEmpty == true) {
+    return 2;
+  }
+  if (account.isCoolingDown) {
+    return 3;
+  }
+  if (account.enabled) {
+    return 4;
+  }
+  return 5;
+}
+
+int _compareDateDesc(DateTime? left, DateTime? right) {
+  if (left == null && right == null) {
+    return 0;
+  }
+  if (left == null) {
+    return 1;
+  }
+  if (right == null) {
+    return -1;
+  }
+  return right.compareTo(left);
+}
+
+int _compareText(String left, String right) {
+  return left.toLowerCase().compareTo(right.toLowerCase());
+}
+
+String _accountSortOptionLabel(KickLocalizations l10n, _AccountSortOption option) {
+  return switch (option) {
+    _AccountSortOption.attention => l10n.accountsSortAttention,
+    _AccountSortOption.priority => l10n.accountsSortPriority,
+    _AccountSortOption.label => l10n.accountsSortAlphabetical,
+    _AccountSortOption.recentActivity => l10n.accountsSortRecentActivity,
+  };
 }

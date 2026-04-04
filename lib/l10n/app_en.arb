@@ -56,6 +56,12 @@
   "openLogsButton": "Open logs",
   "accountsTitle": "Accounts",
   "accountsSubtitle": "Connect Gemini CLI and Kiro accounts and manage them",
+  "accountsSearchHint": "Search by name, email, or project ID",
+  "accountsSortLabel": "Sort by",
+  "accountsSortAttention": "Attention",
+  "accountsSortPriority": "Priority",
+  "accountsSortAlphabetical": "Name",
+  "accountsSortRecentActivity": "Recent activity",
   "addButton": "Add",
   "accountsEmptyTitle": "No accounts yet",
   "accountsEmptyMessage": "Connect at least one Gemini CLI or Kiro account",
@@ -63,6 +69,24 @@
   "connectAccountDialogTitle": "Connect account",
   "connectAccountProviderPickerTitle": "Select provider",
   "accountsLoadErrorTitle": "Failed to load accounts",
+  "accountsTotalCount": "Total: {count}",
+  "@accountsTotalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountsFilteredCount": "Shown: {count}",
+  "@accountsFilteredCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountsFilteredEmptyTitle": "No accounts matched the search",
+  "accountsFilteredEmptyMessage": "Try another name, email, or project ID.",
   "accountProviderLabel": "Account type",
   "accountProviderGemini": "Gemini CLI",
   "accountProviderGeminiCli": "Gemini CLI",

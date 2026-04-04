@@ -330,6 +330,118 @@ void main() {
     expect(find.text(ruL10n.accountsTitle), findsOneWidget);
     expect(find.text(ruL10n.accountsEmptyTitle), findsOneWidget);
   });
+
+  testWidgets('filters accounts by search query', (tester) async {
+    final bootstrap = await _createBootstrap(
+      initialAccounts: [
+        _buildAccount(
+          id: 'google-1',
+          label: 'Primary',
+          email: 'primary@example.com',
+          projectId: 'billing-prod',
+        ),
+        _buildAccount(
+          id: 'google-2',
+          label: 'Reserve',
+          email: 'reserve@example.com',
+          projectId: 'sandbox-dev',
+        ),
+      ],
+    );
+    final service = _FakeKiroLinkAuthService(
+      request: KiroLinkAuthRequest(
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        deviceCode: 'device-code',
+        userCode: 'PSZF-PDMS',
+        verificationUri: 'https://view.awsapps.com/start/#/device',
+        verificationUriComplete: 'https://view.awsapps.com/start/#/device?user_code=PSZF-PDMS',
+        interval: const Duration(seconds: 1),
+        expiresAt: DateTime.now().add(const Duration(minutes: 5)),
+        region: defaultKiroRegion,
+        startUrl: defaultKiroBuilderIdStartUrl,
+      ),
+      completion: Completer<KiroAuthSourceSnapshot>().future,
+    );
+
+    addTearDown(() async {
+      service.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap.dispose();
+    });
+
+    await tester.pumpWidget(_TestApp(bootstrap: bootstrap, kiroLinkAuthService: service));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Primary'), findsOneWidget);
+    expect(find.text('Reserve'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'billing-prod');
+    await tester.pump();
+
+    expect(find.text('Primary'), findsOneWidget);
+    expect(find.text('Reserve'), findsNothing);
+    expect(find.text(enL10n.accountsFilteredCount(1)), findsOneWidget);
+  });
+
+  testWidgets('sorts accounts by recent activity', (tester) async {
+    final bootstrap = await _createBootstrap(
+      initialAccounts: [
+        _buildAccount(
+          id: 'google-1',
+          label: 'Alpha',
+          email: 'alpha@example.com',
+          projectId: 'alpha-project',
+          lastUsedAt: DateTime(2026, 4, 1, 10),
+        ),
+        _buildAccount(
+          id: 'google-2',
+          label: 'Beta',
+          email: 'beta@example.com',
+          projectId: 'beta-project',
+          lastUsedAt: DateTime(2026, 4, 4, 12),
+        ),
+      ],
+    );
+    final service = _FakeKiroLinkAuthService(
+      request: KiroLinkAuthRequest(
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        deviceCode: 'device-code',
+        userCode: 'PSZF-PDMS',
+        verificationUri: 'https://view.awsapps.com/start/#/device',
+        verificationUriComplete: 'https://view.awsapps.com/start/#/device?user_code=PSZF-PDMS',
+        interval: const Duration(seconds: 1),
+        expiresAt: DateTime.now().add(const Duration(minutes: 5)),
+        region: defaultKiroRegion,
+        startUrl: defaultKiroBuilderIdStartUrl,
+      ),
+      completion: Completer<KiroAuthSourceSnapshot>().future,
+    );
+
+    addTearDown(() async {
+      service.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap.dispose();
+    });
+
+    await tester.pumpWidget(_TestApp(bootstrap: bootstrap, kiroLinkAuthService: service));
+    await tester.pump();
+    await tester.pump();
+
+    final alpha = find.text('Alpha');
+    final beta = find.text('Beta');
+
+    expect(tester.getTopLeft(alpha).dy, lessThan(tester.getTopLeft(beta).dy));
+
+    await tester.tap(find.text(enL10n.accountsSortPriority));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(enL10n.accountsSortRecentActivity).last);
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(beta).dy, lessThan(tester.getTopLeft(alpha).dy));
+  });
 }
 
 class _TestApp extends StatelessWidget {
@@ -399,6 +511,30 @@ class _FailingUrlLauncherPlatform extends UrlLauncherPlatform {
 
   @override
   Future<bool> launchUrl(String url, LaunchOptions options) async => false;
+}
+
+AccountProfile _buildAccount({
+  required String id,
+  required String label,
+  required String email,
+  required String projectId,
+  DateTime? lastUsedAt,
+}) {
+  return AccountProfile(
+    id: id,
+    label: label,
+    email: email,
+    projectId: projectId,
+    enabled: true,
+    priority: 0,
+    notSupportedModels: const [],
+    lastUsedAt: lastUsedAt,
+    usageCount: 0,
+    errorCount: 0,
+    cooldownUntil: null,
+    lastQuotaSnapshot: null,
+    tokenRef: '$id-token',
+  );
 }
 
 Future<AppBootstrap> _createBootstrap({
