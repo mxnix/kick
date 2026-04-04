@@ -93,22 +93,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountsSubtitle => 'Подключайте аккаунты Gemini CLI и Kiro и управляйте ими';
 
   @override
-  String get accountsSearchHint => 'Search by name, email, or project ID';
+  String get accountsSearchHint => 'Искать по имени, почте или ID проекта';
 
   @override
-  String get accountsSortLabel => 'Sort by';
+  String get accountsSortLabel => 'Сортировать';
 
   @override
-  String get accountsSortAttention => 'Attention';
+  String get accountsSortAttention => 'По предупреждениям';
 
   @override
-  String get accountsSortPriority => 'Priority';
+  String get accountsSortPriority => 'По приоритету';
 
   @override
-  String get accountsSortAlphabetical => 'Name';
+  String get accountsSortAlphabetical => 'По имени';
 
   @override
-  String get accountsSortRecentActivity => 'Recent activity';
+  String get accountsSortRecentActivity => 'По последней активности';
 
   @override
   String get addButton => 'Добавить';
@@ -133,19 +133,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String accountsTotalCount(int count) {
-    return 'Total: $count';
+    return 'Всего: $count';
   }
 
   @override
   String accountsFilteredCount(int count) {
-    return 'Shown: $count';
+    return 'Показано: $count';
   }
 
   @override
-  String get accountsFilteredEmptyTitle => 'No accounts matched the search';
+  String get accountsFilteredEmptyTitle => 'Нет релевантных аккаунтов';
 
   @override
-  String get accountsFilteredEmptyMessage => 'Try another name, email, or project ID.';
+  String get accountsFilteredEmptyMessage => 'Попробуйте другое имя, почту или ID проекта.';
 
   @override
   String get accountProviderLabel => 'Тип аккаунта';
@@ -794,49 +794,48 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutUpdateCheckFailedMessage => 'Не удалось получить информацию о релизах с GitHub.';
 
   @override
-  String get aboutDownloadUpdateButton => 'Download update';
+  String get aboutDownloadUpdateButton => 'Скачать обновление';
 
   @override
   String get aboutDownloadAndInstallButton => 'Скачать и установить';
 
   @override
-  String get aboutInstallOnRestartButton => 'Install on restart';
+  String get aboutInstallOnRestartButton => 'Установить на перезапуске';
 
   @override
-  String get aboutInstallUpdateButton => 'Install update';
+  String get aboutInstallUpdateButton => 'Установить обновление';
 
   @override
-  String get aboutAllowUnknownSourcesButton => 'Allow install source';
+  String get aboutAllowUnknownSourcesButton => 'Разрешить этот источник';
 
   @override
-  String get aboutPreparingUpdateButton => 'Preparing update...';
+  String get aboutPreparingUpdateButton => 'Готовим обновление...';
 
   @override
   String aboutUpdateDownloadingProgress(String progress) {
-    return 'Downloading update in background: $progress';
+    return 'Скачиваем обновление в фоне: $progress';
   }
 
   @override
-  String get aboutUpdateDownloadingIndeterminate => 'Downloading update in background...';
+  String get aboutUpdateDownloadingIndeterminate => 'Скачиваем обновление в фоне...';
 
   @override
-  String get aboutUpdateVerifyingMessage => 'Verifying the downloaded package with SHA-256...';
+  String get aboutUpdateVerifyingMessage => 'Сверяем скачанный файл с SHA-256...';
 
   @override
-  String get aboutUpdateReadyVerifiedMessage =>
-      'The update package is downloaded, verified, and ready to install.';
+  String get aboutUpdateReadyVerifiedMessage => 'Обновление скачано и готово к установке.';
 
   @override
   String get aboutUpdateReadyUnverifiedMessage =>
-      'The update package is downloaded and ready to install. This release did not provide a checksum file.';
+      'Обновление скачано и готово к установке. Этот релиз не предоставил файл контрольной суммы.';
 
   @override
   String get aboutUpdateUnknownSourcesMessage =>
-      'Allow installs from this source in Android settings, then return and tap Install update again.';
+      'Разрешите установку из этого источника в настройках Android, затем вернитесь сюда и нажмите на кнопку установки снова.';
 
   @override
   String aboutUpdateOperationFailedMessage(String error) {
-    return 'Failed to prepare the update: $error';
+    return 'Ошибка в подготовке обновления: $error';
   }
 
   @override
