@@ -780,5 +780,55 @@
     "logMessageProxySessionSummary": "Сводка по прокси-сессии",
     "logMessageAndroidBackgroundSessionStarted": "Фоновая сессия Android началась",
     "logMessageAndroidBackgroundSessionEnded": "Фоновая сессия Android завершилась",
-    "logMessageAndroidBackgroundSessionRecovered": "Фоновая сессия Android восстановлена после перезапуска процесса"
+    "logMessageAndroidBackgroundSessionRecovered": "Фоновая сессия Android восстановлена после перезапуска процесса",
+    "accountsSearchHint": "Искать по имени, почте или ID проекта",
+    "accountsSortLabel": "Сортировать",
+    "accountsSortAttention": "По предупреждениям",
+    "accountsSortPriority": "По приоритету",
+    "accountsSortAlphabetical": "По имени",
+    "accountsSortRecentActivity": "По последней активности",
+    "accountsTotalCount": "Всего: {count}",
+    "@accountsTotalCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "accountsFilteredCount": "Показано: {count}",
+    "@accountsFilteredCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "accountsFilteredEmptyTitle": "Нет релевантных аккаунтов",
+    "accountsFilteredEmptyMessage": "Попробуйте другое имя, почту или ID проекта.",
+    "aboutDownloadUpdateButton": "Скачать обновление",
+    "aboutInstallOnRestartButton": "Установить на перезапуске",
+    "aboutInstallUpdateButton": "Установить обновление",
+    "aboutAllowUnknownSourcesButton": "Разрешить этот источник",
+    "aboutPreparingUpdateButton": "Готовим обновление...",
+    "aboutUpdateDownloadingProgress": "Скачиваем обновление в фоне: {progress}",
+    "@aboutUpdateDownloadingProgress": {
+        "placeholders": {
+            "progress": {
+                "type": "String"
+            }
+        }
+    },
+    "aboutUpdateDownloadingIndeterminate": "Скачиваем обновление в фоне...",
+    "aboutUpdateVerifyingMessage": "Сверяем скачанный файл с SHA-256...",
+    "aboutUpdateReadyVerifiedMessage": "Обновление скачано и готово к установке.",
+    "aboutUpdateReadyUnverifiedMessage": "Обновление скачано и готово к установке. Этот релиз не предоставил файл контрольной суммы.",
+    "aboutUpdateUnknownSourcesMessage": "Разрешите установку из этого источника в настройках Android, затем вернитесь сюда и нажмите на кнопку установки снова.",
+    "aboutUpdateOperationFailedMessage": "Ошибка в подготовке обновления: {error}",
+    "@aboutUpdateOperationFailedMessage": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    }
 }
