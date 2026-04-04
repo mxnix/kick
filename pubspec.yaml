@@ -1,7 +1,7 @@
 name: kick
 description: "Kick: a local OpenAI-compatible proxy for Gemini CLI and Kiro with a Flutter shell"
 publish_to: "none"
-version: 1.3.3+16
+version: 1.3.4+17
 
 environment:
   sdk: ^3.11.1
