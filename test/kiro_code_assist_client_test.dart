@@ -44,6 +44,8 @@ void main() {
   UnifiedPromptRequest sampleRequest({
     String? model,
     String? systemInstruction,
+    String? reasoningEffort,
+    Map<String, Object?>? googleThinkingConfig,
     List<UnifiedTurn>? turns,
   }) {
     return UnifiedPromptRequest(
@@ -63,8 +65,8 @@ void main() {
       topP: null,
       maxOutputTokens: null,
       stopSequences: null,
-      reasoningEffort: null,
-      googleThinkingConfig: null,
+      reasoningEffort: reasoningEffort,
+      googleThinkingConfig: googleThinkingConfig,
       googleWebSearchEnabled: false,
       responseModalities: null,
       jsonMode: false,
@@ -349,7 +351,7 @@ void main() {
     expect(OpenAiResponseMapper.currentReasoningTokenCount(response), 0);
   });
 
-  test('maps Kiro reasoning stream events to reasoning content and token usage', () async {
+  test('suppresses Kiro reasoning output unless reasoning is explicitly requested', () async {
     final client = KiroCodeAssistClient(
       httpClient: QueueHttpClient([
         (request) async {
@@ -368,6 +370,44 @@ void main() {
     final response = await client.generateContent(
       account: sampleAccount(),
       request: sampleRequest(),
+    );
+
+    expect(OpenAiResponseMapper.currentText(response), 'Done.');
+    expect(OpenAiResponseMapper.currentReasoningText(response), isEmpty);
+    expect(OpenAiResponseMapper.currentReasoningTokenCount(response), greaterThan(0));
+
+    final chatCompletion = OpenAiResponseMapper.toChatCompletion(
+      requestId: 'req-1',
+      model: 'kiro/claude-sonnet-4',
+      payload: response,
+    );
+    final choices = (chatCompletion['choices'] as List).cast<Map<String, Object?>>();
+    final message = (choices.single['message'] as Map).cast<String, Object?>();
+
+    expect(message.containsKey('reasoning_content'), isFalse);
+    expect(message.containsKey('reasoning_signature'), isFalse);
+    expect(message['content'], 'Done.');
+  });
+
+  test('maps Kiro reasoning stream events when reasoning effort is enabled', () async {
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/generateAssistantResponse');
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"text":"Plan first.","signature":"sig-1"}'),
+              utf8.encode('\u0000\u0000{"content":"Done."}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final response = await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(reasoningEffort: 'high'),
     );
 
     expect(OpenAiResponseMapper.currentReasoningText(response), 'Plan first.');

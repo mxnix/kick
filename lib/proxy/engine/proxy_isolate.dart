@@ -225,6 +225,15 @@ class _ProxyIsolateHost {
       onProjectIdResolved: (account, projectId) async {
         await _publishAccounts();
       },
+      onStreamDebugEvent: (event) {
+        _logVerboseStreamTrace(
+          category: 'gemini.upstream',
+          route: '/v1internal:streamGenerateContent',
+          message: 'Gemini upstream SSE trace',
+          details: event,
+        );
+      },
+      isStreamDebugEventEnabled: () => _streamDebugTracingEnabled,
       privilegedUserIdLoader: _privilegedUserIdLoader,
       warmupEnabled: true,
     );
@@ -908,26 +917,94 @@ class _ProxyIsolateHost {
         final stream = () async* {
           var includePrelude = true;
           Map<String, Object?> lastPayload = const <String, Object?>{};
+          final streamTimer = Stopwatch()..start();
+          var upstreamPayloadCount = 0;
           var emittedEventCount = 0;
           var completed = false;
           var failed = false;
           try {
             await for (final payload in upstream) {
+              upstreamPayloadCount += 1;
               lastPayload = payload;
+              if (_streamDebugTracingEnabled) {
+                _logVerboseStreamTrace(
+                  category: request.source,
+                  route: route,
+                  message: 'Proxy received upstream stream payload',
+                  details: {
+                    ..._requestContextPayload(prompt: request),
+                    'stage': 'proxy_upstream_payload',
+                    'elapsed_ms': streamTimer.elapsedMilliseconds,
+                    'upstream_payload_index': upstreamPayloadCount,
+                    ..._responseSummaryPayload(payload),
+                  },
+                );
+              }
               for (final event in mapper(payload, includePrelude)) {
                 includePrelude = false;
                 emittedEventCount += 1;
-                yield utf8.encode(encodeSseEvent(event));
+                final encodedEvent = utf8.encode(encodeSseEvent(event));
+                if (_streamDebugTracingEnabled) {
+                  _logVerboseStreamTrace(
+                    category: request.source,
+                    route: route,
+                    message: 'Proxy emitted downstream SSE event',
+                    details: {
+                      ..._requestContextPayload(prompt: request),
+                      'stage': 'proxy_downstream_event',
+                      'elapsed_ms': streamTimer.elapsedMilliseconds,
+                      'upstream_payload_index': upstreamPayloadCount,
+                      'downstream_event_index': emittedEventCount,
+                      'event_bytes': encodedEvent.length,
+                      ..._streamEventSummaryPayload(event),
+                    },
+                  );
+                }
+                yield encodedEvent;
               }
             }
             for (final event in mapper({...lastPayload, 'final_chunk': true}, includePrelude)) {
               emittedEventCount += 1;
-              yield utf8.encode(encodeSseEvent(event));
+              final encodedEvent = utf8.encode(encodeSseEvent(event));
+              if (_streamDebugTracingEnabled) {
+                _logVerboseStreamTrace(
+                  category: request.source,
+                  route: route,
+                  message: 'Proxy emitted downstream SSE event',
+                  details: {
+                    ..._requestContextPayload(prompt: request),
+                    'stage': 'proxy_downstream_event',
+                    'elapsed_ms': streamTimer.elapsedMilliseconds,
+                    'upstream_payload_index': upstreamPayloadCount,
+                    'downstream_event_index': emittedEventCount,
+                    'event_bytes': encodedEvent.length,
+                    'synthetic_final_chunk': true,
+                    ..._streamEventSummaryPayload(event),
+                  },
+                );
+              }
+              yield encodedEvent;
             }
             final done = doneEvent();
             if (done.isNotEmpty) {
               emittedEventCount += 1;
-              yield utf8.encode(done);
+              final encodedDoneEvent = utf8.encode(done);
+              if (_streamDebugTracingEnabled) {
+                _logVerboseStreamTrace(
+                  category: request.source,
+                  route: route,
+                  message: 'Proxy emitted downstream SSE done marker',
+                  details: {
+                    ..._requestContextPayload(prompt: request),
+                    'stage': 'proxy_downstream_done',
+                    'elapsed_ms': streamTimer.elapsedMilliseconds,
+                    'upstream_payload_index': upstreamPayloadCount,
+                    'downstream_event_index': emittedEventCount,
+                    'event_bytes': encodedDoneEvent.length,
+                  },
+                );
+              }
+              yield encodedDoneEvent;
             }
             completed = true;
             if (_pool.markSuccess(account)) {
@@ -1374,6 +1451,31 @@ class _ProxyIsolateHost {
     });
   }
 
+  void _logVerboseStreamTrace({
+    required String category,
+    required String route,
+    required String message,
+    Map<String, Object?> details = const <String, Object?>{},
+  }) {
+    final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
+    if (verbosity != 'verbose') {
+      return;
+    }
+    _sendPort.send({
+      'type': 'log',
+      'payload': {
+        'id': _uuid.v4(),
+        'timestamp': DateTime.now().toIso8601String(),
+        'level': 'info',
+        'category': category,
+        'route': route,
+        'message': LogSanitizer.sanitizeText(message),
+        'masked_payload': details.isEmpty ? null : jsonEncode(details),
+        'raw_payload': null,
+      },
+    });
+  }
+
   Future<void> _logPromptSummary(UnifiedPromptRequest prompt, {required String route}) async {
     final verbosity = (_settings?['logging_verbosity'] as String?) ?? 'normal';
     if (verbosity == 'quiet') {
@@ -1652,6 +1754,52 @@ class _ProxyIsolateHost {
     };
   }
 
+  Map<String, Object?> _streamEventSummaryPayload(Map<String, Object?> event) {
+    final summary = <String, Object?>{};
+    final eventType = event['type'] as String?;
+    final objectType = event['object'] as String?;
+    if (eventType?.isNotEmpty == true) {
+      summary['event_type'] = eventType;
+    }
+    if (objectType?.isNotEmpty == true) {
+      summary['event_object'] = objectType;
+    }
+
+    final deltaText = event['delta'];
+    if (deltaText is String && deltaText.isNotEmpty) {
+      summary['text_delta_chars'] = deltaText.length;
+    }
+
+    final choices = event['choices'] as List?;
+    Map<String, Object?>? firstChoice;
+    if (choices != null) {
+      for (final choice in choices) {
+        if (choice is Map) {
+          firstChoice = choice.cast<String, Object?>();
+          break;
+        }
+      }
+    }
+    final finishReason = firstChoice?['finish_reason'] as String?;
+    if (finishReason?.isNotEmpty == true) {
+      summary['finish_reason'] = finishReason;
+    }
+    final delta = (firstChoice?['delta'] as Map?)?.cast<String, Object?>();
+    final contentDelta = delta?['content'];
+    if (contentDelta is String && contentDelta.isNotEmpty) {
+      summary['text_delta_chars'] = contentDelta.length;
+    }
+    final reasoningDelta = delta?['reasoning_content'];
+    if (reasoningDelta is String && reasoningDelta.isNotEmpty) {
+      summary['reasoning_delta_chars'] = reasoningDelta.length;
+    }
+    final toolCalls = delta?['tool_calls'] as List?;
+    if (toolCalls?.isNotEmpty == true) {
+      summary['tool_call_delta_count'] = toolCalls!.length;
+    }
+    return summary;
+  }
+
   Map<String, Object?>? _optionalMapEntry(String key, Object? value) {
     if (value == null) {
       return null;
@@ -1660,6 +1808,7 @@ class _ProxyIsolateHost {
   }
 
   bool get _unsafeRawLoggingEnabled => _settings?['unsafe_raw_logging_enabled'] == true;
+  bool get _streamDebugTracingEnabled => (_settings?['logging_verbosity'] as String?) == 'verbose';
 
   Response _jsonResponse(
     Map<String, Object?> body, {

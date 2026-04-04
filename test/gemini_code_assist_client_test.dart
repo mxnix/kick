@@ -1473,7 +1473,7 @@ void main() {
     expect(generationConfig['responseModalities'], ['TEXT']);
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingBudget': 8192,
-      'includeThoughts': true,
+      'includeThoughts': false,
     });
   });
 
@@ -1517,7 +1517,7 @@ void main() {
     expect(generationConfig['responseModalities'], ['TEXT']);
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingBudget': 8192,
-      'includeThoughts': true,
+      'includeThoughts': false,
     });
   });
 
@@ -1613,7 +1613,7 @@ void main() {
     expect(generationConfig.containsKey('responseModalities'), isFalse);
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingBudget': 8192,
-      'includeThoughts': true,
+      'includeThoughts': false,
     });
   });
 
@@ -1830,7 +1830,7 @@ void main() {
     expect(generationConfig['responseModalities'], ['TEXT']);
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingBudget': 8192,
-      'includeThoughts': true,
+      'includeThoughts': false,
     });
   });
 
@@ -1937,7 +1937,7 @@ void main() {
 
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingLevel': 'HIGH',
-      'includeThoughts': true,
+      'includeThoughts': false,
     });
   });
 
@@ -1980,7 +1980,7 @@ void main() {
 
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingLevel': 'HIGH',
-      'includeThoughts': true,
+      'includeThoughts': false,
     });
   });
 
@@ -2023,7 +2023,7 @@ void main() {
 
     expect((generationConfig['thinkingConfig'] as Map).cast<String, Object?>(), {
       'thinkingLevel': 'HIGH',
-      'includeThoughts': true,
+      'includeThoughts': false,
     });
   });
 
@@ -2323,6 +2323,84 @@ void main() {
     );
   });
 
+  test(
+    'unary continuation excludes thought text from merged visible text and prompt suffix',
+    () async {
+      final seenBodies = <Map<String, Object?>>[];
+      final client = GeminiCodeAssistClient(
+        onTokensUpdated: (account, tokens) async {},
+        httpClient: QueueHttpClient([
+          (request) async {
+            seenBodies.add(
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>,
+            );
+            return http.Response(
+              jsonEncode({
+                'response': {
+                  'candidates': [
+                    {
+                      'content': {
+                        'parts': [
+                          {'thought': true, 'text': 'Drafting a plan.'},
+                          {'text': 'Hello'},
+                        ],
+                      },
+                      'finishReason': 'MAX_TOKENS',
+                    },
+                  ],
+                },
+              }),
+              200,
+            );
+          },
+          (request) async {
+            seenBodies.add(
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>,
+            );
+            return http.Response(
+              jsonEncode({
+                'response': {
+                  'candidates': [
+                    {
+                      'content': {
+                        'parts': [
+                          {'text': ' world'},
+                        ],
+                      },
+                      'finishReason': 'STOP',
+                    },
+                  ],
+                },
+              }),
+              200,
+            );
+          },
+        ]),
+      );
+
+      final response = await client.generateContent(
+        account: sampleAccount(),
+        request: sampleRequest(maxOutputTokens: 5),
+      );
+
+      final responseMap = (response['response'] as Map).cast<String, Object?>();
+      final candidate = ((responseMap['candidates'] as List).single as Map).cast<String, Object?>();
+      final content = (candidate['content'] as Map).cast<String, Object?>();
+      final parts = (content['parts'] as List).cast<Map>();
+      final continuationContents = (((seenBodies[1]['request'] as Map)['contents']) as List)
+          .cast<Map>();
+      final continuationPrompt =
+          ((continuationContents[2]['parts'] as List).single as Map)['text'] as String;
+
+      expect(parts, [
+        {'text': 'Hello world'},
+      ]);
+      expect(((continuationContents[1]['parts'] as List).single as Map)['text'], 'Hello');
+      expect(continuationPrompt, contains('Hello'));
+      expect(continuationPrompt, isNot(contains('Drafting a plan.')));
+    },
+  );
+
   test('continues streaming generation when Gemini stops on max tokens', () async {
     final seenBodies = <Map<String, Object?>>[];
     const sessionId = '33333333-3333-4333-8333-333333333333';
@@ -2388,6 +2466,45 @@ void main() {
       ((continuationContents[2]['parts'] as List).single as Map)['text'],
       contains('Please continue from where you left off.'),
     );
+  });
+
+  test('stream continuation keeps thought parts separate from merged visible text', () async {
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode(
+                'data: {"response":{"candidates":[{"content":{"parts":[{"thought":true,"text":"Drafting a plan."},{"text":"Hello"}]},"finishReason":"MAX_TOKENS"}]}}\n\n',
+              ),
+            ),
+            200,
+          );
+        },
+        (request) async {
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode(
+                'data: {"response":{"candidates":[{"content":{"parts":[{"thought":true,"text":"Continuing."},{"text":" world"}]},"finishReason":"STOP"}]}}\n\n',
+              ),
+            ),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final payloads = await (await client.generateContentStream(
+      account: sampleAccount(),
+      request: sampleRequest(stream: true, maxOutputTokens: 5),
+    )).toList();
+
+    expect(payloads, hasLength(2));
+    expect(OpenAiResponseMapper.currentReasoningText(payloads[0]), 'Drafting a plan.');
+    expect(OpenAiResponseMapper.currentText(payloads[0]), 'Hello');
+    expect(OpenAiResponseMapper.currentReasoningText(payloads[1]), 'Continuing.');
+    expect(OpenAiResponseMapper.currentText(payloads[1]), 'Hello world');
   });
 
   test('stream continuation emits cumulative text instead of restarted prefixes', () async {

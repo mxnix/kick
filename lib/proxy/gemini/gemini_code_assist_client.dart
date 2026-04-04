@@ -396,6 +396,8 @@ class GeminiCodeAssistClient {
   GeminiCodeAssistClient({
     required Future<void> Function(ProxyRuntimeAccount account, OAuthTokens tokens) onTokensUpdated,
     Future<void> Function(ProxyRuntimeAccount account, String projectId)? onProjectIdResolved,
+    void Function(Map<String, Object?> event)? onStreamDebugEvent,
+    bool Function()? isStreamDebugEventEnabled,
     http.Client? httpClient,
     Future<void> Function(Duration delay)? wait,
     String Function()? createSessionId,
@@ -405,6 +407,8 @@ class GeminiCodeAssistClient {
     Duration requestTimeout = defaultGeminiRequestTimeout,
   }) : _onTokensUpdated = onTokensUpdated,
        _onProjectIdResolved = onProjectIdResolved ?? _noopProjectIdResolved,
+       _onStreamDebugEvent = onStreamDebugEvent,
+       _isStreamDebugEventEnabled = isStreamDebugEventEnabled ?? _neverEmitStreamDebugEvent,
        _http = httpClient ?? http.Client(),
        _wait = wait ?? _defaultWait,
        _createSessionId = createSessionId ?? const Uuid().v4,
@@ -417,6 +421,8 @@ class GeminiCodeAssistClient {
 
   final Future<void> Function(ProxyRuntimeAccount account, OAuthTokens tokens) _onTokensUpdated;
   final Future<void> Function(ProxyRuntimeAccount account, String projectId) _onProjectIdResolved;
+  final void Function(Map<String, Object?> event)? _onStreamDebugEvent;
+  final bool Function() _isStreamDebugEventEnabled;
   final http.Client _http;
   final Future<void> Function(Duration delay) _wait;
   final String Function() _createSessionId;
@@ -1268,7 +1274,10 @@ class GeminiCodeAssistClient {
   }
 
   Stream<Map<String, Object?>> _streamResponse(http.StreamedResponse response) {
+    final streamTimer = Stopwatch()..start();
     StreamIterator<String>? lineIterator;
+    var rawChunkIndex = 0;
+    var frameIndex = 0;
     final controller = StreamController<Map<String, Object?>>(
       onCancel: () async {
         await lineIterator?.cancel();
@@ -1277,7 +1286,25 @@ class GeminiCodeAssistClient {
     unawaited(
       Future<void>(() async {
         try {
-          final lines = response.stream.transform(utf8.decoder).transform(const LineSplitter());
+          final lines = response.stream
+              .transform(
+                StreamTransformer<List<int>, List<int>>.fromHandlers(
+                  handleData: (chunk, sink) {
+                    rawChunkIndex += 1;
+                    if (_streamDebugEventEnabled) {
+                      _onStreamDebugEvent?.call({
+                        'stage': 'upstream_raw_chunk',
+                        'elapsed_ms': streamTimer.elapsedMilliseconds,
+                        'raw_chunk_index': rawChunkIndex,
+                        'raw_chunk_bytes': chunk.length,
+                      });
+                    }
+                    sink.add(chunk);
+                  },
+                ),
+              )
+              .transform(utf8.decoder)
+              .transform(const LineSplitter());
           lineIterator = StreamIterator<String>(lines);
           final buffer = <String>[];
           while (await lineIterator!.moveNext()) {
@@ -1288,7 +1315,13 @@ class GeminiCodeAssistClient {
               continue;
             }
             if (line.isEmpty && buffer.isNotEmpty) {
-              _emitBufferedChunk(controller, buffer);
+              frameIndex += 1;
+              _emitBufferedChunk(
+                controller,
+                buffer,
+                frameIndex: frameIndex,
+                elapsedMs: streamTimer.elapsedMilliseconds,
+              );
               buffer.clear();
             }
             if (buffer.isEmpty && (trimmedLine.startsWith('{') || trimmedLine.startsWith('['))) {
@@ -1297,11 +1330,25 @@ class GeminiCodeAssistClient {
             }
           }
           if (buffer.isNotEmpty) {
-            _emitBufferedChunk(controller, buffer);
+            frameIndex += 1;
+            _emitBufferedChunk(
+              controller,
+              buffer,
+              frameIndex: frameIndex,
+              elapsedMs: streamTimer.elapsedMilliseconds,
+            );
           }
         } catch (error) {
           controller.addError(_decodeTransportError(error));
         } finally {
+          if (_streamDebugEventEnabled) {
+            _onStreamDebugEvent?.call({
+              'stage': 'upstream_stream_closed',
+              'elapsed_ms': streamTimer.elapsedMilliseconds,
+              'raw_chunk_count': rawChunkIndex,
+              'frame_count': frameIndex,
+            });
+          }
           lineIterator = null;
           if (!controller.isClosed) {
             await controller.close();
@@ -1312,18 +1359,47 @@ class GeminiCodeAssistClient {
     return controller.stream;
   }
 
-  void _emitBufferedChunk(StreamController<Map<String, Object?>> controller, List<String> buffer) {
+  void _emitBufferedChunk(
+    StreamController<Map<String, Object?>> controller,
+    List<String> buffer, {
+    required int frameIndex,
+    required int elapsedMs,
+  }) {
     final chunk = buffer.join('\n');
     try {
       final decoded = jsonDecode(chunk);
       if (decoded is Map<String, dynamic>) {
-        controller.add(decoded.cast<String, Object?>());
+        final payload = decoded.cast<String, Object?>();
+        if (_streamDebugEventEnabled) {
+          final finishReason = _extractFinishReason(payload);
+          _onStreamDebugEvent?.call({
+            'stage': 'upstream_sse_frame',
+            'elapsed_ms': elapsedMs,
+            'frame_index': frameIndex,
+            'frame_chars': chunk.length,
+            'frame_lines': buffer.length,
+            'output_text_chars': _extractGeneratedText(payload).length,
+            if (finishReason?.isNotEmpty == true) 'finish_reason': finishReason,
+          });
+        }
+        controller.add(payload);
       }
     } on FormatException {
       // Gemini SSE occasionally includes non-JSON noise between data frames.
       // Ignore those chunks so an otherwise valid stream can continue.
+      if (_streamDebugEventEnabled) {
+        _onStreamDebugEvent?.call({
+          'stage': 'upstream_non_json_frame',
+          'elapsed_ms': elapsedMs,
+          'frame_index': frameIndex,
+          'frame_chars': chunk.length,
+          'frame_lines': buffer.length,
+        });
+      }
     }
   }
+
+  bool get _streamDebugEventEnabled => _onStreamDebugEvent != null && _isStreamDebugEventEnabled();
 
   Future<T> _executeWithRetry<T>(
     Future<T> Function() operation, {
@@ -1606,6 +1682,9 @@ class GeminiCodeAssistClient {
         continue;
       }
       final part = rawPart.cast<String, Object?>();
+      if (part['thought'] == true) {
+        continue;
+      }
       if (part['text'] is String) {
         buffer.write(part['text'] as String);
       }
@@ -1630,21 +1709,27 @@ class GeminiCodeAssistClient {
     final content = ((candidate['content'] as Map?) ?? const <String, Object?>{})
         .cast<String, Object?>();
     final rawParts = (content['parts'] as List?) ?? const [];
-    final nonTextParts = <Map<String, Object?>>[];
+    final mergedParts = <Map<String, Object?>>[];
+    var insertedAccumulatedText = false;
     for (final rawPart in rawParts) {
       if (rawPart is! Map) {
         continue;
       }
       final part = rawPart.cast<String, Object?>();
-      if (part['text'] is! String) {
-        nonTextParts.add(part);
+      if (part['thought'] == true || part['text'] is! String) {
+        mergedParts.add(part);
+        continue;
+      }
+      if (!insertedAccumulatedText && accumulatedText.isNotEmpty) {
+        mergedParts.add({'text': accumulatedText});
+        insertedAccumulatedText = true;
       }
     }
+    if (!insertedAccumulatedText && accumulatedText.isNotEmpty) {
+      mergedParts.add({'text': accumulatedText});
+    }
 
-    content['parts'] = [
-      if (accumulatedText.isNotEmpty) {'text': accumulatedText},
-      ...nonTextParts,
-    ];
+    content['parts'] = mergedParts;
     candidate['content'] = content;
     final candidates = ((response['candidates'] as List?) ?? const []).toList(growable: true);
     if (candidates.isNotEmpty) {
@@ -1797,11 +1882,11 @@ class GeminiCodeAssistClient {
     }
 
     if (_isGemini3Model(model)) {
-      return {'includeThoughts': true, 'thinkingLevel': _defaultGemini3ThinkingLevel()};
+      return {'thinkingLevel': _defaultGemini3ThinkingLevel(), 'includeThoughts': false};
     }
 
     if (_shouldUseDefaultGemini25ThinkingConfig(model)) {
-      return const {'thinkingBudget': _defaultGemini25ThinkingBudget, 'includeThoughts': true};
+      return const {'thinkingBudget': _defaultGemini25ThinkingBudget, 'includeThoughts': false};
     }
 
     return null;
@@ -1932,6 +2017,8 @@ class GeminiCodeAssistClient {
 Future<void> _defaultWait(Duration delay) => Future<void>.delayed(delay);
 
 Future<void> _noopProjectIdResolved(ProxyRuntimeAccount account, String projectId) async {}
+
+bool _neverEmitStreamDebugEvent() => false;
 
 Map<String, Object?> _deepCopyJsonMap(Map<String, Object?> source) {
   final decoded = jsonDecode(jsonEncode(source));

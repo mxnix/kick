@@ -114,7 +114,10 @@ class KiroCodeAssistClient {
       return lastPayload;
     }
 
-    return _KiroResponseAccumulator(model: resolvedModel).toPayload(finalChunk: true);
+    return _KiroResponseAccumulator(
+      model: resolvedModel,
+      includeReasoning: _shouldExposeReasoning(request),
+    ).toPayload(finalChunk: true);
   }
 
   Future<Stream<Map<String, Object?>>> generateContentStream({
@@ -125,7 +128,10 @@ class KiroCodeAssistClient {
     await _ensureFreshTokens(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
     final requestBody = _buildRequestBody(account: account, request: request, model: resolvedModel);
-    final accumulator = _KiroResponseAccumulator(model: resolvedModel);
+    final accumulator = _KiroResponseAccumulator(
+      model: resolvedModel,
+      includeReasoning: _shouldExposeReasoning(request),
+    );
     final controller = StreamController<Map<String, Object?>>();
 
     unawaited(
@@ -602,6 +608,41 @@ class KiroCodeAssistClient {
     return images;
   }
 
+  bool _shouldExposeReasoning(UnifiedPromptRequest request) {
+    final reasoningEffort = request.reasoningEffort?.trim().toLowerCase();
+    if (reasoningEffort != null && reasoningEffort.isNotEmpty) {
+      return reasoningEffort != 'none' && reasoningEffort != 'minimal';
+    }
+
+    final thinkingConfig = request.googleThinkingConfig;
+    if (thinkingConfig == null) {
+      return false;
+    }
+
+    if (thinkingConfig['includeThoughts'] is bool) {
+      return thinkingConfig['includeThoughts'] as bool;
+    }
+    if (thinkingConfig['include_thoughts'] is bool) {
+      return thinkingConfig['include_thoughts'] as bool;
+    }
+
+    final budget =
+        _parseThinkingBudget(thinkingConfig['thinkingBudget']) ??
+        _parseThinkingBudget(thinkingConfig['thinking_budget']);
+    if (budget != null) {
+      return budget != 0;
+    }
+
+    final thinkingLevel =
+        (thinkingConfig['thinkingLevel'] as String?)?.trim().toUpperCase() ??
+        (thinkingConfig['thinking_level'] as String?)?.trim().toUpperCase();
+    if (thinkingLevel != null && thinkingLevel.isNotEmpty) {
+      return thinkingLevel != 'LOW' && thinkingLevel != 'MINIMAL';
+    }
+
+    return false;
+  }
+
   Map<String, Object?> _sanitizeSchema(Map<String, Object?> schema) {
     final result = <String, Object?>{};
     for (final entry in schema.entries) {
@@ -959,8 +1000,7 @@ class _KiroEventStreamParser {
     final candidates = <({int index, String type})>[
       if (contentIndex >= 0) (index: contentIndex, type: 'content'),
       if (reasoningTextIndex >= 0) (index: reasoningTextIndex, type: 'reasoning'),
-      if (reasoningSignatureIndex >= 0)
-        (index: reasoningSignatureIndex, type: 'reasoning'),
+      if (reasoningSignatureIndex >= 0) (index: reasoningSignatureIndex, type: 'reasoning'),
       if (toolStartIndex >= 0) (index: toolStartIndex, type: 'tool_start'),
       if (toolInputIndex >= 0) (index: toolInputIndex, type: 'tool_input'),
       if (toolStopIndex >= 0) (index: toolStopIndex, type: 'tool_stop'),
@@ -1021,9 +1061,10 @@ class _KiroEventStreamParser {
 }
 
 class _KiroResponseAccumulator {
-  _KiroResponseAccumulator({required this.model});
+  _KiroResponseAccumulator({required this.model, required this.includeReasoning});
 
   final String model;
+  final bool includeReasoning;
   final StringBuffer _text = StringBuffer();
   final StringBuffer _reasoningText = StringBuffer();
   final List<Map<String, Object?>> _thoughts = <Map<String, Object?>>[];
@@ -1044,8 +1085,9 @@ class _KiroResponseAccumulator {
         if (text != null && text.isNotEmpty) {
           _reasoningText.write(text);
         }
-        if ((text != null && text.isNotEmpty) ||
-            (thoughtSignature != null && thoughtSignature.isNotEmpty)) {
+        if (includeReasoning &&
+            ((text != null && text.isNotEmpty) ||
+                (thoughtSignature != null && thoughtSignature.isNotEmpty))) {
           _thoughts.add({
             'thought': true,
             if (text != null && text.isNotEmpty) 'text': text,
@@ -1133,6 +1175,19 @@ class _KiroResponseAccumulator {
     }
     return buffer.toString();
   }
+}
+
+int? _parseThinkingBudget(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value.trim());
+  }
+  return null;
 }
 
 const int _defaultKiroMaxInputTokens = 200000;
