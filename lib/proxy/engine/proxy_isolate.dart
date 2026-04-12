@@ -469,6 +469,12 @@ class _ProxyIsolateHost {
         details: _requestContextPayload(prompt: resolvedPrompt),
       );
       final payload = await _executeNonStreamRequest(resolvedPrompt, retryTracker: retryTracker);
+	  
+	  final candidates = payload['candidates'] as List?;
+	  if (candidates != null && candidates.isEmpty) {
+		return _errorResponse(502, 'bad_gateway', 'Upstream API returned empty candidates');
+		}
+		
       await _logTrace(
         category: 'chat.completions',
         route: route,
@@ -664,6 +670,12 @@ class _ProxyIsolateHost {
       }
 
       final payload = await _executeNonStreamRequest(resolvedPrompt, retryTracker: retryTracker);
+	  
+	  final candidates = payload['candidates'] as List?;
+	  if (candidates != null && candidates.isEmpty) {
+		return _errorResponse(502, 'bad_gateway', 'Upstream API returned empty candidates');
+		}
+		
       await _logResponsePreview(
         category: 'responses',
         route: route,

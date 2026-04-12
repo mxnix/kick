@@ -161,7 +161,7 @@ const _cloudCodeDomains = <String>{
 };
 const defaultGeminiRequestMaxRetries = 10;
 const defaultGeminiBaseRetryDelay = Duration(seconds: 1);
-const defaultGeminiRequestTimeout = Duration(seconds: 90);
+const defaultGeminiRequestTimeout = Duration(minutes: 5);
 const _maxTransientRequestRetries = 3;
 const _maxRetryable429Delay = Duration(minutes: 1);
 const _maxRetryableTransientDelay = Duration(minutes: 5);
