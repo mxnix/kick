@@ -5,6 +5,7 @@ import 'dart:isolate';
 
 import '../../analytics/kick_analytics.dart';
 import '../../core/platform/android_foreground_runtime.dart';
+import '../../core/platform/android_local_network_permission.dart';
 import '../../data/models/account_profile.dart';
 import '../../data/models/app_log_entry.dart';
 import '../../data/models/app_settings.dart';
@@ -22,6 +23,7 @@ typedef ProxyRuntimeProbe = Future<Map<String, Object?>?> Function(AppSettings s
 typedef AndroidPlatformCheck = bool Function();
 typedef AndroidRuntimeRunningCheck = Future<bool> Function();
 typedef AndroidRuntimeEffect = Future<void> Function();
+typedef AndroidLocalNetworkPermissionRequest = Future<bool> Function();
 
 class ProxyRuntimeState {
   const ProxyRuntimeState({
@@ -141,6 +143,7 @@ class KickProxyController {
     AndroidRuntimeRunningCheck? isAndroidRuntimeRunning,
     AndroidRuntimeEffect? stopAndroidRuntimeIfRunning,
     AndroidRuntimeEffect? ensureAndroidRuntimeRunning,
+    AndroidLocalNetworkPermissionRequest? ensureAndroidLocalNetworkPermission,
     ProxyRuntimeProbe? probeExistingRuntime,
     ProxyIsolateSpawner? spawnIsolate,
   }) : _accountsRepository = accountsRepository,
@@ -152,6 +155,8 @@ class KickProxyController {
            stopAndroidRuntimeIfRunning ?? AndroidForegroundRuntime.stopIfRunning,
        _ensureAndroidRuntimeRunning =
            ensureAndroidRuntimeRunning ?? AndroidForegroundRuntime.ensureRunning,
+       _ensureAndroidLocalNetworkPermission =
+           ensureAndroidLocalNetworkPermission ?? AndroidLocalNetworkPermission.ensureGranted,
        _logsRepository = logsRepository,
        _probeExistingRuntime = probeExistingRuntime ?? _defaultProbeExistingRuntime,
        _secretStore = secretStore,
@@ -164,6 +169,7 @@ class KickProxyController {
   final AndroidRuntimeRunningCheck _isAndroidRuntimeRunning;
   final AndroidRuntimeEffect _stopAndroidRuntimeIfRunning;
   final AndroidRuntimeEffect _ensureAndroidRuntimeRunning;
+  final AndroidLocalNetworkPermissionRequest _ensureAndroidLocalNetworkPermission;
   final LogsRepository _logsRepository;
   final ProxyRuntimeProbe _probeExistingRuntime;
   final SecretStore _secretStore;
@@ -191,6 +197,7 @@ class KickProxyController {
   AppSettings? _lastSettings;
   List<AccountProfile> _lastAccounts = const [];
   String? _pendingIsolateFailure;
+  String? _localRuntimeError;
   bool _awaitingStartResult = false;
   bool _disposing = false;
   bool _disposed = false;
@@ -233,6 +240,14 @@ class KickProxyController {
     await initialize();
     _lastSettings = settings;
     _lastAccounts = accounts;
+    if (_currentState.running &&
+        !await _ensureAndroidLocalNetworkPermissionFor(
+          settings,
+          route: '/runtime/configure',
+          trackStartFailure: false,
+        )) {
+      return;
+    }
     if (!settings.androidBackgroundRuntime) {
       await _stopAndroidRuntimeIfRunning();
     } else {
@@ -310,6 +325,14 @@ class KickProxyController {
       }
 
       final settings = _lastSettings;
+      if (settings != null &&
+          !await _ensureAndroidLocalNetworkPermissionFor(
+            settings,
+            route: '/runtime/start',
+            trackStartFailure: true,
+          )) {
+        return;
+      }
       final wasRunningBeforeSync = _currentState.running;
       if (settings != null && await _syncExistingAndroidRuntime(settings)) {
         _awaitingStartResult = false;
@@ -414,9 +437,15 @@ class KickProxyController {
         break;
       case 'status':
         final previousState = _currentState;
-        final state = _withDerivedStateFlags(
+        var state = _withDerivedStateFlags(
           ProxyRuntimeState.fromJson((message['payload'] as Map).cast<String, Object?>()),
         );
+        final localRuntimeError = _localRuntimeError;
+        if (localRuntimeError != null && state.lastError == null) {
+          state = state.copyWith(lastError: localRuntimeError);
+        } else if (state.lastError != null && state.lastError != localRuntimeError) {
+          _localRuntimeError = null;
+        }
         _currentState = state;
         _emitState(_currentState);
         _handleStatusTransition(previousState, state);
@@ -577,6 +606,66 @@ class KickProxyController {
   }
 
   static bool _defaultIsAndroidPlatform() => Platform.isAndroid;
+
+  Future<bool> _ensureAndroidLocalNetworkPermissionFor(
+    AppSettings settings, {
+    required String route,
+    required bool trackStartFailure,
+  }) async {
+    if (!_isAndroidPlatform() || !requiresAndroidLocalNetworkPermission(settings)) {
+      _localRuntimeError = null;
+      return true;
+    }
+
+    try {
+      final granted = await _ensureAndroidLocalNetworkPermission();
+      if (granted) {
+        _localRuntimeError = null;
+        return true;
+      }
+      await _recordLocalNetworkPermissionFailure(
+        route: route,
+        message: androidLocalNetworkPermissionDeniedMessage,
+        trackStartFailure: trackStartFailure,
+      );
+      return false;
+    } catch (error, stackTrace) {
+      await _recordLocalNetworkPermissionFailure(
+        route: route,
+        message: 'Local network permission request failed: $error',
+        stackTrace: stackTrace,
+        trackStartFailure: trackStartFailure,
+      );
+      return false;
+    }
+  }
+
+  Future<void> _recordLocalNetworkPermissionFailure({
+    required String route,
+    required String message,
+    required bool trackStartFailure,
+    StackTrace? stackTrace,
+  }) async {
+    _awaitingStartResult = false;
+    _localRuntimeError = message;
+    _currentState = _currentState.copyWith(startPending: false, lastError: message);
+    _emitState(_currentState);
+    await _logsRepository.insert(
+      AppLogEntry(
+        id: 'proxy-local-network-permission-${DateTime.now().microsecondsSinceEpoch}',
+        timestamp: DateTime.now(),
+        level: AppLogLevel.warning,
+        category: 'proxy.runtime',
+        route: route,
+        message: message,
+        maskedPayload: stackTrace?.toString(),
+      ),
+    );
+    _emitActivity('logs');
+    if (trackStartFailure) {
+      await _analytics.trackProxyStartFailed(errorKind: _classifyRuntimeError(message));
+    }
+  }
 
   void _handleStatusTransition(ProxyRuntimeState previous, ProxyRuntimeState next) {
     if (!_awaitingStartResult) {
