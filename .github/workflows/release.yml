@@ -389,7 +389,7 @@ jobs:
           done < <(find release-artifacts -type f \( -name '*.zip' -o -name '*.exe' -o -name '*.apk' -o -name '*.aab' \) -print0 | sort -z)
 
       - name: Create or update GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.metadata.outputs.tag }}
           body_path: release-notes.md
