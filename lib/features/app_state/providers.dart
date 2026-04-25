@@ -10,8 +10,8 @@ import '../../app/bootstrap.dart';
 import '../../core/accounts/account_priority.dart';
 import '../../core/logging/internal_log_visibility.dart';
 import '../../core/platform/android_auth_keep_alive.dart';
+import '../../core/platform/desktop_runtime.dart';
 import '../../core/platform/window_bootstrap.dart';
-import '../../core/platform/windows_desktop_runtime.dart';
 import '../../core/security/proxy_api_key.dart';
 import '../../data/models/account_profile.dart';
 import '../../data/models/app_log_entry.dart';
@@ -151,7 +151,7 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     await bootstrap.logsRepository.setRetentionLimit(settings.logRetentionCount);
     setKickLocaleOverride(settings.appLocale);
     _refreshWindowTitleSafely();
-    await WindowsDesktopRuntime.applySettings(settings);
+    await DesktopRuntime.applySettings(settings);
     await bootstrap.analytics.setTrackingAllowed(analyticsTrackingAllowed(settings));
     state = AsyncData(settings);
     await ref.read(logsControllerProvider.notifier).refreshState();

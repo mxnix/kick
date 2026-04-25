@@ -11,38 +11,39 @@ import '../../data/models/app_settings.dart';
 import '../../l10n/kick_localizations.dart';
 import 'window_bootstrap.dart';
 
-const windowsLaunchToTrayArgument = '--background';
+const desktopLaunchToTrayArgument = '--background';
 const _showWindowMenuItemKey = 'show_window';
 const _hideWindowMenuItemKey = 'hide_window';
 const _exitAppMenuItemKey = 'exit_app';
 
-class WindowsLaunchOptions {
-  const WindowsLaunchOptions({required this.startHidden});
+class DesktopLaunchOptions {
+  const DesktopLaunchOptions({required this.startHidden});
 
-  factory WindowsLaunchOptions.fromArguments(List<String> arguments) {
-    return WindowsLaunchOptions(startHidden: arguments.contains(windowsLaunchToTrayArgument));
+  factory DesktopLaunchOptions.fromArguments(List<String> arguments) {
+    return DesktopLaunchOptions(startHidden: arguments.contains(desktopLaunchToTrayArgument));
   }
 
   final bool startHidden;
 }
 
-class WindowsDesktopRuntime with TrayListener, WindowListener {
-  WindowsDesktopRuntime._();
+class DesktopRuntime with TrayListener, WindowListener {
+  DesktopRuntime._();
 
-  static const trayNotificationShownKey = 'windows_tray_notification_shown';
-  static final WindowsDesktopRuntime _instance = WindowsDesktopRuntime._();
-  static final WindowsLaunchOptions launchOptions = WindowsLaunchOptions.fromArguments(
+  static const trayNotificationShownKey = 'desktop_tray_notification_shown';
+  static final DesktopRuntime _instance = DesktopRuntime._();
+  static final DesktopLaunchOptions launchOptions = DesktopLaunchOptions.fromArguments(
     Platform.executableArguments,
   );
 
-  static bool get startHiddenOnLaunch => Platform.isWindows && launchOptions.startHidden;
+  static bool get isSupported => Platform.isWindows || Platform.isLinux;
+  static bool get startHiddenOnLaunch => isSupported && launchOptions.startHidden;
 
   static Future<void> configure({
     required AppSettings settings,
     required Future<bool> Function() readTrayNotificationShown,
     required Future<void> Function(bool value) writeTrayNotificationShown,
   }) async {
-    if (!Platform.isWindows) {
+    if (!isSupported) {
       return;
     }
 
@@ -54,7 +55,7 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
   }
 
   static Future<void> applySettings(AppSettings settings) async {
-    if (!Platform.isWindows) {
+    if (!isSupported) {
       return;
     }
 
@@ -62,7 +63,7 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
   }
 
   static Future<void> dispose() async {
-    if (!Platform.isWindows) {
+    if (!isSupported) {
       return;
     }
 
@@ -70,7 +71,7 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
   }
 
   static Future<void> exitApplication() async {
-    if (!Platform.isWindows) {
+    if (!isSupported) {
       return;
     }
 
@@ -107,9 +108,12 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
     launchAtStartup.setup(
       appName: 'kick',
       appPath: Platform.resolvedExecutable,
-      args: const [windowsLaunchToTrayArgument],
+      args: const [desktopLaunchToTrayArgument],
     );
-    await localNotifier.setup(appName: l10n.appTitle, shortcutPolicy: ShortcutPolicy.requireCreate);
+    await localNotifier.setup(
+      appName: l10n.appTitle,
+      shortcutPolicy: Platform.isWindows ? ShortcutPolicy.requireCreate : ShortcutPolicy.ignore,
+    );
 
     if (!_listenersAttached) {
       trayManager.addListener(this);
@@ -118,12 +122,12 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
     }
 
     await windowManager.setPreventClose(true);
-    await trayManager.setIcon(kickWindowsTrayIconAssetPath);
-    await trayManager.setToolTip(l10n.appTitle);
+    await trayManager.setIcon(_trayIconAssetPath);
+    await _refreshTrayTitle(l10n);
     await _setTrayContextMenu(windowVisible: !startHiddenOnLaunch);
 
     if (startHiddenOnLaunch) {
-      await windowManager.setSkipTaskbar(true);
+      await _hideWindowFromTaskbarIfSupported();
     }
 
     _configured = true;
@@ -153,8 +157,18 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
   Future<void> _refreshLocalizedUi() async {
     final windowVisible = await windowManager.isVisible();
     final l10n = lookupKickLocalizations();
-    await trayManager.setToolTip(l10n.appTitle);
+    await _refreshTrayTitle(l10n);
     await _setTrayContextMenu(windowVisible: windowVisible);
+  }
+
+  Future<void> _refreshTrayTitle(KickLocalizations l10n) async {
+    if (Platform.isWindows) {
+      await trayManager.setToolTip(l10n.appTitle);
+      return;
+    }
+    if (Platform.isLinux) {
+      await trayManager.setTitle(l10n.appTitle);
+    }
   }
 
   Future<void> _dispose() async {
@@ -180,7 +194,7 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
   }
 
   Future<void> _showWindow() async {
-    await windowManager.setSkipTaskbar(false);
+    await _showWindowInTaskbarIfSupported();
     await WindowBootstrap.reveal();
     await _setTrayContextMenu(windowVisible: true);
   }
@@ -190,7 +204,7 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
       return;
     }
 
-    await windowManager.setSkipTaskbar(true);
+    await _hideWindowFromTaskbarIfSupported();
     await windowManager.hide();
     await _setTrayContextMenu(windowVisible: false);
     if (showEducationNotification) {
@@ -249,6 +263,18 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
     await notification.show();
   }
 
+  Future<void> _hideWindowFromTaskbarIfSupported() async {
+    if (Platform.isWindows) {
+      await windowManager.setSkipTaskbar(true);
+    }
+  }
+
+  Future<void> _showWindowInTaskbarIfSupported() async {
+    if (Platform.isWindows) {
+      await windowManager.setSkipTaskbar(false);
+    }
+  }
+
   @override
   void onWindowEvent(String eventName) {
     if (!_configured || _exitRequested) {
@@ -268,7 +294,7 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
   }
 
   Future<void> _syncVisibleWindowState() async {
-    if (await windowManager.isSkipTaskbar()) {
+    if (Platform.isWindows && await windowManager.isSkipTaskbar()) {
       await windowManager.setSkipTaskbar(false);
     }
 
@@ -282,7 +308,9 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
 
   @override
   void onTrayIconRightMouseDown() {
-    unawaited(trayManager.popUpContextMenu());
+    if (Platform.isWindows) {
+      unawaited(trayManager.popUpContextMenu());
+    }
   }
 
   @override
@@ -310,4 +338,7 @@ class WindowsDesktopRuntime with TrayListener, WindowListener {
 
     unawaited(_hideWindowToTray(showEducationNotification: true));
   }
+
+  String get _trayIconAssetPath =>
+      Platform.isLinux ? kickLinuxTrayIconAssetPath : kickWindowsTrayIconAssetPath;
 }

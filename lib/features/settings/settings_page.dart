@@ -55,7 +55,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isAndroidPlatform = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    final isWindowsPlatform = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+    final isDesktopTrayPlatform =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux);
     final settingsValue = ref.watch(settingsControllerProvider);
 
     return settingsValue.when(
@@ -90,7 +93,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onToggle: () {
                       setState(() => _appearanceExpanded = !_appearanceExpanded);
                     },
-                    isWindowsPlatform: isWindowsPlatform,
+                    isDesktopTrayPlatform: isDesktopTrayPlatform,
                   ),
                   const SizedBox(height: 14),
                   SettingsNetworkSection(

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -32,17 +33,20 @@ class AppUpdateChecker {
     String apiUrl = kickLatestReleaseApiUrl,
     Duration requestTimeout = const Duration(seconds: 8),
     TargetPlatform? targetPlatform,
+    LinuxPackageFormat? linuxPackageFormat,
   }) : _http = httpClient ?? http.Client(),
        _apiUrl = apiUrl,
        _requestTimeout = requestTimeout > Duration.zero
            ? requestTimeout
            : const Duration(seconds: 8),
-       _targetPlatform = targetPlatform ?? defaultTargetPlatform;
+       _targetPlatform = targetPlatform ?? defaultTargetPlatform,
+       _linuxPackageFormat = linuxPackageFormat;
 
   final http.Client _http;
   final String _apiUrl;
   final Duration _requestTimeout;
   final TargetPlatform _targetPlatform;
+  final LinuxPackageFormat? _linuxPackageFormat;
 
   Future<AppUpdateInfo> checkForUpdates({required String currentVersion}) async {
     final normalizedCurrentVersion = normalizeVersion(currentVersion);
@@ -75,10 +79,14 @@ class AppUpdateChecker {
     final releaseUrl = (map['html_url']?.toString().trim().isNotEmpty == true)
         ? map['html_url']!.toString().trim()
         : kickLatestReleaseUrl;
+    final linuxPackageFormat = _targetPlatform == TargetPlatform.linux
+        ? (_linuxPackageFormat ?? LinuxPackageFormat.detect())
+        : null;
     final installerAsset = _resolveInstallerAsset(
       releasePayload: map,
       latestVersion: latestVersion,
       targetPlatform: _targetPlatform,
+      linuxPackageFormat: linuxPackageFormat,
     );
     final checksumUrl = _resolveChecksumUrl(releasePayload: map, latestVersion: latestVersion);
 
@@ -147,24 +155,52 @@ class AppUpdateChecker {
     required Map<String, Object?> releasePayload,
     required String latestVersion,
     required TargetPlatform targetPlatform,
+    LinuxPackageFormat? linuxPackageFormat,
   }) {
     final assets = releasePayload['assets'];
     if (assets is! List) {
       return null;
     }
 
-    final expectedAssetName = switch (targetPlatform) {
-      TargetPlatform.android => 'kick-android-$latestVersion.apk',
-      TargetPlatform.windows => 'kick-windows-$latestVersion-setup.exe',
-      TargetPlatform.fuchsia ||
-      TargetPlatform.iOS ||
-      TargetPlatform.linux ||
-      TargetPlatform.macOS => null,
+    final expectedAssetNames = switch (targetPlatform) {
+      TargetPlatform.android => ['kick-android-$latestVersion.apk'],
+      TargetPlatform.windows => ['kick-windows-$latestVersion-setup.exe'],
+      TargetPlatform.linux => _expectedLinuxAssetNames(
+        latestVersion: latestVersion,
+        packageFormat: linuxPackageFormat,
+      ),
+      TargetPlatform.fuchsia || TargetPlatform.iOS || TargetPlatform.macOS => const <String>[],
     };
-    if (expectedAssetName == null) {
+    if (expectedAssetNames.isEmpty) {
       return null;
     }
 
+    for (final assetName in expectedAssetNames) {
+      final asset = _findReleaseAsset(assets: assets, expectedAssetName: assetName);
+      if (asset != null) {
+        return asset;
+      }
+    }
+    return null;
+  }
+
+  static List<String> _expectedLinuxAssetNames({
+    required String latestVersion,
+    required LinuxPackageFormat? packageFormat,
+  }) {
+    final packageNames = switch (packageFormat) {
+      LinuxPackageFormat.deb => ['kick-linux-x64-$latestVersion.deb'],
+      LinuxPackageFormat.rpm => ['kick-linux-x64-$latestVersion.rpm'],
+      LinuxPackageFormat.pacman => const <String>[],
+      null => const <String>[],
+    };
+    return [...packageNames, 'kick-linux-x64-$latestVersion.AppImage'];
+  }
+
+  static _ReleaseAsset? _findReleaseAsset({
+    required List<Object?> assets,
+    required String expectedAssetName,
+  }) {
     for (final asset in assets) {
       if (asset is! Map) {
         continue;
@@ -206,6 +242,78 @@ class AppUpdateChecker {
 
     return null;
   }
+}
+
+enum LinuxPackageFormat {
+  deb,
+  rpm,
+  pacman;
+
+  static LinuxPackageFormat? detect({String osReleasePath = '/etc/os-release'}) {
+    if (!Platform.isLinux) {
+      return null;
+    }
+
+    try {
+      final file = File(osReleasePath);
+      if (!file.existsSync()) {
+        return null;
+      }
+      return fromOsRelease(file.readAsStringSync());
+    } on FileSystemException {
+      return null;
+    }
+  }
+
+  static LinuxPackageFormat? fromOsRelease(String contents) {
+    final fields = <String, String>{};
+    for (final rawLine in contents.split(RegExp(r'\r?\n'))) {
+      final line = rawLine.trim();
+      if (line.isEmpty || line.startsWith('#')) {
+        continue;
+      }
+      final separatorIndex = line.indexOf('=');
+      if (separatorIndex <= 0) {
+        continue;
+      }
+      final key = line.substring(0, separatorIndex).trim().toUpperCase();
+      var value = line.substring(separatorIndex + 1).trim();
+      if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+        value = value.substring(1, value.length - 1);
+      }
+      fields[key] = value.toLowerCase();
+    }
+
+    final ids = <String>{
+      for (final key in const ['ID', 'ID_LIKE'])
+        ...?fields[key]?.split(RegExp(r'\s+')).where((item) => item.trim().isNotEmpty),
+    };
+    if (ids.any(_isDebianLike)) {
+      return LinuxPackageFormat.deb;
+    }
+    if (ids.any(_isRpmLike)) {
+      return LinuxPackageFormat.rpm;
+    }
+    if (ids.any(_isPacmanLike)) {
+      return LinuxPackageFormat.pacman;
+    }
+    return null;
+  }
+
+  static bool _isDebianLike(String id) =>
+      id == 'debian' || id == 'ubuntu' || id == 'linuxmint' || id == 'pop';
+
+  static bool _isRpmLike(String id) =>
+      id == 'fedora' ||
+      id == 'rhel' ||
+      id == 'centos' ||
+      id == 'rocky' ||
+      id == 'almalinux' ||
+      id == 'suse' ||
+      id == 'opensuse';
+
+  static bool _isPacmanLike(String id) =>
+      id == 'arch' || id == 'manjaro' || id == 'endeavouros' || id == 'cachyos';
 }
 
 class _ReleaseAsset {

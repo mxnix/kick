@@ -9,7 +9,7 @@ class WindowBootstrap {
   static Future<void>? _configureFuture;
 
   static Future<void> configure() async {
-    if (!Platform.isWindows) {
+    if (!_isDesktopWindowPlatform) {
       return;
     }
 
@@ -17,7 +17,7 @@ class WindowBootstrap {
   }
 
   static Future<void> reveal() async {
-    if (!Platform.isWindows) {
+    if (!_isDesktopWindowPlatform) {
       return;
     }
 
@@ -25,7 +25,7 @@ class WindowBootstrap {
   }
 
   static Future<void> refreshTitle() async {
-    if (!Platform.isWindows) {
+    if (!_isDesktopWindowPlatform) {
       return;
     }
 
@@ -41,12 +41,14 @@ class WindowBootstrap {
       center: true,
       title: lookupKickLocalizations().appTitle,
       backgroundColor: Colors.transparent,
-      titleBarStyle: TitleBarStyle.hidden,
-      windowButtonVisibility: false,
+      titleBarStyle: Platform.isWindows ? TitleBarStyle.hidden : TitleBarStyle.normal,
+      windowButtonVisibility: !Platform.isWindows,
     );
     await windowManager.waitUntilReadyToShow(options, () async {
-      await windowManager.setAsFrameless();
-      await windowManager.setHasShadow(false);
+      if (Platform.isWindows) {
+        await windowManager.setAsFrameless();
+        await windowManager.setHasShadow(false);
+      }
     });
   }
 
@@ -56,3 +58,5 @@ class WindowBootstrap {
     await windowManager.focus();
   }
 }
+
+bool get _isDesktopWindowPlatform => Platform.isWindows || Platform.isLinux;

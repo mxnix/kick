@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import '../../core/platform/windows_desktop_runtime.dart';
+import '../../core/platform/desktop_runtime.dart';
 import 'app_update_checker.dart';
 
 const _appUpdateChannelName = 'kick/app_update';
@@ -75,8 +75,29 @@ class DownloadedAppUpdate {
 
 enum AppUpdateInstallLaunchResult { launched, permissionRequired }
 
+enum AppUpdateInstallPlatform {
+  android,
+  windows,
+  linux,
+  unsupported;
+
+  static AppUpdateInstallPlatform current() {
+    if (Platform.isAndroid) {
+      return AppUpdateInstallPlatform.android;
+    }
+    if (Platform.isWindows) {
+      return AppUpdateInstallPlatform.windows;
+    }
+    if (Platform.isLinux) {
+      return AppUpdateInstallPlatform.linux;
+    }
+    return AppUpdateInstallPlatform.unsupported;
+  }
+}
+
 typedef AppUpdateDirectoryProvider = Future<Directory> Function();
 typedef AppUpdateWindowsInstallerLauncher = Future<void> Function();
+typedef AppUpdateLinuxPackageOpener = Future<void> Function(String filePath);
 
 final appUpdateInstallerProvider = Provider<AppUpdateInstaller>((ref) {
   final installer = AppUpdateInstaller();
@@ -94,16 +115,21 @@ class AppUpdateInstaller {
     MethodChannel? platformChannel,
     AppUpdateDirectoryProvider? directoryProvider,
     AppUpdateWindowsInstallerLauncher? windowsInstallerLauncher,
+    AppUpdateLinuxPackageOpener? linuxPackageOpener,
+    AppUpdateInstallPlatform? installPlatform,
   }) : _http = httpClient ?? http.Client(),
        _platformChannel = platformChannel ?? const MethodChannel(_appUpdateChannelName),
        _directoryProvider = directoryProvider ?? getApplicationSupportDirectory,
-       _windowsInstallerLauncher =
-           windowsInstallerLauncher ?? WindowsDesktopRuntime.exitApplication;
+       _windowsInstallerLauncher = windowsInstallerLauncher ?? DesktopRuntime.exitApplication,
+       _linuxPackageOpener = linuxPackageOpener ?? _openLinuxPackage,
+       _installPlatform = installPlatform ?? AppUpdateInstallPlatform.current();
 
   final http.Client _http;
   final MethodChannel _platformChannel;
   final AppUpdateDirectoryProvider _directoryProvider;
   final AppUpdateWindowsInstallerLauncher _windowsInstallerLauncher;
+  final AppUpdateLinuxPackageOpener _linuxPackageOpener;
+  final AppUpdateInstallPlatform _installPlatform;
 
   Future<DownloadedAppUpdate> downloadUpdate({
     required AppUpdateInfo updateInfo,
@@ -181,39 +207,14 @@ class AppUpdateInstaller {
   }
 
   Future<AppUpdateInstallLaunchResult> launchInstall(DownloadedAppUpdate downloadedUpdate) async {
-    if (Platform.isWindows) {
-      final scheduled =
-          await _platformChannel.invokeMethod<bool>('scheduleInstallerOnExit', {
-            'filePath': downloadedUpdate.filePath,
-          }) ??
-          false;
-      if (!scheduled) {
-        throw StateError('Failed to stage the Windows installer.');
-      }
-      await _windowsInstallerLauncher();
-      return AppUpdateInstallLaunchResult.launched;
-    }
-
-    if (Platform.isAndroid) {
-      final canInstall =
-          await _platformChannel.invokeMethod<bool>('canRequestPackageInstalls') ?? true;
-      if (!canInstall) {
-        await _platformChannel.invokeMethod<void>('openUnknownSourcesSettings');
-        return AppUpdateInstallLaunchResult.permissionRequired;
-      }
-
-      final installerOpened =
-          await _platformChannel.invokeMethod<bool>('installApk', {
-            'filePath': downloadedUpdate.filePath,
-          }) ??
-          false;
-      if (!installerOpened) {
-        throw StateError('Android installer could not be opened.');
-      }
-      return AppUpdateInstallLaunchResult.launched;
-    }
-
-    throw UnsupportedError('Native update install is not supported on this platform.');
+    return switch (_installPlatform) {
+      AppUpdateInstallPlatform.windows => _launchWindowsInstaller(downloadedUpdate),
+      AppUpdateInstallPlatform.android => _launchAndroidInstaller(downloadedUpdate),
+      AppUpdateInstallPlatform.linux => _launchLinuxPackage(downloadedUpdate),
+      AppUpdateInstallPlatform.unsupported => throw UnsupportedError(
+        'Native update install is not supported on this platform.',
+      ),
+    };
   }
 
   Future<void> dispose() async {
@@ -270,6 +271,75 @@ class AppUpdateInstaller {
 
   bool _hashesEqual(String left, String right) =>
       left.trim().toLowerCase() == right.trim().toLowerCase();
+
+  Future<AppUpdateInstallLaunchResult> _launchWindowsInstaller(
+    DownloadedAppUpdate downloadedUpdate,
+  ) async {
+    final scheduled =
+        await _platformChannel.invokeMethod<bool>('scheduleInstallerOnExit', {
+          'filePath': downloadedUpdate.filePath,
+        }) ??
+        false;
+    if (!scheduled) {
+      throw StateError('Failed to stage the Windows installer.');
+    }
+    await _windowsInstallerLauncher();
+    return AppUpdateInstallLaunchResult.launched;
+  }
+
+  Future<AppUpdateInstallLaunchResult> _launchAndroidInstaller(
+    DownloadedAppUpdate downloadedUpdate,
+  ) async {
+    final canInstall =
+        await _platformChannel.invokeMethod<bool>('canRequestPackageInstalls') ?? true;
+    if (!canInstall) {
+      await _platformChannel.invokeMethod<void>('openUnknownSourcesSettings');
+      return AppUpdateInstallLaunchResult.permissionRequired;
+    }
+
+    final installerOpened =
+        await _platformChannel.invokeMethod<bool>('installApk', {
+          'filePath': downloadedUpdate.filePath,
+        }) ??
+        false;
+    if (!installerOpened) {
+      throw StateError('Android installer could not be opened.');
+    }
+    return AppUpdateInstallLaunchResult.launched;
+  }
+
+  Future<AppUpdateInstallLaunchResult> _launchLinuxPackage(
+    DownloadedAppUpdate downloadedUpdate,
+  ) async {
+    await _linuxPackageOpener(downloadedUpdate.filePath);
+    return AppUpdateInstallLaunchResult.launched;
+  }
+}
+
+Future<void> _openLinuxPackage(String filePath) async {
+  if (filePath.toLowerCase().endsWith('.appimage')) {
+    final chmodResult = await Process.run('chmod', ['u+x', filePath]);
+    if (chmodResult.exitCode != 0) {
+      throw StateError('Linux AppImage could not be marked executable.');
+    }
+
+    final process = await Process.start(filePath, const [], mode: ProcessStartMode.detached);
+    await _waitForLinuxPackageLaunch(process, 'Linux AppImage could not be opened.');
+    return;
+  }
+
+  final process = await Process.start('xdg-open', [filePath], mode: ProcessStartMode.detached);
+  await _waitForLinuxPackageLaunch(process, 'Linux package could not be opened.');
+}
+
+Future<void> _waitForLinuxPackageLaunch(Process process, String failureMessage) async {
+  final exitCode = await process.exitCode.timeout(
+    const Duration(milliseconds: 500),
+    onTimeout: () => 0,
+  );
+  if (exitCode != 0) {
+    throw StateError(failureMessage);
+  }
 }
 
 class AppUpdateController extends Notifier<AppUpdateFlowState> {

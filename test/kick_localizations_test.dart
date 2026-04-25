@@ -36,4 +36,14 @@ void main() {
 
     expect(l10n.localeName, 'ru');
   });
+
+  test('desktop integration labels are platform-neutral', () {
+    final en = lookupKickLocalizations(const Locale('en'));
+    final ru = lookupKickLocalizations(const Locale('ru'));
+
+    expect(en.windowsLaunchAtStartupTitle, isNot(contains('Windows')));
+    expect(en.windowsTraySubtitle, isNot(contains('Windows')));
+    expect(ru.windowsLaunchAtStartupTitle, isNot(contains('Windows')));
+    expect(ru.windowsTraySubtitle, isNot(contains('Windows')));
+  });
 }

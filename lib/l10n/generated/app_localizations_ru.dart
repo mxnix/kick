@@ -475,11 +475,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get windowsTrayTitle => 'Сворачивать в трей';
 
   @override
-  String get windowsTraySubtitle =>
-      'При закрытии окно не завершает работу, а скрывает KiCk в системный трей';
+  String get windowsTraySubtitle => 'При закрытии окна KiCk продолжит работать в системном трее';
 
   @override
-  String get windowsLaunchAtStartupTitle => 'Запускать вместе с Windows';
+  String get windowsLaunchAtStartupTitle => 'Запускать при входе';
 
   @override
   String get windowsLaunchAtStartupSubtitle =>

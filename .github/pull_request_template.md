@@ -7,6 +7,7 @@
 - [ ] `flutter analyze`
 - [ ] `flutter test`
 - [ ] Manual verification on Windows
+- [ ] Manual verification on Linux
 - [ ] Manual verification on Android
 
 ## Notes
