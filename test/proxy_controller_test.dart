@@ -3,6 +3,7 @@ import 'dart:isolate';
 
 import 'package:drift/native.dart';
 import 'package:kick/analytics/kick_analytics.dart';
+import 'package:kick/core/platform/android_local_network_permission.dart';
 import 'package:kick/data/app_database.dart';
 import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/app_settings.dart';
@@ -152,6 +153,123 @@ void main() {
     expect(harness.controller.currentState.running, isTrue);
     expect(harness.controller.currentState.requestCount, 1);
     expect(harness.controller.currentState.startPending, isFalse);
+  });
+
+  test('does not request local network permission for loopback Android proxy start', () async {
+    var permissionRequestCount = 0;
+    final harness = await _ControllerHarness.create(
+      isAndroidPlatform: () => true,
+      ensureAndroidLocalNetworkPermission: () async {
+        permissionRequestCount += 1;
+        return false;
+      },
+      spawnIsolate: (messagePort, errorPort, exitPort) {
+        return Isolate.spawn(
+          _delayedStartCountingIsolate,
+          messagePort,
+          onError: errorPort,
+          onExit: exitPort,
+        );
+      },
+    );
+    addTearDown(harness.dispose);
+    final settings = AppSettings.defaults(
+      apiKey: 'expected-key',
+    ).copyWith(port: 0, androidBackgroundRuntime: false);
+
+    await harness.controller.configure(settings: settings, accounts: const <AccountProfile>[]);
+    final runningState = harness.controller.states.firstWhere((state) => state.running);
+
+    await harness.controller.start();
+    await runningState.timeout(const Duration(seconds: 2));
+
+    expect(permissionRequestCount, 0);
+    expect(harness.controller.currentState.running, isTrue);
+  });
+
+  test('blocks Android LAN proxy start when local network permission is denied', () async {
+    var permissionRequestCount = 0;
+    final transport = _RecordingAnalyticsTransport();
+    final analytics = KickAnalytics(
+      config: const AnalyticsBuildConfig(buildChannel: 'test', appKey: 'A-EU-test'),
+      transport: transport,
+      trackingAllowed: true,
+    );
+    final harness = await _ControllerHarness.create(
+      analytics: analytics,
+      isAndroidPlatform: () => true,
+      ensureAndroidLocalNetworkPermission: () async {
+        permissionRequestCount += 1;
+        return false;
+      },
+      spawnIsolate: (messagePort, errorPort, exitPort) {
+        return Isolate.spawn(
+          _delayedStartCountingIsolate,
+          messagePort,
+          onError: errorPort,
+          onExit: exitPort,
+        );
+      },
+    );
+    addTearDown(harness.dispose);
+    final settings = AppSettings.defaults(
+      apiKey: 'expected-key',
+    ).copyWith(allowLan: true, port: 0, androidBackgroundRuntime: false);
+
+    await harness.controller.configure(settings: settings, accounts: const <AccountProfile>[]);
+    await harness.controller.start();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    expect(permissionRequestCount, 1);
+    expect(harness.controller.currentState.running, isFalse);
+    expect(harness.controller.currentState.startPending, isFalse);
+    expect(harness.controller.currentState.lastError, androidLocalNetworkPermissionDeniedMessage);
+    expect(
+      transport.events.any(
+        (event) =>
+            event.name == 'proxy_start_failed' &&
+            event.properties['error_kind'] == 'permission_denied',
+      ),
+      isTrue,
+    );
+  });
+
+  test('requests local network permission before applying LAN config to a running proxy', () async {
+    var permissionRequestCount = 0;
+    final harness = await _ControllerHarness.create(
+      isAndroidPlatform: () => true,
+      ensureAndroidLocalNetworkPermission: () async {
+        permissionRequestCount += 1;
+        return false;
+      },
+      spawnIsolate: (messagePort, errorPort, exitPort) {
+        return Isolate.spawn(
+          _delayedStartCountingIsolate,
+          messagePort,
+          onError: errorPort,
+          onExit: exitPort,
+        );
+      },
+    );
+    addTearDown(harness.dispose);
+    final loopbackSettings = AppSettings.defaults(
+      apiKey: 'expected-key',
+    ).copyWith(port: 0, androidBackgroundRuntime: false);
+    final lanSettings = loopbackSettings.copyWith(allowLan: true);
+
+    await harness.controller.configure(
+      settings: loopbackSettings,
+      accounts: const <AccountProfile>[],
+    );
+    final runningState = harness.controller.states.firstWhere((state) => state.running);
+    await harness.controller.start();
+    await runningState.timeout(const Duration(seconds: 2));
+
+    await harness.controller.configure(settings: lanSettings, accounts: const <AccountProfile>[]);
+
+    expect(permissionRequestCount, 1);
+    expect(harness.controller.currentState.running, isTrue);
+    expect(harness.controller.currentState.lastError, androidLocalNetworkPermissionDeniedMessage);
   });
 
   test('emits compatibility issues and proxy session summaries from isolate analytics', () async {
@@ -633,6 +751,7 @@ class _ControllerHarness {
     AndroidRuntimeRunningCheck? isAndroidRuntimeRunning,
     AndroidRuntimeEffect? stopAndroidRuntimeIfRunning,
     AndroidRuntimeEffect? ensureAndroidRuntimeRunning,
+    AndroidLocalNetworkPermissionRequest? ensureAndroidLocalNetworkPermission,
     ProxyRuntimeProbe? probeExistingRuntime,
   }) async {
     final database = AppDatabase(NativeDatabase.memory());
@@ -652,6 +771,7 @@ class _ControllerHarness {
       isAndroidRuntimeRunning: isAndroidRuntimeRunning,
       stopAndroidRuntimeIfRunning: stopAndroidRuntimeIfRunning,
       ensureAndroidRuntimeRunning: ensureAndroidRuntimeRunning,
+      ensureAndroidLocalNetworkPermission: ensureAndroidLocalNetworkPermission,
       probeExistingRuntime: probeExistingRuntime,
       spawnIsolate: spawnIsolate,
     );

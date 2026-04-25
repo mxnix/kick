@@ -66,7 +66,6 @@ jobs:
         run: flutter gen-l10n
 
       - name: Verify generated localizations are up to date
-        if: ${{ github.event_name != 'pull_request' || github.head_ref != 'l10n/weblate-translations' }}
         shell: bash
         run: git diff --exit-code -- lib/l10n/generated
 
