@@ -17,9 +17,6 @@
   <a href="https://github.com/mxnix/kick/blob/main/LICENSE.md">
     <img src="https://img.shields.io/github/license/mxnix/kick?style=flat-square" alt="Лицензия">
   </a>
-  <a href="https://weblate.nikz.lol/projects/kick/">
-    <img src="https://img.shields.io/badge/Translations-Weblate-2ECCAA?style=flat-square&logo=weblate&logoColor=white" alt="Переводы в Weblate">
-  </a>
 </p>
 
 **Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном Flutter-приложении**

@@ -45,4 +45,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows-inst
 
 - After changing any `lib/l10n/app_*.arb` file, regenerate localizations with `flutter gen-l10n`.
 - The canonical source locale is `lib/l10n/app_en.arb`.
-- Weblate setup and translation rules are documented in `docs/localization.md`.
+- Localization workflow and translation rules are documented in `docs/localization.md`.
