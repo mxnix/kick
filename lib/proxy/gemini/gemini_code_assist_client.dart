@@ -558,6 +558,9 @@ class GeminiCodeAssistClient {
             }
 
             if (lastPayload == null) {
+              if (accumulatedText.isEmpty) {
+                throw _emptyStreamingResponseError();
+              }
               break;
             }
 
@@ -1618,6 +1621,15 @@ class GeminiCodeAssistClient {
       message: error.toString(),
       statusCode: 500,
       source: GeminiGatewayFailureSource.proxy,
+    );
+  }
+
+  GeminiGatewayException _emptyStreamingResponseError() {
+    return GeminiGatewayException(
+      kind: GeminiGatewayFailureKind.serviceUnavailable,
+      message: 'Gemini streaming request completed without response data.',
+      statusCode: 502,
+      source: GeminiGatewayFailureSource.transport,
     );
   }
 

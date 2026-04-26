@@ -214,6 +214,31 @@ void main() {
     expect(waits, [const Duration(seconds: 2)]);
   });
 
+  test('fails Kiro generation when upstream closes without output', () async {
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/generateAssistantResponse');
+          return http.StreamedResponse(Stream<List<int>>.empty(), 200);
+        },
+      ]),
+    );
+
+    await expectLater(
+      client.generateContent(account: sampleAccount(), request: sampleRequest()),
+      throwsA(
+        isA<GeminiGatewayException>()
+            .having((error) => error.kind, 'kind', GeminiGatewayFailureKind.serviceUnavailable)
+            .having((error) => error.statusCode, 'statusCode', 502)
+            .having(
+              (error) => error.message,
+              'message',
+              'Kiro streaming request completed without response data.',
+            ),
+      ),
+    );
+  });
+
   test('injects the hardcoded Kiro prompt only for Claude models', () async {
     late Map<String, Object?> capturedBody;
     final client = KiroCodeAssistClient(

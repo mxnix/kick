@@ -156,6 +156,15 @@ class KiroCodeAssistClient {
               controller.add(accumulator.toPayload());
             }
           }
+          if (!accumulator.hasEmittableOutput) {
+            throw GeminiGatewayException(
+              provider: AccountProvider.kiro,
+              kind: GeminiGatewayFailureKind.serviceUnavailable,
+              message: 'Kiro streaming request completed without response data.',
+              statusCode: 502,
+              source: GeminiGatewayFailureSource.transport,
+            );
+          }
           controller.add(accumulator.toPayload(finalChunk: true));
         } catch (error) {
           controller.addError(_decodeTransportError(error));
@@ -1070,6 +1079,8 @@ class _KiroResponseAccumulator {
   final List<Map<String, Object?>> _thoughts = <Map<String, Object?>>[];
   final List<Map<String, Object?>> _toolCalls = <Map<String, Object?>>[];
   double? _contextUsagePercentage;
+
+  bool get hasEmittableOutput => _text.isNotEmpty || _thoughts.isNotEmpty || _toolCalls.isNotEmpty;
 
   void apply(_KiroEvent event) {
     switch (event.type) {

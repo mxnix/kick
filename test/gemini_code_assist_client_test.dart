@@ -2896,6 +2896,34 @@ void main() {
     await upstreamCanceled.future.timeout(const Duration(seconds: 1));
   });
 
+  test('fails Gemini streaming generation when upstream closes without payloads', () async {
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async => http.StreamedResponse(Stream<List<int>>.empty(), 200),
+      ]),
+    );
+
+    final stream = await client.generateContentStream(
+      account: sampleAccount(),
+      request: sampleRequest(stream: true),
+    );
+
+    await expectLater(
+      stream.toList(),
+      throwsA(
+        isA<GeminiGatewayException>()
+            .having((error) => error.kind, 'kind', GeminiGatewayFailureKind.serviceUnavailable)
+            .having((error) => error.statusCode, 'statusCode', 502)
+            .having(
+              (error) => error.message,
+              'message',
+              'Gemini streaming request completed without response data.',
+            ),
+      ),
+    );
+  });
+
   test('stops retrying Gemini stream when consumer cancels during retry backoff', () async {
     final waits = <Duration>[];
     final firstAttempt = Completer<void>();
