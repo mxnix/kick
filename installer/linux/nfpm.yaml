@@ -9,7 +9,6 @@ description: Local OpenAI-compatible proxy for Gemini CLI and Kiro.
 vendor: nikzmx
 homepage: https://github.com/mxnix/kick
 license: Apache-2.0
-bindir: /usr/bin
 
 contents:
   - src: "__SOURCE_DIR__"
