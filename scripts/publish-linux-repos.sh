@@ -105,11 +105,14 @@ cp "$pacman_pkg" "$pacman_repo_pkg"
 (
   cd "$pacman_root"
   repo-add "$repo_name.db.tar.gz" "$(basename "$pacman_repo_pkg")"
-  cp "$repo_name.db.tar.gz" "$repo_name.db"
-  cp "$repo_name.files.tar.gz" "$repo_name.files"
+
+  cp -f --remove-destination "$repo_name.db.tar.gz" "$repo_name.db"
+  cp -f --remove-destination "$repo_name.files.tar.gz" "$repo_name.files"
+
   gpg_sign \
     --detach-sign --armor -o "$repo_name.db.tar.gz.sig" "$repo_name.db.tar.gz"
-  cp "$repo_name.db.tar.gz.sig" "$repo_name.db.sig"
+
+  cp -f --remove-destination "$repo_name.db.tar.gz.sig" "$repo_name.db.sig"
 )
 
 cat > "$pages_dir/linux/index.html" <<HTML
