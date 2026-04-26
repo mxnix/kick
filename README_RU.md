@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="static/github/logo/logo.png" alt="Логотип KiCk" style="width: 128px; height: 128px; margin-bottom: 3px;">
+<img src="static/github/logo/logo.png" alt="Логотип KiCk" width="128" height="128">
 
 # KiCk
 
@@ -23,15 +23,19 @@
 
 **Поддерживаемые платформы**
 
-<a href="https://github.com/mxnix/kick/releases/latest">
-  <img src="static/github/logo/windows.png" alt="Скачать для Windows" style="width: 128px; height: 128px; margin-bottom: 6px; margin-right: 24px;">
-</a>
-<a href="https://github.com/mxnix/kick/releases/latest">
-  <img src="static/github/logo/linux.png" alt="Скачать для Linux" style="width: 128px; height: 128px; margin-bottom: 6px; margin-right: 24px;">
-</a>
-<a href="https://github.com/mxnix/kick/releases/latest">
-  <img src="static/github/logo/android.png" alt="Скачать для Android" style="width: auto; height: 128px; margin-bottom: 6px;">
-</a>
+<p align="center">
+  <a href="https://github.com/mxnix/kick/releases/latest">
+    <img src="static/github/logo/windows.png" alt="Скачать для Windows" width="112" height="112">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/mxnix/kick/releases/latest">
+    <img src="static/github/logo/linux.png" alt="Скачать для Linux" width="112" height="112">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/mxnix/kick/releases/latest">
+    <img src="static/github/logo/android.png" alt="Скачать для Android" width="112" height="112">
+  </a>
+</p>
 
 </div>
 
