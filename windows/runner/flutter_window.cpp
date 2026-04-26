@@ -105,15 +105,7 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
   if (message == GetKickActivateWindowMessage()) {
-    const auto style = static_cast<DWORD>(GetWindowLongPtr(hwnd, GWL_STYLE));
-    if ((style & WS_VISIBLE) == 0) {
-      SetWindowLongPtr(hwnd, GWL_STYLE, style | WS_VISIBLE);
-    }
-
-    const int show_command = IsIconic(hwnd) ? SW_RESTORE : SW_SHOW;
-    ShowWindowAsync(hwnd, show_command);
-    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-    SetForegroundWindow(hwnd);
+    ActivateKickWindow(hwnd);
     return 0;
   }
 

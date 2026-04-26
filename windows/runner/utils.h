@@ -31,6 +31,10 @@ std::vector<std::string> GetCommandLineArguments();
 // window when a second process is launched.
 UINT GetKickActivateWindowMessage();
 
+// Shows, raises, and focuses an existing KiCk window as reliably as Windows
+// foreground activation rules allow.
+void ActivateKickWindow(HWND window);
+
 // Tries to find an already-running KiCk window, ask it to show itself, and
 // bring it to the foreground. Returns true when an existing window is found.
 bool NotifyExistingKickInstance();

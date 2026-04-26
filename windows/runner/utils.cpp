@@ -18,6 +18,7 @@ constexpr wchar_t kKickActivateWindowMessageName[] =
     L"KiCk.ActivateWindow";
 constexpr int kExistingWindowLookupAttempts = 20;
 constexpr DWORD kExistingWindowLookupDelayMs = 100;
+constexpr UINT kActivateWindowTimeoutMs = 1000;
 
 UINT kKickActivateWindowMessage =
     ::RegisterWindowMessage(kKickActivateWindowMessageName);
@@ -26,23 +27,96 @@ HWND FindKickWindow() {
   return ::FindWindow(nullptr, kKickWindowTitle);
 }
 
-void ShowAndFocusWindow(HWND window) {
-  if (window == nullptr) {
+void AttachThreadInputIfNeeded(DWORD current_thread, DWORD target_thread,
+                               bool* attached) {
+  *attached = false;
+  if (target_thread == 0 || target_thread == current_thread) {
     return;
   }
 
-  auto style = static_cast<DWORD>(::GetWindowLongPtr(window, GWL_STYLE));
+  *attached = ::AttachThreadInput(current_thread, target_thread, TRUE) != 0;
+}
+
+void DetachThreadInputIfNeeded(DWORD current_thread, DWORD target_thread,
+                               bool attached) {
+  if (attached) {
+    ::AttachThreadInput(current_thread, target_thread, FALSE);
+  }
+}
+
+void ForceForegroundWindow(HWND window) {
+  const DWORD current_thread = ::GetCurrentThreadId();
+  const DWORD target_thread = ::GetWindowThreadProcessId(window, nullptr);
+  const HWND foreground_window = ::GetForegroundWindow();
+  const DWORD foreground_thread =
+      foreground_window == nullptr
+          ? 0
+          : ::GetWindowThreadProcessId(foreground_window, nullptr);
+
+  bool attached_to_foreground = false;
+  bool attached_to_target = false;
+  AttachThreadInputIfNeeded(current_thread, foreground_thread,
+                            &attached_to_foreground);
+  AttachThreadInputIfNeeded(current_thread, target_thread,
+                            &attached_to_target);
+
+  ::BringWindowToTop(window);
+  ::SetActiveWindow(window);
+  ::SetForegroundWindow(window);
+  ::SetFocus(window);
+
+  DetachThreadInputIfNeeded(current_thread, target_thread, attached_to_target);
+  DetachThreadInputIfNeeded(current_thread, foreground_thread,
+                            attached_to_foreground);
+
+  if (::GetForegroundWindow() == window) {
+    return;
+  }
+
+  ::SetWindowPos(window, HWND_TOPMOST, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+  ::SetWindowPos(window, HWND_NOTOPMOST, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+
+  FLASHWINFO flash_info = {};
+  flash_info.cbSize = sizeof(flash_info);
+  flash_info.hwnd = window;
+  flash_info.dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG;
+  flash_info.uCount = 3;
+  ::FlashWindowEx(&flash_info);
+}
+
+void SendActivationMessage(HWND window) {
+  DWORD_PTR message_result = 0;
+  const LRESULT sent = ::SendMessageTimeout(
+      window, GetKickActivateWindowMessage(), 0, 0,
+      SMTO_ABORTIFHUNG | SMTO_NORMAL, kActivateWindowTimeoutMs,
+      &message_result);
+  if (sent == 0) {
+    ::PostMessage(window, GetKickActivateWindowMessage(), 0, 0);
+  }
+}
+
+}  // namespace
+
+void ActivateKickWindow(HWND window) {
+  if (window == nullptr || !::IsWindow(window)) {
+    return;
+  }
+
+  const auto style = static_cast<LONG_PTR>(::GetWindowLongPtr(window, GWL_STYLE));
   if ((style & WS_VISIBLE) == 0) {
     ::SetWindowLongPtr(window, GWL_STYLE, style | WS_VISIBLE);
   }
 
   const int show_command = ::IsIconic(window) ? SW_RESTORE : SW_SHOW;
-  ::ShowWindowAsync(window, show_command);
-  ::SetWindowPos(window, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-  ::SetForegroundWindow(window);
+  ::ShowWindow(window, show_command);
+  ::SetWindowPos(window, HWND_TOP, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+  ForceForegroundWindow(window);
+  ::RedrawWindow(window, nullptr, nullptr,
+                 RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
-
-}  // namespace
 
 void CreateAndAttachConsole() {
   if (::AllocConsole()) {
@@ -151,7 +225,7 @@ bool NotifyExistingKickInstance() {
     ::AllowSetForegroundWindow(process_id);
   }
 
-  ::PostMessage(existing_window, GetKickActivateWindowMessage(), 0, 0);
-  ShowAndFocusWindow(existing_window);
+  SendActivationMessage(existing_window);
+  ActivateKickWindow(existing_window);
   return true;
 }
