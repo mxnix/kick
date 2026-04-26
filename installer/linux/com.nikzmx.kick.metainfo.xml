@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.nikzmx.kick</id>
+  <name>KiCk</name>
+  <summary>Local OpenAI-compatible proxy for Gemini CLI and Kiro</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+  <launchable type="desktop-id">com.nikzmx.kick.desktop</launchable>
+  <url type="homepage">https://github.com/mxnix/kick</url>
+  <description>
+    <p>KiCk runs a local OpenAI-compatible endpoint and forwards requests to Gemini CLI or Kiro accounts.</p>
+  </description>
+</component>

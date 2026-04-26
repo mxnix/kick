@@ -70,6 +70,152 @@ void main() {
     );
   });
 
+  test('selects distro-native Linux package with AppImage fallback assets', () async {
+    final checker = AppUpdateChecker(
+      apiUrl: 'https://example.com/releases/latest',
+      targetPlatform: TargetPlatform.linux,
+      linuxPackageFormat: LinuxPackageFormat.rpm,
+      httpClient: QueueHttpClient([
+        (_) async => http.Response(
+          jsonEncode({
+            'tag_name': 'v1.4.0',
+            'html_url': 'https://github.com/mxnix/kick/releases/tag/v1.4.0',
+            'assets': [
+              {
+                'name': 'kick-linux-x64-1.4.0.deb',
+                'browser_download_url':
+                    'https://github.com/mxnix/kick/releases/download/v1.4.0/kick-linux-x64-1.4.0.deb',
+              },
+              {
+                'name': 'kick-linux-x64-1.4.0.rpm',
+                'browser_download_url':
+                    'https://github.com/mxnix/kick/releases/download/v1.4.0/kick-linux-x64-1.4.0.rpm',
+              },
+              {
+                'name': 'kick-linux-x64-1.4.0.AppImage',
+                'browser_download_url':
+                    'https://github.com/mxnix/kick/releases/download/v1.4.0/kick-linux-x64-1.4.0.AppImage',
+              },
+              {
+                'name': 'kick-1.4.0-checksums.txt',
+                'browser_download_url':
+                    'https://github.com/mxnix/kick/releases/download/v1.4.0/kick-1.4.0-checksums.txt',
+              },
+            ],
+          }),
+          200,
+        ),
+      ]),
+    );
+
+    final result = await checker.checkForUpdates(currentVersion: '1.3.5');
+
+    expect(result.hasUpdate, isTrue);
+    expect(result.installerFileName, 'kick-linux-x64-1.4.0.rpm');
+    expect(
+      result.installerUrl,
+      'https://github.com/mxnix/kick/releases/download/v1.4.0/kick-linux-x64-1.4.0.rpm',
+    );
+  });
+
+  test('falls back to Linux AppImage when distro package is unavailable', () async {
+    final checker = AppUpdateChecker(
+      apiUrl: 'https://example.com/releases/latest',
+      targetPlatform: TargetPlatform.linux,
+      linuxPackageFormat: LinuxPackageFormat.pacman,
+      httpClient: QueueHttpClient([
+        (_) async => http.Response(
+          jsonEncode({
+            'tag_name': 'v1.4.0',
+            'assets': [
+              {
+                'name': 'kick-linux-x64-1.4.0.AppImage',
+                'browser_download_url':
+                    'https://github.com/mxnix/kick/releases/download/v1.4.0/kick-linux-x64-1.4.0.AppImage',
+              },
+            ],
+          }),
+          200,
+        ),
+      ]),
+    );
+
+    final result = await checker.checkForUpdates(currentVersion: '1.3.5');
+
+    expect(result.installerFileName, 'kick-linux-x64-1.4.0.AppImage');
+  });
+
+  test('uses AppImage for pacman systems instead of opening a package archive', () async {
+    final checker = AppUpdateChecker(
+      apiUrl: 'https://example.com/releases/latest',
+      targetPlatform: TargetPlatform.linux,
+      linuxPackageFormat: LinuxPackageFormat.pacman,
+      httpClient: QueueHttpClient([
+        (_) async => http.Response(
+          jsonEncode({
+            'tag_name': 'v1.4.0',
+            'assets': [
+              {
+                'name': 'kick-linux-x64-1.4.0.pkg.tar.zst',
+                'browser_download_url':
+                    'https://github.com/mxnix/kick/releases/download/v1.4.0/kick-linux-x64-1.4.0.pkg.tar.zst',
+              },
+              {
+                'name': 'kick-linux-x64-1.4.0.AppImage',
+                'browser_download_url':
+                    'https://github.com/mxnix/kick/releases/download/v1.4.0/kick-linux-x64-1.4.0.AppImage',
+              },
+            ],
+          }),
+          200,
+        ),
+      ]),
+    );
+
+    final result = await checker.checkForUpdates(currentVersion: '1.3.5');
+
+    expect(result.installerFileName, 'kick-linux-x64-1.4.0.AppImage');
+  });
+
+  test('does not treat Linux tarball as a native installer', () async {
+    final checker = AppUpdateChecker(
+      apiUrl: 'https://example.com/releases/latest',
+      targetPlatform: TargetPlatform.linux,
+      httpClient: QueueHttpClient([
+        (_) async => http.Response(
+          jsonEncode({
+            'tag_name': 'v1.4.0',
+            'assets': [
+              {
+                'name': 'kick-linux-x64-1.4.0.tar.gz',
+                'browser_download_url':
+                    'https://github.com/mxnix/kick/releases/download/v1.4.0/kick-linux-x64-1.4.0.tar.gz',
+              },
+            ],
+          }),
+          200,
+        ),
+      ]),
+    );
+
+    final result = await checker.checkForUpdates(currentVersion: '1.3.5');
+
+    expect(result.installerUrl, isNull);
+    expect(result.installerFileName, isNull);
+  });
+
+  test('detects Linux package family from os-release contents', () {
+    expect(LinuxPackageFormat.fromOsRelease('ID=ubuntu\nID_LIKE=debian\n'), LinuxPackageFormat.deb);
+    expect(
+      LinuxPackageFormat.fromOsRelease('ID=fedora\nID_LIKE="rhel fedora"\n'),
+      LinuxPackageFormat.rpm,
+    );
+    expect(
+      LinuxPackageFormat.fromOsRelease('ID=manjaro\nID_LIKE=arch\n'),
+      LinuxPackageFormat.pacman,
+    );
+  });
+
   test('reports no update when installed version is current', () async {
     final checker = AppUpdateChecker(
       apiUrl: 'https://example.com/releases/latest',

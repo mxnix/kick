@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=KiCk
+Comment=Local OpenAI-compatible proxy for Gemini CLI and Kiro
+Exec=kick
+Icon=com.nikzmx.kick
+Terminal=false
+Categories=Network;Development;
+StartupWMClass=com.nikzmx.kick

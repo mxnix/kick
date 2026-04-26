@@ -75,7 +75,8 @@ class LogExportService {
   }) : _exportDirectoryResolver = exportDirectoryResolver ?? _defaultExportDirectory,
        _shareCallback = shareCallback ?? _defaultShare,
        _saveFileCallback = saveFileCallback ?? _defaultSaveFile,
-       _useNativeSaveDialog = useNativeSaveDialog ?? (Platform.isAndroid || Platform.isWindows);
+       _useNativeSaveDialog =
+           useNativeSaveDialog ?? (Platform.isAndroid || Platform.isWindows || Platform.isLinux);
 
   final LogExportDirectoryResolver _exportDirectoryResolver;
   final LogShareCallback _shareCallback;
@@ -170,7 +171,9 @@ class LogExportService {
         ..writeln(
           '--------------------------------------------------------------------------------',
         )
-        ..writeln('${l10n.logsExportTimestampLabel}: ${_formatTimestampWithOffset(entry.timestamp)}')
+        ..writeln(
+          '${l10n.logsExportTimestampLabel}: ${_formatTimestampWithOffset(entry.timestamp)}',
+        )
         ..writeln('${l10n.logsExportLevelLabel}: ${_localizedLevelName(l10n, entry.level)}')
         ..writeln('${l10n.logsExportCategoryLabel}: ${entry.category}');
       if (entry.route?.isNotEmpty == true) {
@@ -458,10 +461,14 @@ class LogExportService {
       diagnostics.writeln('${l10n.logsExportModelsLabel}: ${_formatCountMap(modelCounts)}');
     }
     if (statusCodeCounts.isNotEmpty) {
-      diagnostics.writeln('${l10n.logsExportStatusCodesLabel}: ${_formatCountMap(statusCodeCounts)}');
+      diagnostics.writeln(
+        '${l10n.logsExportStatusCodesLabel}: ${_formatCountMap(statusCodeCounts)}',
+      );
     }
     if (errorDetailCounts.isNotEmpty) {
-      diagnostics.writeln('${l10n.logsExportErrorDetailsLabel}: ${_formatCountMap(errorDetailCounts)}');
+      diagnostics.writeln(
+        '${l10n.logsExportErrorDetailsLabel}: ${_formatCountMap(errorDetailCounts)}',
+      );
     }
     if (upstreamReasonCounts.isNotEmpty) {
       diagnostics.writeln(

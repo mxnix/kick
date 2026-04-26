@@ -477,10 +477,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get windowsTraySubtitle =>
-      'Closing the window will not stop KiCk, it will hide it to the system tray';
+      'Closing the desktop window will keep KiCk running in the system tray';
 
   @override
-  String get windowsLaunchAtStartupTitle => 'Launch with Windows';
+  String get windowsLaunchAtStartupTitle => 'Launch at sign-in';
 
   @override
   String get windowsLaunchAtStartupSubtitle => 'KiCk will start automatically when you sign in';

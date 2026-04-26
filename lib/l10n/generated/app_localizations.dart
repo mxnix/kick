@@ -936,13 +936,13 @@ abstract class AppLocalizations {
   /// No description provided for @windowsTraySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Closing the window will not stop KiCk, it will hide it to the system tray'**
+  /// **'Closing the desktop window will keep KiCk running in the system tray'**
   String get windowsTraySubtitle;
 
   /// No description provided for @windowsLaunchAtStartupTitle.
   ///
   /// In en, this message translates to:
-  /// **'Launch with Windows'**
+  /// **'Launch at sign-in'**
   String get windowsLaunchAtStartupTitle;
 
   /// No description provided for @windowsLaunchAtStartupSubtitle.
