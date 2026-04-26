@@ -94,6 +94,68 @@ void main() {
     expect(normalized['extra_body'], isNull);
   });
 
+  test('normalizeOpenAiCompatRequest does not apply default search to chat JSON schema', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'gemini-3-flash-preview',
+        'messages': [
+          {'role': 'user', 'content': 'Return structured data'},
+        ],
+        'response_format': {
+          'type': 'json_schema',
+          'json_schema': {
+            'schema': {'type': 'object'},
+          },
+        },
+      },
+      headers: const {},
+      defaultGoogleWebSearchEnabled: true,
+    );
+
+    expect(normalized['extra_body'], isNull);
+  });
+
+  test('normalizeOpenAiCompatRequest keeps explicit search with chat JSON schema', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'gemini-3-flash-preview',
+        'messages': [
+          {'role': 'user', 'content': 'Return structured data'},
+        ],
+        'web_search': true,
+        'response_format': {
+          'type': 'json_schema',
+          'json_schema': {
+            'schema': {'type': 'object'},
+          },
+        },
+      },
+      headers: const {},
+      defaultGoogleWebSearchEnabled: true,
+    );
+
+    expect(((normalized['extra_body'] as Map?)?['google'] as Map?)?['web_search'], isTrue);
+  });
+
+  test('normalizeOpenAiCompatRequest does not apply default search to responses JSON schema', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'gemini-3-flash-preview',
+        'input': 'Return structured data',
+        'text': {
+          'format': {
+            'type': 'json_schema',
+            'schema': {'type': 'object'},
+          },
+        },
+      },
+      headers: const {},
+      defaultGoogleWebSearchEnabled: true,
+    );
+
+    expect(normalized['extra_body'], isNull);
+  });
+
   test('retryProxyPortBind retries transient bind races until the port is released', () async {
     var attempts = 0;
 

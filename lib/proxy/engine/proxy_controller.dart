@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:ui';
 
 import '../../analytics/kick_analytics.dart';
 import '../../core/platform/android_foreground_runtime.dart';
@@ -960,6 +961,12 @@ class KickProxyController {
     SendPort errorPort,
     SendPort exitPort,
   ) {
-    return Isolate.spawn(proxyIsolateMain, messagePort, onError: errorPort, onExit: exitPort);
+    final rootIsolateToken = RootIsolateToken.instance;
+    return Isolate.spawn(
+      proxyIsolateMain,
+      {'send_port': messagePort, 'root_isolate_token': ?rootIsolateToken},
+      onError: errorPort,
+      onExit: exitPort,
+    );
   }
 }

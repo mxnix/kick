@@ -53,7 +53,7 @@ class KiroCodeAssistClient {
   }
 
   Future<List<String>> listModels({required ProxyRuntimeAccount account}) async {
-    await _ensureFreshTokens(account);
+    await _ensureFreshTokensForRequest(account);
     final discoveredModels = <String>{};
     final seenTokens = <String>{};
     var nextToken = '';
@@ -135,7 +135,7 @@ class KiroCodeAssistClient {
     required UnifiedPromptRequest request,
     void Function(GeminiRetryEvent event)? onRetry,
   }) async {
-    await _ensureFreshTokens(account);
+    await _ensureFreshTokensForRequest(account);
     final resolvedModel = ModelCatalog.normalizeModel(request.model);
     final requestBody = _buildRequestBody(account: account, request: request, model: resolvedModel);
     final accumulator = _KiroResponseAccumulator(
@@ -185,6 +185,14 @@ class KiroCodeAssistClient {
     );
 
     return controller.stream;
+  }
+
+  Future<void> _ensureFreshTokensForRequest(ProxyRuntimeAccount account) async {
+    try {
+      await _ensureFreshTokens(account);
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(_decodeTransportError(error), stackTrace);
+    }
   }
 
   Future<void> _ensureFreshTokens(ProxyRuntimeAccount account) async {
@@ -1259,6 +1267,15 @@ GeminiGatewayException _decodeTransportError(Object error) {
   if (error is GeminiGatewayException) {
     return error;
   }
+  if (_isBackgroundIsolateMessengerError(error)) {
+    return GeminiGatewayException(
+      provider: AccountProvider.kiro,
+      kind: GeminiGatewayFailureKind.serviceUnavailable,
+      message: 'Kiro credential storage is unavailable in the proxy runtime.',
+      statusCode: 503,
+      source: GeminiGatewayFailureSource.transport,
+    );
+  }
   if (error is SocketException || error is HttpException || error is TimeoutException) {
     return GeminiGatewayException(
       provider: AccountProvider.kiro,
@@ -1275,6 +1292,10 @@ GeminiGatewayException _decodeTransportError(Object error) {
     statusCode: 500,
     source: GeminiGatewayFailureSource.transport,
   );
+}
+
+bool _isBackgroundIsolateMessengerError(Object error) {
+  return error.toString().contains('BackgroundIsolateBinaryMessenger');
 }
 
 Map<String, Object?> _tryDecodeJsonMap(String body) {

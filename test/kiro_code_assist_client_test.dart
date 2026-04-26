@@ -244,6 +244,67 @@ void main() {
   });
 
   test(
+    'maps background isolate messenger failures during Kiro refresh to a gateway error',
+    () async {
+      final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_refresh_isolate');
+      addTearDown(() => tempDirectory.delete(recursive: true));
+      final sourceFile = File(
+        '${tempDirectory.path}${Platform.pathSeparator}kiro-auth-managed.json',
+      );
+      await sourceFile.writeAsString(
+        jsonEncode({
+          'accessToken': 'old-access',
+          'refreshToken': 'old-refresh',
+          'expiresAt': '2020-01-01T00:00:00Z',
+          'region': defaultKiroRegion,
+        }),
+      );
+
+      final client = KiroCodeAssistClient(
+        managedSourcePathChecker: (_) async {
+          throw StateError(
+            'Bad state: The BackgroundIsolateBinaryMessenger.instance value is invalid until '
+            'BackgroundIsolateBinaryMessenger.ensureInitialized is executed.',
+          );
+        },
+        httpClient: QueueHttpClient([
+          (request) async {
+            expect(request.url.path, '/refreshToken');
+            return http.Response(
+              jsonEncode({'accessToken': 'new-access', 'refreshToken': 'new-refresh'}),
+              200,
+            );
+          },
+        ]),
+      );
+      final account = sampleAccount()
+        ..credentialSourcePath = sourceFile.path
+        ..tokens = OAuthTokens(
+          accessToken: 'old-access',
+          refreshToken: 'old-refresh',
+          expiry: DateTime.fromMillisecondsSinceEpoch(0),
+          tokenType: 'Bearer',
+          scope: null,
+        );
+
+      await expectLater(
+        client.generateContent(account: account, request: sampleRequest()),
+        throwsA(
+          isA<GeminiGatewayException>()
+              .having((error) => error.provider, 'provider', AccountProvider.kiro)
+              .having((error) => error.kind, 'kind', GeminiGatewayFailureKind.serviceUnavailable)
+              .having((error) => error.statusCode, 'statusCode', 503)
+              .having(
+                (error) => error.message,
+                'message',
+                'Kiro credential storage is unavailable in the proxy runtime.',
+              ),
+        ),
+      );
+    },
+  );
+
+  test(
     'returns an empty discovery list instead of a stale fallback when Kiro omits models',
     () async {
       final client = KiroCodeAssistClient(

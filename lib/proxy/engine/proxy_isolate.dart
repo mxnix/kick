@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:flutter/services.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
@@ -72,7 +73,11 @@ Map<String, Object?> normalizeOpenAiCompatRequest({
   final explicitFlag = bodyFlag ?? headerFlag;
   final effectiveFlag =
       explicitFlag ??
-      (defaultGoogleWebSearchEnabled && !_requestDeclaresTools(normalized) ? true : null);
+      (defaultGoogleWebSearchEnabled &&
+              !_requestDeclaresTools(normalized) &&
+              !_requestUsesControlledGeneration(normalized)
+          ? true
+          : null);
   if (effectiveFlag == null) {
     return normalized;
   }
@@ -88,6 +93,22 @@ Map<String, Object?> normalizeOpenAiCompatRequest({
 bool _requestDeclaresTools(Map<String, Object?> body) {
   final tools = body['tools'];
   return tools is List && tools.isNotEmpty;
+}
+
+bool _requestUsesControlledGeneration(Map<String, Object?> body) {
+  final responseFormat = _readRequestMap(body['response_format'], 'response_format');
+  if (_isJsonResponseFormat(responseFormat?['type'])) {
+    return true;
+  }
+
+  final text = _readRequestMap(body['text'], 'text');
+  final textFormat = _readRequestMap(text?['format'], 'text.format');
+  return _isJsonResponseFormat(textFormat?['type']);
+}
+
+bool _isJsonResponseFormat(Object? rawType) {
+  final type = rawType is String ? rawType.trim().toLowerCase() : '';
+  return type == 'json_schema' || type == 'json_object';
 }
 
 bool? _readGoogleWebSearchFlagFromJson(Map<String, Object?> body) {
@@ -249,10 +270,16 @@ void applyProxyAccountFailurePolicy({
 }
 
 @pragma('vm:entry-point')
-Future<void> proxyIsolateMain(SendPort sendPort) async {
+Future<void> proxyIsolateMain(Object? message) async {
+  final bootstrap = _readProxyIsolateBootstrap(message);
+  final rootIsolateToken = bootstrap.rootIsolateToken;
+  if (rootIsolateToken != null) {
+    BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
+  }
+
   final commands = ReceivePort();
-  final host = _ProxyIsolateHost(sendPort);
-  sendPort.send({'type': 'ready', 'port': commands.sendPort});
+  final host = _ProxyIsolateHost(bootstrap.sendPort);
+  bootstrap.sendPort.send({'type': 'ready', 'port': commands.sendPort});
   await for (final message in commands) {
     if (message is! Map) {
       continue;
@@ -262,6 +289,25 @@ Future<void> proxyIsolateMain(SendPort sendPort) async {
       commands.close();
     }
   }
+}
+
+({SendPort sendPort, RootIsolateToken? rootIsolateToken}) _readProxyIsolateBootstrap(
+  Object? message,
+) {
+  if (message is SendPort) {
+    return (sendPort: message, rootIsolateToken: null);
+  }
+  if (message is Map) {
+    final sendPort = message['send_port'];
+    if (sendPort is SendPort) {
+      final rootIsolateToken = message['root_isolate_token'];
+      return (
+        sendPort: sendPort,
+        rootIsolateToken: rootIsolateToken is RootIsolateToken ? rootIsolateToken : null,
+      );
+    }
+  }
+  throw ArgumentError('Proxy isolate bootstrap message must include a SendPort.');
 }
 
 class _ProxyIsolateHost {
