@@ -74,6 +74,13 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# AppIndicator is the Linux tray backend exposed by tray_manager, but newer
+# toolchains mark its constructor as deprecated and Flutter builds plugins with
+# -Werror. Keep the warning visible without failing third-party plugin builds.
+if(TARGET tray_manager_plugin)
+  target_compile_options(tray_manager_plugin PRIVATE -Wno-error=deprecated-declarations)
+endif()
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

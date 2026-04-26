@@ -56,7 +56,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows-inst
 Install Flutter Linux build dependencies plus package tooling:
 
 ```bash
-sudo apt install clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev libjsoncpp-dev libayatana-appindicator3-dev libnotify-dev
+sudo apt install clang lld cmake ninja-build pkg-config openjdk-17-jdk libgtk-3-dev liblzma-dev libcurl4-openssl-dev libsecret-1-dev libjsoncpp-dev libayatana-appindicator3-dev libnotify-dev
 ```
 
 Install `nfpm` and `appimagetool`, then build all Linux artifacts:

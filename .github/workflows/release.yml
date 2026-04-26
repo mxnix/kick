@@ -205,11 +205,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             clang \
+            lld \
             cmake \
             ninja-build \
             pkg-config \
+            openjdk-17-jdk \
             libgtk-3-dev \
             liblzma-dev \
+            libcurl4-openssl-dev \
             libsecret-1-dev \
             libjsoncpp-dev \
             libayatana-appindicator3-dev \
