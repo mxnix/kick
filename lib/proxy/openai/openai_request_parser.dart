@@ -155,8 +155,8 @@ class OpenAiRequestParser {
       if (rawMessage is! Map) {
         continue;
       }
-      final message = rawMessage.cast<String, Object?>();
-      final role = (message['role'] as String? ?? 'user').trim();
+      final message = _readRequiredMapValue(rawMessage, 'messages[]');
+      final role = (_readStringValue(message['role'], 'messages[].role') ?? 'user').trim();
       if (role == 'system' || role == 'developer') {
         final text = _extractTextContent(message['content']);
         if (text.isEmpty) {
@@ -173,7 +173,8 @@ class OpenAiRequestParser {
       seenNonSystemMessage = true;
 
       if (role == 'tool') {
-        final toolCallId = message['tool_call_id'] as String? ?? '';
+        final toolCallId =
+            _readStringValue(message['tool_call_id'], 'messages[].tool_call_id') ?? '';
         final functionName = toolCallNames[toolCallId];
         if (functionName == null) {
           continue;
@@ -204,11 +205,13 @@ class OpenAiRequestParser {
           if (rawToolCall is! Map) {
             continue;
           }
-          final toolCall = rawToolCall.cast<String, Object?>();
-          final id = toolCall['id'] as String? ?? '';
+          final toolCall = _readRequiredMapValue(rawToolCall, 'messages[].tool_calls[]');
+          final id = _readStringValue(toolCall['id'], 'messages[].tool_calls[].id') ?? '';
           final function =
-              (toolCall['function'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
-          final name = function['name'] as String? ?? '';
+              _readMapValue(toolCall['function'], 'messages[].tool_calls[].function') ??
+              const <String, Object?>{};
+          final name =
+              _readStringValue(function['name'], 'messages[].tool_calls[].function.name') ?? '';
           if (id.isNotEmpty && name.isNotEmpty) {
             toolCallNames[id] = name;
           }
@@ -229,7 +232,8 @@ class OpenAiRequestParser {
       turns.add(UnifiedTurn(role: role == 'assistant' ? 'assistant' : 'user', parts: parts));
     }
 
-    final responseFormat = (json['response_format'] as Map?)?.cast<String, Object?>();
+    final responseFormat = _readMapField(json, 'response_format');
+    final jsonSchema = _readMapValue(responseFormat?['json_schema'], 'response_format.json_schema');
     final googleWebSearchEnabled = _parseGoogleWebSearchEnabled(json);
     final mergedSystemInstruction = leadingSystemParts.join('\n\n').trim();
     var systemInstruction = mergedSystemInstruction.isEmpty ? null : mergedSystemInstruction;
@@ -247,10 +251,10 @@ class OpenAiRequestParser {
       tools: toolDeclarations,
       systemInstruction: systemInstruction,
       toolChoice: json['tool_choice'],
-      temperature: (json['temperature'] as num?)?.toDouble(),
-      topP: (json['top_p'] as num?)?.toDouble(),
+      temperature: _readNumField(json, 'temperature')?.toDouble(),
+      topP: _readNumField(json, 'top_p')?.toDouble(),
       maxOutputTokens:
-          (json['max_completion_tokens'] as num?)?.toInt() ?? (json['max_tokens'] as num?)?.toInt(),
+          _readIntField(json, 'max_completion_tokens') ?? _readIntField(json, 'max_tokens'),
       stopSequences: _parseStopSequences(json['stop']),
       reasoningEffort: _parseReasoningEffort(json),
       googleThinkingConfig: _parseGoogleThinkingConfig(json),
@@ -258,8 +262,7 @@ class OpenAiRequestParser {
       responseModalities: _parseModalities(json['modalities']),
       jsonMode:
           responseFormat?['type'] == 'json_object' || responseFormat?['type'] == 'json_schema',
-      responseSchema: ((responseFormat?['json_schema'] as Map?)?['schema'] as Map?)
-          ?.cast<String, Object?>(),
+      responseSchema: _readMapValue(jsonSchema?['schema'], 'response_format.json_schema.schema'),
     );
   }
 
@@ -277,16 +280,16 @@ class OpenAiRequestParser {
         if (rawItem is! Map) {
           continue;
         }
-        final item = rawItem.cast<String, Object?>();
-        final type = item['type'] as String? ?? 'message';
+        final item = _readRequiredMapValue(rawItem, 'input[]');
+        final type = _readStringValue(item['type'], 'input[].type') ?? 'message';
         if (type == 'function_call') {
           turns.add(
             UnifiedTurn(
               role: 'assistant',
               parts: [
                 UnifiedPart.functionCall(
-                  callId: item['call_id'] as String? ?? '',
-                  name: item['name'] as String? ?? 'tool',
+                  callId: _readStringValue(item['call_id'], 'input[].call_id') ?? '',
+                  name: _readStringValue(item['name'], 'input[].name') ?? 'tool',
                   arguments: _parseJsonLike(item['arguments']),
                   thoughtSignature: _extractToolCallThoughtSignature(item),
                 ),
@@ -301,8 +304,8 @@ class OpenAiRequestParser {
               role: 'user',
               parts: [
                 UnifiedPart.functionResponse(
-                  callId: item['call_id'] as String? ?? '',
-                  name: item['name'] as String? ?? 'tool',
+                  callId: _readStringValue(item['call_id'], 'input[].call_id') ?? '',
+                  name: _readStringValue(item['name'], 'input[].name') ?? 'tool',
                   arguments: {'result': _extractTextContent(item['output'])},
                 ),
               ],
@@ -319,7 +322,9 @@ class OpenAiRequestParser {
           continue;
         }
 
-        final role = (item['role'] as String? ?? 'user') == 'assistant' ? 'assistant' : 'user';
+        final role = _readStringValue(item['role'], 'input[].role') == 'assistant'
+            ? 'assistant'
+            : 'user';
         final parts = <UnifiedPart>[
           ..._extractMessageThoughtParts(item),
           ..._extractResponsesParts(item['content']),
@@ -332,8 +337,8 @@ class OpenAiRequestParser {
 
     final tools = _parseTools(json['tools']);
     final googleWebSearchEnabled = _parseGoogleWebSearchEnabled(json);
-    final textConfig = (json['text'] as Map?)?.cast<String, Object?>();
-    final responseFormat = (textConfig?['format'] as Map?)?.cast<String, Object?>();
+    final textConfig = _readMapField(json, 'text');
+    final responseFormat = _readMapValue(textConfig?['format'], 'text.format');
 
     return UnifiedPromptRequest(
       requestId: requestId,
@@ -342,13 +347,11 @@ class OpenAiRequestParser {
       source: 'responses',
       turns: turns,
       tools: tools,
-      systemInstruction: (json['instructions'] as String?)?.trim().isEmpty == true
-          ? null
-          : (json['instructions'] as String?),
+      systemInstruction: _readTrimmedStringField(json, 'instructions'),
       toolChoice: json['tool_choice'],
-      temperature: (json['temperature'] as num?)?.toDouble(),
-      topP: (json['top_p'] as num?)?.toDouble(),
-      maxOutputTokens: (json['max_output_tokens'] as num?)?.toInt(),
+      temperature: _readNumField(json, 'temperature')?.toDouble(),
+      topP: _readNumField(json, 'top_p')?.toDouble(),
+      maxOutputTokens: _readIntField(json, 'max_output_tokens'),
       stopSequences: _parseStopSequences(json['stop']),
       reasoningEffort: _parseReasoningEffort(json),
       googleThinkingConfig: _parseGoogleThinkingConfig(json),
@@ -356,16 +359,98 @@ class OpenAiRequestParser {
       responseModalities: _parseModalities(json['modalities']),
       jsonMode:
           responseFormat?['type'] == 'json_schema' || responseFormat?['type'] == 'json_object',
-      responseSchema: (responseFormat?['schema'] as Map?)?.cast<String, Object?>(),
+      responseSchema: _readMapValue(responseFormat?['schema'], 'text.format.schema'),
     );
   }
 
   static String _readRequiredString(Map<String, Object?> json, String key) {
-    final value = (json[key] as String?)?.trim();
+    final raw = json[key];
+    if (raw != null && raw is! String) {
+      throw FormatException('`$key` must be a string.');
+    }
+    final value = (raw as String?)?.trim();
     if (value == null || value.isEmpty) {
       throw FormatException('`$key` is required.');
     }
     return value;
+  }
+
+  static String? _readTrimmedStringField(Map<String, Object?> json, String key) {
+    final raw = json[key];
+    if (raw == null) {
+      return null;
+    }
+    if (raw is! String) {
+      throw FormatException('`$key` must be a string.');
+    }
+    final value = raw.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  static String? _readStringValue(Object? raw, String fieldName) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is String) {
+      return raw;
+    }
+    throw FormatException('`$fieldName` must be a string.');
+  }
+
+  static num? _readNumField(Map<String, Object?> json, String key) {
+    final raw = json[key];
+    if (raw == null) {
+      return null;
+    }
+    if (raw is num) {
+      return raw;
+    }
+    throw FormatException('`$key` must be a number.');
+  }
+
+  static int? _readIntField(Map<String, Object?> json, String key) {
+    return _readNumField(json, key)?.toInt();
+  }
+
+  static Map<String, Object?>? _readMapField(Map<String, Object?> json, String key) {
+    return _readMapValue(json[key], key);
+  }
+
+  static Map<String, Object?>? _readMapValue(Object? raw, String fieldName) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is! Map) {
+      throw FormatException('`$fieldName` must be an object.');
+    }
+
+    final result = <String, Object?>{};
+    for (final entry in raw.entries) {
+      final key = entry.key;
+      if (key is! String) {
+        throw FormatException('`$fieldName` keys must be strings.');
+      }
+      result[key] = entry.value;
+    }
+    return result;
+  }
+
+  static Map<String, Object?> _readRequiredMapValue(Object? raw, String fieldName) {
+    final value = _readMapValue(raw, fieldName);
+    if (value == null) {
+      throw FormatException('`$fieldName` must be an object.');
+    }
+    return value;
+  }
+
+  static List<Object?>? _readListValue(Object? raw, String fieldName) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is List) {
+      return raw.cast<Object?>();
+    }
+    throw FormatException('`$fieldName` must be an array.');
   }
 
   static String? _extractToolCallThoughtSignature(Map<String, Object?> toolCall) {
@@ -376,8 +461,8 @@ class OpenAiRequestParser {
       return direct;
     }
 
-    final extraContent = (toolCall['extra_content'] as Map?)?.cast<String, Object?>();
-    final google = (extraContent?['google'] as Map?)?.cast<String, Object?>();
+    final extraContent = _readMapValue(toolCall['extra_content'], 'extra_content');
+    final google = _readMapValue(extraContent?['google'], 'extra_content.google');
     return _trimmedString(google?['thought_signature']) ??
         _trimmedString(google?['thoughtSignature']);
   }
@@ -391,30 +476,35 @@ class OpenAiRequestParser {
   }
 
   static List<UnifiedToolDeclaration> _parseTools(Object? rawTools) {
-    if (rawTools is! List) {
+    final rawToolList = _readListValue(rawTools, 'tools');
+    if (rawToolList == null) {
       return const [];
     }
 
     final tools = <UnifiedToolDeclaration>[];
-    for (final rawTool in rawTools) {
+    for (final rawTool in rawToolList) {
       if (rawTool is! Map) {
         continue;
       }
-      final tool = rawTool.cast<String, Object?>();
-      final function =
-          (tool['function'] as Map?)?.cast<String, Object?>() ?? tool.cast<String, Object?>();
-      final name = function['name'] as String? ?? '';
+      final tool = _readRequiredMapValue(rawTool, 'tools[]');
+      final function = _readMapValue(tool['function'], 'tools[].function') ?? tool;
+      final name = _readStringValue(function['name'], 'tools[].function.name') ?? '';
       if (name.trim().isEmpty) {
         continue;
       }
+      final parameters =
+          _readMapValue(
+            function['parametersJsonSchema'],
+            'tools[].function.parametersJsonSchema',
+          ) ??
+          _readMapValue(function['parameters'], 'tools[].function.parameters') ??
+          const {'type': 'object', 'properties': <String, Object?>{}};
       tools.add(
         UnifiedToolDeclaration(
           name: name,
-          description: function['description'] as String? ?? '',
-          parameters:
-              (function['parametersJsonSchema'] as Map?)?.cast<String, Object?>() ??
-              (function['parameters'] as Map?)?.cast<String, Object?>() ??
-              const {'type': 'object', 'properties': <String, Object?>{}},
+          description:
+              _readStringValue(function['description'], 'tools[].function.description') ?? '',
+          parameters: parameters,
         ),
       );
     }
@@ -431,12 +521,17 @@ class OpenAiRequestParser {
         if (item is! Map) {
           continue;
         }
-        final entry = item.cast<String, Object?>();
+        final entry = _readRequiredMapValue(item, 'content[]');
         if (entry['type'] == 'text' && entry['text'] is String) {
           buffer.writeln((entry['text'] as String).trim());
         } else if (entry['type'] == 'image_url') {
           final imageUrl = entry['image_url'];
-          final url = imageUrl is String ? imageUrl : (imageUrl as Map?)?['url'] as String?;
+          final url = imageUrl is String
+              ? imageUrl
+              : _readStringValue(
+                  _readMapValue(imageUrl, 'content[].image_url')?['url'],
+                  'content[].image_url.url',
+                );
           if (url != null && url.isNotEmpty) {
             buffer.writeln('[Image: $url]');
           }
@@ -467,7 +562,7 @@ class OpenAiRequestParser {
       if (raw is! Map) {
         continue;
       }
-      _appendContentItemAsPart(parts, raw.cast<String, Object?>());
+      _appendContentItemAsPart(parts, _readRequiredMapValue(raw, 'content[]'));
     }
     return parts;
   }
@@ -486,23 +581,26 @@ class OpenAiRequestParser {
       if (raw is! Map) {
         continue;
       }
-      _appendContentItemAsPart(parts, raw.cast<String, Object?>());
+      _appendContentItemAsPart(parts, _readRequiredMapValue(raw, 'content[]'));
     }
     return parts;
   }
 
   static void _appendContentItemAsPart(List<UnifiedPart> parts, Map<String, Object?> item) {
-    final type = item['type'] as String? ?? '';
+    final type = _readStringValue(item['type'], 'content[].type') ?? '';
     switch (type) {
       case 'reasoning':
       case 'reasoning_content':
       case 'summary_text':
-        final text = (item['text'] as String?)?.trim();
+        final text = _readStringValue(item['text'], 'content[].text')?.trim();
         if (text != null && text.isNotEmpty) {
           parts.add(
             UnifiedPart.thought(
               text: text,
-              thoughtSignature: (item['thought_signature'] as String?)?.trim(),
+              thoughtSignature: _readStringValue(
+                item['thought_signature'],
+                'content[].thought_signature',
+              )?.trim(),
             ),
           );
         }
@@ -510,7 +608,7 @@ class OpenAiRequestParser {
       case 'text':
       case 'input_text':
       case 'output_text':
-        final text = (item['text'] as String?)?.trim();
+        final text = _readStringValue(item['text'], 'content[].text')?.trim();
         if (text != null && text.isNotEmpty) {
           parts.add(UnifiedPart.text(text));
         }
@@ -525,8 +623,9 @@ class OpenAiRequestParser {
         _appendFilePart(parts, item['file']);
         break;
       default:
-        if (item['text'] is String && (item['text'] as String).trim().isNotEmpty) {
-          parts.add(UnifiedPart.text((item['text'] as String).trim()));
+        final text = _readStringValue(item['text'], 'content[].text')?.trim();
+        if (text != null && text.isNotEmpty) {
+          parts.add(UnifiedPart.text(text));
         }
         break;
     }
@@ -540,9 +639,12 @@ class OpenAiRequestParser {
         if (rawThought is! Map) {
           continue;
         }
-        final thought = rawThought.cast<String, Object?>();
-        final text = (thought['text'] as String?)?.trim() ?? '';
-        final signature = (thought['signature'] as String?)?.trim();
+        final thought = _readRequiredMapValue(rawThought, 'google_thoughts[]');
+        final text = _readStringValue(thought['text'], 'google_thoughts[].text')?.trim() ?? '';
+        final signature = _readStringValue(
+          thought['signature'],
+          'google_thoughts[].signature',
+        )?.trim();
         if (text.isEmpty && (signature == null || signature.isEmpty)) {
           continue;
         }
@@ -553,8 +655,14 @@ class OpenAiRequestParser {
       }
     }
 
-    final reasoningText = (message['reasoning_content'] as String?)?.trim();
-    final reasoningSignature = (message['reasoning_signature'] as String?)?.trim();
+    final reasoningText = _readStringValue(
+      message['reasoning_content'],
+      'reasoning_content',
+    )?.trim();
+    final reasoningSignature = _readStringValue(
+      message['reasoning_signature'],
+      'reasoning_signature',
+    )?.trim();
     if ((reasoningText == null || reasoningText.isEmpty) &&
         (reasoningSignature == null || reasoningSignature.isEmpty)) {
       return const [];
@@ -579,9 +687,12 @@ class OpenAiRequestParser {
       if (rawPart is! Map) {
         continue;
       }
-      final entry = rawPart.cast<String, Object?>();
-      final text = (entry['text'] as String?)?.trim() ?? '';
-      final signature = (entry['thought_signature'] as String?)?.trim();
+      final entry = _readRequiredMapValue(rawPart, 'summary[]');
+      final text = _readStringValue(entry['text'], 'summary[].text')?.trim() ?? '';
+      final signature = _readStringValue(
+        entry['thought_signature'],
+        'summary[].thought_signature',
+      )?.trim();
       if (text.isEmpty && (signature == null || signature.isEmpty)) {
         continue;
       }
@@ -593,7 +704,7 @@ class OpenAiRequestParser {
   static void _appendImagePart(List<UnifiedPart> parts, Object? rawImage) {
     final imageUrl = rawImage is String
         ? rawImage
-        : (rawImage as Map?)?.cast<String, Object?>()['url'] as String?;
+        : _readStringValue(_readMapValue(rawImage, 'image_url')?['url'], 'image_url.url');
     if (imageUrl == null || imageUrl.trim().isEmpty) {
       return;
     }
@@ -616,9 +727,12 @@ class OpenAiRequestParser {
     if (rawFile is! Map) {
       return;
     }
-    final file = rawFile.cast<String, Object?>();
-    final fileData = (file['file_data'] as String?)?.trim();
-    final fileUrl = ((file['file_url'] as String?) ?? (file['url'] as String?))?.trim();
+    final file = _readRequiredMapValue(rawFile, 'file');
+    final fileData = _readStringValue(file['file_data'], 'file.file_data')?.trim();
+    final fileUrl =
+        (_readStringValue(file['file_url'], 'file.file_url') ??
+                _readStringValue(file['url'], 'file.url'))
+            ?.trim();
     final mimeType = _resolveFileMimeType(file);
 
     if (fileData != null && fileData.isNotEmpty) {
@@ -640,13 +754,13 @@ class OpenAiRequestParser {
 
   static Map<String, Object?> _parseJsonLike(Object? raw) {
     if (raw is Map) {
-      return raw.cast<String, Object?>();
+      return _readRequiredMapValue(raw, 'arguments');
     }
     if (raw is String && raw.trim().isNotEmpty) {
       try {
         final decoded = jsonDecode(raw);
         if (decoded is Map) {
-          return decoded.cast<String, Object?>();
+          return _readRequiredMapValue(decoded, 'arguments');
         }
       } catch (_) {
         return {'raw': raw};
@@ -673,21 +787,22 @@ class OpenAiRequestParser {
   }
 
   static String? _parseReasoningEffort(Map<String, Object?> json) {
-    final direct = (json['reasoning_effort'] as String?)?.trim();
+    final direct = _readStringValue(json['reasoning_effort'], 'reasoning_effort')?.trim();
     if (direct != null && direct.isNotEmpty) {
       return direct;
     }
 
-    final reasoning = (json['reasoning'] as Map?)?.cast<String, Object?>();
-    final effort = (reasoning?['effort'] as String?)?.trim();
+    final reasoning = _readMapField(json, 'reasoning');
+    final effort = _readStringValue(reasoning?['effort'], 'reasoning.effort')?.trim();
     return effort == null || effort.isEmpty ? null : effort;
   }
 
   static Map<String, Object?>? _parseGoogleThinkingConfig(Map<String, Object?> json) {
-    final extraBody = (json['extra_body'] as Map?)?.cast<String, Object?>();
-    final google = (extraBody?['google'] as Map?)?.cast<String, Object?>();
-    final config = ((google?['thinking_config'] as Map?) ?? (google?['thinkingConfig'] as Map?))
-        ?.cast<String, Object?>();
+    final extraBody = _readMapField(json, 'extra_body');
+    final google = _readMapValue(extraBody?['google'], 'extra_body.google');
+    final config =
+        _readMapValue(google?['thinking_config'], 'extra_body.google.thinking_config') ??
+        _readMapValue(google?['thinkingConfig'], 'extra_body.google.thinkingConfig');
     if (config == null || config.isEmpty) {
       return null;
     }
@@ -695,9 +810,9 @@ class OpenAiRequestParser {
   }
 
   static bool _parseGoogleWebSearchEnabled(Map<String, Object?> json) {
-    final extraBody = (json['extra_body'] as Map?)?.cast<String, Object?>();
-    final google = (extraBody?['google'] as Map?)?.cast<String, Object?>();
-    final directGoogle = (json['google'] as Map?)?.cast<String, Object?>();
+    final extraBody = _readMapField(json, 'extra_body');
+    final google = _readMapValue(extraBody?['google'], 'extra_body.google');
+    final directGoogle = _readMapField(json, 'google');
     return _readBooleanFlag(google?['web_search']) ??
         _readBooleanFlag(google?['webSearch']) ??
         _readBooleanFlag(extraBody?['web_search']) ??
@@ -769,12 +884,15 @@ _ParsedDataUri? _parseDataUri(String value) {
 }
 
 String _resolveFileMimeType(Map<String, Object?> file) {
-  final explicitMimeType = (file['mime_type'] as String?)?.trim();
+  final explicitMimeType = OpenAiRequestParser._readStringValue(
+    file['mime_type'],
+    'file.mime_type',
+  )?.trim();
   if (explicitMimeType != null && explicitMimeType.isNotEmpty) {
     return explicitMimeType;
   }
 
-  final filename = (file['filename'] as String?)?.trim();
+  final filename = OpenAiRequestParser._readStringValue(file['filename'], 'file.filename')?.trim();
   return _guessMimeType(filename, fallback: 'application/octet-stream');
 }
 

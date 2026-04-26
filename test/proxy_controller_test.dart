@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -124,6 +125,117 @@ void main() {
         client.close(force: true);
       }
     });
+  });
+
+  test('bad OpenAI request field types return 400 instead of proxy errors', () async {
+    final harness = await _ControllerHarness.create();
+    addTearDown(harness.dispose);
+    final settings = AppSettings.defaults(
+      apiKey: 'expected-key',
+    ).copyWith(port: 0, androidBackgroundRuntime: false);
+
+    await harness.controller.configure(settings: settings, accounts: const <AccountProfile>[]);
+    final runningState = harness.controller.states.firstWhere((state) => state.running);
+
+    await harness.controller.start();
+    final state = await runningState.timeout(const Duration(seconds: 2));
+
+    await runWithRealHttpClient(() async {
+      final client = HttpClient();
+      try {
+        final request = await client.postUrl(
+          Uri.http('127.0.0.1:${state.port}', '/v1/chat/completions'),
+        );
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer expected-key');
+        request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+        request.write(
+          jsonEncode({
+            'model': 'gemini-2.5-flash',
+            'temperature': '0.7',
+            'messages': [
+              {'role': 'user', 'content': 'Hello'},
+            ],
+          }),
+        );
+
+        final response = await request.close();
+        final body = await utf8.decoder.bind(response).join();
+
+        expect(response.statusCode, HttpStatus.badRequest);
+        expect(body, contains('invalid_request_error'));
+        expect(body, isNot(contains('proxy_error')));
+      } finally {
+        client.close(force: true);
+      }
+    });
+  });
+
+  test('configure skips malformed Kiro sources while keeping valid accounts', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_configure_bad_source');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+    final malformedSource = File('${tempDirectory.path}${Platform.pathSeparator}broken.json');
+    await malformedSource.writeAsString('{');
+
+    final harness = await _ControllerHarness.create(
+      spawnIsolate: (messagePort, errorPort, exitPort) {
+        return Isolate.spawn(
+          _configurationStatusIsolate,
+          messagePort,
+          onError: errorPort,
+          onExit: exitPort,
+        );
+      },
+    );
+    addTearDown(harness.dispose);
+    await harness.secretStore.writeOAuthTokens('good-token', _sampleTokens('good-access-token'));
+
+    final nextState = harness.controller.states.firstWhere(
+      (state) => state.ready && state.activeAccounts == 1,
+    );
+    await harness.controller.configure(
+      settings: AppSettings.defaults(
+        apiKey: 'expected-key',
+      ).copyWith(androidBackgroundRuntime: false),
+      accounts: [
+        AccountProfile(
+          id: 'bad-kiro',
+          label: 'Broken Kiro',
+          email: '',
+          projectId: '',
+          provider: AccountProvider.kiro,
+          credentialSourcePath: malformedSource.path,
+          enabled: true,
+          priority: 0,
+          notSupportedModels: const [],
+          lastUsedAt: null,
+          usageCount: 0,
+          errorCount: 0,
+          cooldownUntil: null,
+          lastQuotaSnapshot: null,
+          tokenRef: 'bad-token',
+        ),
+        const AccountProfile(
+          id: 'good-gemini',
+          label: 'Gemini',
+          email: 'user@example.com',
+          projectId: 'project-1',
+          enabled: true,
+          priority: 0,
+          notSupportedModels: [],
+          lastUsedAt: null,
+          usageCount: 0,
+          errorCount: 0,
+          cooldownUntil: null,
+          lastQuotaSnapshot: null,
+          tokenRef: 'good-token',
+        ),
+      ],
+    );
+
+    final state = await nextState.timeout(const Duration(seconds: 2));
+
+    expect(state.activeAccounts, 1);
+    expect(state.healthyAccounts, 1);
   });
 
   test('ignores repeated start requests while a start is already pending', () async {
@@ -669,6 +781,40 @@ Future<void> _delayedStartCountingIsolate(SendPort sendPort) async {
             'request_count': startCount,
             'active_accounts': 0,
             'healthy_accounts': 0,
+            'last_error': null,
+          },
+        });
+        break;
+      case 'shutdown':
+        commands.close();
+        break;
+    }
+  }
+}
+
+@pragma('vm:entry-point')
+Future<void> _configurationStatusIsolate(SendPort sendPort) async {
+  final commands = ReceivePort();
+  sendPort.send({'type': 'ready', 'port': commands.sendPort});
+  await for (final message in commands) {
+    if (message is! Map) {
+      continue;
+    }
+    switch (message['type']) {
+      case 'configure':
+        final payload = (message['payload'] as Map?)?.cast<String, Object?>() ?? const {};
+        final accounts = (payload['accounts'] as List?) ?? const [];
+        sendPort.send({
+          'type': 'status',
+          'payload': {
+            'ready': true,
+            'running': false,
+            'bound_host': '127.0.0.1',
+            'port': 3000,
+            'started_at': null,
+            'request_count': 0,
+            'active_accounts': accounts.length,
+            'healthy_accounts': accounts.length,
             'last_error': null,
           },
         });

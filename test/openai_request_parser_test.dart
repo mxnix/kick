@@ -161,6 +161,60 @@ void main() {
     expect(request.turns.last.parts.single.arguments?['result'], 'Bananas are berries.');
   });
 
+  test('rejects invalid request field types with FormatException', () {
+    expect(
+      () => OpenAiRequestParser.parseChatRequest({
+        'model': 'gemini-2.5-flash',
+        'temperature': '0.7',
+        'messages': [
+          {'role': 'user', 'content': 'Hello'},
+        ],
+      }, requestId: 'req_bad_temperature'),
+      throwsA(
+        isA<FormatException>().having((error) => error.message, 'message', contains('temperature')),
+      ),
+    );
+
+    expect(
+      () => OpenAiRequestParser.parseChatRequest({
+        'model': 'gemini-2.5-flash',
+        'response_format': <Object?>[],
+        'messages': [
+          {'role': 'user', 'content': 'Hello'},
+        ],
+      }, requestId: 'req_bad_response_format'),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('response_format'),
+        ),
+      ),
+    );
+
+    expect(
+      () => OpenAiRequestParser.parseResponsesRequest({
+        'model': 'gemini-2.5-flash',
+        'text': <Object?>[],
+        'input': 'Hello',
+      }, requestId: 'req_bad_text'),
+      throwsA(isA<FormatException>().having((error) => error.message, 'message', contains('text'))),
+    );
+
+    expect(
+      () => OpenAiRequestParser.parseChatRequest({
+        'model': 'gemini-2.5-flash',
+        'extra_body': <Object?>[],
+        'messages': [
+          {'role': 'user', 'content': 'Hello'},
+        ],
+      }, requestId: 'req_bad_extra_body'),
+      throwsA(
+        isA<FormatException>().having((error) => error.message, 'message', contains('extra_body')),
+      ),
+    );
+  });
+
   test('parses Google thought signatures attached to OpenAI tool calls', () {
     final request = OpenAiRequestParser.parseChatRequest({
       'model': 'gemini-3.1-pro-preview',

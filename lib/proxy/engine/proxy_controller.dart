@@ -258,7 +258,16 @@ class KickProxyController {
       OAuthTokens? tokens;
       var runtimeAccount = account;
       if (account.provider == AccountProvider.kiro) {
-        final source = await loadKiroAuthSource(sourcePath: account.credentialSourcePath);
+        final KiroAuthSourceSnapshot? source;
+        try {
+          source = await loadKiroAuthSource(sourcePath: account.credentialSourcePath);
+        } on FileSystemException {
+          continue;
+        } on FormatException {
+          continue;
+        } on TypeError {
+          continue;
+        }
         if (source == null) {
           continue;
         }

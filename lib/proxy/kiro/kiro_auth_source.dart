@@ -124,16 +124,25 @@ Future<KiroAuthSourceSnapshot?> loadKiroAuthSource({String? sourcePath}) async {
   }
 
   final file = File(resolvedPath);
-  if (!await file.exists()) {
-    return null;
-  }
+  Map<String, Object?> json;
+  try {
+    if (!await file.exists()) {
+      return null;
+    }
 
-  final raw = await file.readAsString();
-  final decoded = jsonDecode(raw);
-  if (decoded is! Map) {
+    final raw = await file.readAsString();
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) {
+      return null;
+    }
+    json = decoded.cast<String, Object?>();
+  } on FileSystemException {
+    return null;
+  } on FormatException {
+    return null;
+  } on TypeError {
     return null;
   }
-  final json = decoded.cast<String, Object?>();
 
   final accessToken = _readString(json, const [
     'accessToken',

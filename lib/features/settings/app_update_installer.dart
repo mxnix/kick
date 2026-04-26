@@ -12,6 +12,9 @@ import '../../core/platform/desktop_runtime.dart';
 import 'app_update_checker.dart';
 
 const _appUpdateChannelName = 'kick/app_update';
+const defaultAppUpdateDownloadTimeout = Duration(minutes: 10);
+const defaultAppUpdateDownloadIdleTimeout = Duration(seconds: 30);
+const defaultAppUpdateMaxDownloadBytes = 512 * 1024 * 1024;
 
 enum AppUpdatePhase { idle, downloading, verifying, readyToInstall, awaitingPermission, error }
 
@@ -117,12 +120,24 @@ class AppUpdateInstaller {
     AppUpdateWindowsInstallerLauncher? windowsInstallerLauncher,
     AppUpdateLinuxPackageOpener? linuxPackageOpener,
     AppUpdateInstallPlatform? installPlatform,
+    Duration downloadTimeout = defaultAppUpdateDownloadTimeout,
+    Duration downloadIdleTimeout = defaultAppUpdateDownloadIdleTimeout,
+    int maxDownloadBytes = defaultAppUpdateMaxDownloadBytes,
   }) : _http = httpClient ?? http.Client(),
        _platformChannel = platformChannel ?? const MethodChannel(_appUpdateChannelName),
        _directoryProvider = directoryProvider ?? getApplicationSupportDirectory,
        _windowsInstallerLauncher = windowsInstallerLauncher ?? DesktopRuntime.exitApplication,
        _linuxPackageOpener = linuxPackageOpener ?? _openLinuxPackage,
-       _installPlatform = installPlatform ?? AppUpdateInstallPlatform.current();
+       _installPlatform = installPlatform ?? AppUpdateInstallPlatform.current(),
+       _downloadTimeout = downloadTimeout > Duration.zero
+           ? downloadTimeout
+           : defaultAppUpdateDownloadTimeout,
+       _downloadIdleTimeout = downloadIdleTimeout > Duration.zero
+           ? downloadIdleTimeout
+           : defaultAppUpdateDownloadIdleTimeout,
+       _maxDownloadBytes = maxDownloadBytes > 0
+           ? maxDownloadBytes
+           : defaultAppUpdateMaxDownloadBytes;
 
   final http.Client _http;
   final MethodChannel _platformChannel;
@@ -130,6 +145,9 @@ class AppUpdateInstaller {
   final AppUpdateWindowsInstallerLauncher _windowsInstallerLauncher;
   final AppUpdateLinuxPackageOpener _linuxPackageOpener;
   final AppUpdateInstallPlatform _installPlatform;
+  final Duration _downloadTimeout;
+  final Duration _downloadIdleTimeout;
+  final int _maxDownloadBytes;
 
   Future<DownloadedAppUpdate> downloadUpdate({
     required AppUpdateInfo updateInfo,
@@ -145,10 +163,15 @@ class AppUpdateInstaller {
       throw StateError('This release does not provide a native installer package.');
     }
 
-    final updatesDirectory = await _resolveUpdatesDirectory(updateInfo.latestVersion);
-    final targetFile = File(p.join(updatesDirectory.path, installerFileName));
+    final safeVersion = _safePathSegment(updateInfo.latestVersion, 'latestVersion');
+    final safeInstallerFileName = _safeInstallerFileName(installerFileName);
+    final updatesDirectory = await _resolveUpdatesDirectory(safeVersion);
+    final targetFile = _safeFileInDirectory(updatesDirectory, safeInstallerFileName);
     final tempFile = File('${targetFile.path}.part');
-    final expectedSha256 = await _loadExpectedSha256(updateInfo);
+    final expectedSha256 = await _loadExpectedSha256(
+      updateInfo,
+      installerFileName: safeInstallerFileName,
+    );
 
     if (await tempFile.exists()) {
       await tempFile.delete();
@@ -158,9 +181,9 @@ class AppUpdateInstaller {
       final existingSha256 = await _digestFile(targetFile);
       if (expectedSha256 == null || _hashesEqual(existingSha256, expectedSha256)) {
         return DownloadedAppUpdate(
-          version: updateInfo.latestVersion,
+          version: safeVersion,
           filePath: targetFile.path,
-          fileName: installerFileName,
+          fileName: safeInstallerFileName,
           sha256: existingSha256,
           isChecksumVerified: expectedSha256 != null,
         );
@@ -168,42 +191,73 @@ class AppUpdateInstaller {
       await targetFile.delete();
     }
 
-    final request = http.Request('GET', Uri.parse(installerUrl));
-    final response = await _http.send(request);
-    if (response.statusCode >= 400) {
-      throw StateError('Failed to download the update package: ${response.statusCode}.');
-    }
-
-    final sink = tempFile.openWrite();
-    var receivedBytes = 0;
+    IOSink? sink;
     try {
-      await for (final chunk in response.stream) {
-        sink.add(chunk);
+      final request = http.Request('GET', Uri.parse(installerUrl));
+      final response = await _http
+          .send(request)
+          .timeout(
+            _downloadTimeout,
+            onTimeout: () => throw TimeoutException('Update download timed out.'),
+          );
+      if (response.statusCode >= 400) {
+        throw StateError('Failed to download the update package: ${response.statusCode}.');
+      }
+      final contentLength = response.contentLength;
+      if (contentLength != null && contentLength > _maxDownloadBytes) {
+        throw StateError('Update package is larger than the allowed download limit.');
+      }
+
+      sink = tempFile.openWrite();
+      var receivedBytes = 0;
+      final downloadTimer = Stopwatch()..start();
+      final guardedStream = response.stream.timeout(
+        _downloadIdleTimeout,
+        onTimeout: (controller) {
+          controller.addError(TimeoutException('Update download stalled.'));
+          controller.close();
+        },
+      );
+      await for (final chunk in guardedStream) {
         receivedBytes += chunk.length;
+        if (receivedBytes > _maxDownloadBytes) {
+          throw StateError('Update package is larger than the allowed download limit.');
+        }
+        if (downloadTimer.elapsed > _downloadTimeout) {
+          throw TimeoutException('Update download timed out.');
+        }
+        sink.add(chunk);
         onProgress(receivedBytes, response.contentLength);
       }
       await sink.flush();
-    } catch (_) {
       await sink.close();
+      sink = null;
+
+      onVerifying?.call();
+      final sha256Hash = await _digestFile(tempFile);
+      if (expectedSha256 != null && !_hashesEqual(sha256Hash, expectedSha256)) {
+        throw StateError('SHA-256 mismatch for $safeInstallerFileName.');
+      }
+
+      await tempFile.rename(targetFile.path);
+      return DownloadedAppUpdate(
+        version: safeVersion,
+        filePath: targetFile.path,
+        fileName: safeInstallerFileName,
+        sha256: sha256Hash,
+        isChecksumVerified: expectedSha256 != null,
+      );
+    } catch (_) {
+      if (sink != null) {
+        try {
+          await sink.close();
+        } catch (_) {
+          // The original download error is more useful than a cleanup failure.
+        }
+      }
+      await _deleteIfExists(tempFile);
       rethrow;
     }
-    await sink.close();
-
-    onVerifying?.call();
-    final sha256Hash = await _digestFile(tempFile);
-    if (expectedSha256 != null && !_hashesEqual(sha256Hash, expectedSha256)) {
-      await tempFile.delete();
-      throw StateError('SHA-256 mismatch for $installerFileName.');
-    }
-
-    await tempFile.rename(targetFile.path);
-    return DownloadedAppUpdate(
-      version: updateInfo.latestVersion,
-      filePath: targetFile.path,
-      fileName: installerFileName,
-      sha256: sha256Hash,
-      isChecksumVerified: expectedSha256 != null,
-    );
   }
 
   Future<AppUpdateInstallLaunchResult> launchInstall(DownloadedAppUpdate downloadedUpdate) async {
@@ -226,17 +280,21 @@ class AppUpdateInstaller {
     _http.close();
   }
 
-  Future<String?> _loadExpectedSha256(AppUpdateInfo updateInfo) async {
+  Future<String?> _loadExpectedSha256(
+    AppUpdateInfo updateInfo, {
+    required String installerFileName,
+  }) async {
     final checksumUrl = updateInfo.checksumUrl?.trim();
-    final installerFileName = updateInfo.installerFileName?.trim();
-    if (checksumUrl == null ||
-        checksumUrl.isEmpty ||
-        installerFileName == null ||
-        installerFileName.isEmpty) {
+    if (checksumUrl == null || checksumUrl.isEmpty || installerFileName.trim().isEmpty) {
       return null;
     }
 
-    final response = await _http.get(Uri.parse(checksumUrl));
+    final response = await _http
+        .get(Uri.parse(checksumUrl))
+        .timeout(
+          _downloadTimeout,
+          onTimeout: () => throw TimeoutException('Update checksum download timed out.'),
+        );
     if (response.statusCode >= 400) {
       return null;
     }
@@ -264,7 +322,13 @@ class AppUpdateInstaller {
 
   Future<Directory> _resolveUpdatesDirectory(String version) async {
     final rootDirectory = await _directoryProvider();
-    final updatesDirectory = Directory(p.join(rootDirectory.path, 'updates', version));
+    final updatesRoot = Directory(p.join(rootDirectory.path, 'updates'));
+    final updatesDirectory = Directory(p.join(updatesRoot.path, version));
+    final normalizedRoot = p.normalize(updatesRoot.path);
+    final normalizedTarget = p.normalize(updatesDirectory.path);
+    if (!p.isWithin(normalizedRoot, normalizedTarget)) {
+      throw StateError('Invalid update version metadata.');
+    }
     await updatesDirectory.create(recursive: true);
     return updatesDirectory;
   }
@@ -276,6 +340,54 @@ class AppUpdateInstaller {
 
   bool _hashesEqual(String left, String right) =>
       left.trim().toLowerCase() == right.trim().toLowerCase();
+
+  String _safePathSegment(String value, String fieldName) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty ||
+        trimmed == '.' ||
+        trimmed == '..' ||
+        trimmed.contains('..') ||
+        trimmed.contains('/') ||
+        trimmed.contains('\\') ||
+        p.basename(trimmed) != trimmed) {
+      throw StateError('Invalid update $fieldName metadata.');
+    }
+    return trimmed;
+  }
+
+  String _safeInstallerFileName(String value) {
+    final trimmed = value.trim();
+    final basename = p.basename(trimmed);
+    if (trimmed.isEmpty ||
+        basename != trimmed ||
+        trimmed == '.' ||
+        trimmed == '..' ||
+        trimmed.contains('..') ||
+        trimmed.contains('/') ||
+        trimmed.contains('\\')) {
+      throw StateError('Invalid update installer file name metadata.');
+    }
+    return basename;
+  }
+
+  File _safeFileInDirectory(Directory directory, String fileName) {
+    final normalizedDirectory = p.normalize(directory.path);
+    final targetPath = p.normalize(p.join(directory.path, fileName));
+    if (!p.isWithin(normalizedDirectory, targetPath)) {
+      throw StateError('Invalid update installer file name metadata.');
+    }
+    return File(targetPath);
+  }
+
+  Future<void> _deleteIfExists(File file) async {
+    try {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } on FileSystemException {
+      // Cleanup is best-effort; callers should see the original download failure.
+    }
+  }
 
   Future<AppUpdateInstallLaunchResult> _launchWindowsInstaller(
     DownloadedAppUpdate downloadedUpdate,

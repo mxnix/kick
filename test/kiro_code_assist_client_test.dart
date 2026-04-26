@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -119,6 +120,127 @@ void main() {
     expect(models, ['auto', 'claude-sonnet-4']);
     expect(attempts, 2);
     expect(waits, [const Duration(seconds: 12)]);
+  });
+
+  test('persists refreshed desktop tokens for app-managed Kiro sources', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_refresh_managed');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+    final sourceFile = File('${tempDirectory.path}${Platform.pathSeparator}kiro-auth-managed.json');
+    await sourceFile.writeAsString(
+      jsonEncode({
+        'accessToken': 'old-access',
+        'refreshToken': 'old-refresh',
+        'expiresAt': '2020-01-01T00:00:00Z',
+        'region': defaultKiroRegion,
+      }),
+    );
+
+    KiroAuthSourceSnapshot? persistedSnapshot;
+    String? persistedPath;
+    final client = KiroCodeAssistClient(
+      managedSourcePathChecker: (_) async => true,
+      authSourcePersister: (snapshot, {outputPath}) async {
+        persistedSnapshot = snapshot;
+        persistedPath = outputPath;
+        return snapshot;
+      },
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/refreshToken');
+          return http.Response(
+            jsonEncode({'accessToken': 'new-access', 'refreshToken': 'new-refresh'}),
+            200,
+          );
+        },
+        (request) async {
+          expect(request.url.path, '/ListAvailableModels');
+          expect(request.headers['authorization'], 'Bearer new-access');
+          return http.Response(
+            jsonEncode({
+              'models': [
+                {'modelId': 'claude-sonnet-4'},
+              ],
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+    final account = sampleAccount()
+      ..credentialSourcePath = sourceFile.path
+      ..tokens = OAuthTokens(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+        expiry: DateTime.fromMillisecondsSinceEpoch(0),
+        tokenType: 'Bearer',
+        scope: null,
+      );
+
+    final models = await client.listModels(account: account);
+
+    expect(models, ['claude-sonnet-4']);
+    expect(account.tokens.accessToken, 'new-access');
+    expect(account.tokens.refreshToken, 'new-refresh');
+    expect(persistedPath, sourceFile.path);
+    expect(persistedSnapshot?.accessToken, 'new-access');
+    expect(persistedSnapshot?.refreshToken, 'new-refresh');
+  });
+
+  test('does not persist refreshed desktop tokens for external Kiro sources', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_refresh_external');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+    final sourceFile = File('${tempDirectory.path}${Platform.pathSeparator}external.json');
+    await sourceFile.writeAsString(
+      jsonEncode({
+        'accessToken': 'old-access',
+        'refreshToken': 'old-refresh',
+        'expiresAt': '2020-01-01T00:00:00Z',
+        'region': defaultKiroRegion,
+      }),
+    );
+
+    var persistCount = 0;
+    final client = KiroCodeAssistClient(
+      managedSourcePathChecker: (_) async => false,
+      authSourcePersister: (snapshot, {outputPath}) async {
+        persistCount += 1;
+        return snapshot;
+      },
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/refreshToken');
+          return http.Response(
+            jsonEncode({'accessToken': 'new-access', 'refreshToken': 'new-refresh'}),
+            200,
+          );
+        },
+        (request) async {
+          expect(request.url.path, '/ListAvailableModels');
+          return http.Response(
+            jsonEncode({
+              'models': [
+                {'modelId': 'claude-sonnet-4'},
+              ],
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+    final account = sampleAccount()
+      ..credentialSourcePath = sourceFile.path
+      ..tokens = OAuthTokens(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+        expiry: DateTime.fromMillisecondsSinceEpoch(0),
+        tokenType: 'Bearer',
+        scope: null,
+      );
+
+    await client.listModels(account: account);
+
+    expect(persistCount, 0);
+    expect(jsonDecode(await sourceFile.readAsString())['accessToken'], 'old-access');
   });
 
   test(

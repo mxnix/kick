@@ -13,6 +13,10 @@ const _maxRequestMaxRetries = 20;
 const _defaultRetry429DelaySeconds = 30;
 const _minRetry429DelaySeconds = 1;
 const _maxRetry429DelaySeconds = 3600;
+const _defaultProxyHost = '127.0.0.1';
+const _defaultProxyPort = 3000;
+const _minProxyPort = 1;
+const _maxProxyPort = 65535;
 
 class AppSettings {
   static const Set<String> storageKeys = {
@@ -93,8 +97,8 @@ class AppSettings {
       useDynamicColor: true,
       hasAcknowledgedDisclaimer: false,
       analyticsConsentEnabled: false,
-      host: '127.0.0.1',
-      port: 3000,
+      host: _defaultProxyHost,
+      port: _defaultProxyPort,
       allowLan: false,
       androidBackgroundRuntime: true,
       windowsLaunchAtStartup: false,
@@ -234,7 +238,7 @@ class AppSettings {
       ),
       analyticsConsentEnabled: _readBool(json['analytics_consent_enabled'], defaultValue: false),
       host: _normalizeHost(_readString(json['host']), allowLan: allowLan),
-      port: _readInt(json['port']) ?? 3000,
+      port: _normalizeUserPort(_readInt(json['port'])),
       allowLan: allowLan,
       androidBackgroundRuntime: _readBool(json['android_background_runtime'], defaultValue: true),
       windowsLaunchAtStartup: _readBool(json['windows_launch_at_startup'], defaultValue: false),
@@ -275,7 +279,7 @@ class AppSettings {
       hasAcknowledgedDisclaimer: values['has_acknowledged_disclaimer'] == 'true',
       analyticsConsentEnabled: values['analytics_consent_enabled'] == 'true',
       host: _normalizeHost(values['host'], allowLan: allowLan),
-      port: int.tryParse(values['port'] ?? '') ?? 3000,
+      port: _normalizeUserPort(int.tryParse(values['port'] ?? '')),
       allowLan: allowLan,
       androidBackgroundRuntime: values['android_background_runtime'] != 'false',
       windowsLaunchAtStartup: values['windows_launch_at_startup'] == 'true',
@@ -321,12 +325,31 @@ Locale? _normalizeAppLocale(Locale? value) {
 String _normalizeHost(String? value, {required bool allowLan}) {
   final trimmed = value?.trim();
   if (trimmed == null || trimmed.isEmpty) {
-    return '127.0.0.1';
+    return _defaultProxyHost;
+  }
+  if (_looksLikeHostWithSchemeOrPath(trimmed)) {
+    return _defaultProxyHost;
   }
   if (!allowLan && trimmed == '0.0.0.0') {
-    return '127.0.0.1';
+    return _defaultProxyHost;
   }
   return trimmed;
+}
+
+bool _looksLikeHostWithSchemeOrPath(String value) {
+  return value.contains('://') ||
+      value.contains('/') ||
+      value.contains('\\') ||
+      value.contains('?') ||
+      value.contains('#') ||
+      RegExp(r'\s').hasMatch(value);
+}
+
+int _normalizeUserPort(int? value) {
+  if (value == null || value < _minProxyPort || value > _maxProxyPort) {
+    return _defaultProxyPort;
+  }
+  return value;
 }
 
 int _normalizeRequestMaxRetries(int? value) {

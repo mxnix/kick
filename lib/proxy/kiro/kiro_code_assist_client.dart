@@ -17,24 +17,34 @@ import 'kiro_embedded_system_prompt.dart';
 
 const defaultKiroRequestTimeout = Duration(seconds: 90);
 
+typedef KiroManagedSourcePathChecker = Future<bool> Function(String? sourcePath);
+typedef KiroAuthSourceSnapshotPersister =
+    Future<KiroAuthSourceSnapshot> Function(KiroAuthSourceSnapshot snapshot, {String? outputPath});
+
 class KiroCodeAssistClient {
   KiroCodeAssistClient({
     http.Client? httpClient,
     Future<void> Function(Duration delay)? wait,
     GeminiRetryPolicy retryPolicy = const GeminiRetryPolicy(),
     Duration requestTimeout = defaultKiroRequestTimeout,
+    KiroManagedSourcePathChecker? managedSourcePathChecker,
+    KiroAuthSourceSnapshotPersister? authSourcePersister,
   }) : _http = httpClient ?? http.Client(),
        _wait = wait ?? _defaultWait,
        _retryPolicy = retryPolicy.normalized(),
        _requestTimeout = requestTimeout > Duration.zero
            ? requestTimeout
            : defaultKiroRequestTimeout,
+       _managedSourcePathChecker = managedSourcePathChecker ?? isManagedKiroCredentialSourcePath,
+       _authSourcePersister = authSourcePersister ?? persistKiroAuthSourceSnapshot,
        _fingerprint = _buildMachineFingerprint();
 
   final http.Client _http;
   final Future<void> Function(Duration delay) _wait;
   GeminiRetryPolicy _retryPolicy;
   final Duration _requestTimeout;
+  final KiroManagedSourcePathChecker _managedSourcePathChecker;
+  final KiroAuthSourceSnapshotPersister _authSourcePersister;
   final String _fingerprint;
   final _uuid = const Uuid();
 
@@ -702,12 +712,16 @@ class KiroCodeAssistClient {
     );
     final body = await response.stream.bytesToString();
 
-    return _tokensFromRefreshResponse(
+    final tokens = _tokensFromRefreshResponse(
       account: account,
       source: source,
       body: body,
       statusCode: response.statusCode,
     );
+    if (source != null) {
+      await _persistRefreshedTokensIfManaged(account, source, tokens);
+    }
+    return tokens;
   }
 
   Future<OAuthTokens> _refreshBuilderIdTokens(
@@ -754,19 +768,33 @@ class KiroCodeAssistClient {
       body: body,
       statusCode: response.statusCode,
     );
-    if (account.credentialSourcePath?.trim().isNotEmpty == true) {
-      await persistKiroAuthSourceSnapshot(
-        source.copyWith(
-          sourcePath: account.credentialSourcePath!.trim(),
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-          expiry: tokens.expiry,
-          profileArn: account.providerProfileArn,
-        ),
-        outputPath: account.credentialSourcePath,
-      );
-    }
+    await _persistRefreshedTokensIfManaged(account, source, tokens);
     return tokens;
+  }
+
+  Future<void> _persistRefreshedTokensIfManaged(
+    ProxyRuntimeAccount account,
+    KiroAuthSourceSnapshot source,
+    OAuthTokens tokens,
+  ) async {
+    final sourcePath = account.credentialSourcePath?.trim().isNotEmpty == true
+        ? account.credentialSourcePath!.trim()
+        : source.sourcePath.trim();
+    // External Kiro credential sources are intentionally read-only.
+    if (sourcePath.isEmpty || !await _managedSourcePathChecker(sourcePath)) {
+      return;
+    }
+
+    await _authSourcePersister(
+      source.copyWith(
+        sourcePath: sourcePath,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiry: tokens.expiry,
+        profileArn: account.providerProfileArn,
+      ),
+      outputPath: sourcePath,
+    );
   }
 
   OAuthTokens _tokensFromRefreshResponse({

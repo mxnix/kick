@@ -70,6 +70,17 @@ void main() {
     expect(reloaded.startUrl, defaultKiroBuilderIdStartUrl);
   });
 
+  test('returns null for malformed Kiro source JSON', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_auth_malformed');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+    final sourceFile = File('${tempDirectory.path}${Platform.pathSeparator}broken.json');
+    await sourceFile.writeAsString('{');
+
+    final snapshot = await loadKiroAuthSource(sourcePath: sourceFile.path);
+
+    expect(snapshot, isNull);
+  });
+
   test('detects and deletes app-managed Kiro sources', () async {
     final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_auth_managed');
     addTearDown(() => tempDirectory.delete(recursive: true));

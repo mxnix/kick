@@ -108,6 +108,28 @@ void main() {
     expect(restored.allowLan, isFalse);
   });
 
+  test('normalizes invalid storage host and port to safe defaults', () {
+    final restored = AppSettings.fromStorageMap({
+      'host': 'http://127.0.0.1/proxy',
+      'port': '70000',
+      'allow_lan': 'false',
+    }, apiKey: 'kick_test');
+
+    expect(restored.host, '127.0.0.1');
+    expect(restored.port, 3000);
+  });
+
+  test('normalizes invalid backup host and port to safe defaults', () {
+    final backup = AppSettings.defaults(apiKey: 'kick_test').toBackupJson()
+      ..['host'] = r'..\127.0.0.1'
+      ..['port'] = -1;
+
+    final restored = AppSettings.fromBackupJson(backup);
+
+    expect(restored.host, '127.0.0.1');
+    expect(restored.port, 3000);
+  });
+
   test('keeps analytics consent disabled when legacy settings are missing the key', () {
     final restored = AppSettings.fromStorageMap({
       'has_acknowledged_disclaimer': 'false',

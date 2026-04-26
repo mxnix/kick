@@ -29,6 +29,8 @@ const _proxyBindRetryDelays = <Duration>[
   Duration(milliseconds: 400),
 ];
 const _modelCatalogRefreshInterval = Duration(minutes: 30);
+const _defaultProxyRuntimeHost = '127.0.0.1';
+const _defaultProxyRuntimePort = 3000;
 
 bool looksLikeProxyPortInUseError(String value) {
   final normalized = value.toLowerCase();
@@ -75,9 +77,8 @@ Map<String, Object?> normalizeOpenAiCompatRequest({
     return normalized;
   }
 
-  final extraBody =
-      (normalized['extra_body'] as Map?)?.cast<String, Object?>() ?? <String, Object?>{};
-  final google = (extraBody['google'] as Map?)?.cast<String, Object?>() ?? <String, Object?>{};
+  final extraBody = _readRequestMap(normalized['extra_body'], 'extra_body') ?? <String, Object?>{};
+  final google = _readRequestMap(extraBody['google'], 'extra_body.google') ?? <String, Object?>{};
   google.putIfAbsent('web_search', () => effectiveFlag);
   extraBody['google'] = google;
   normalized['extra_body'] = extraBody;
@@ -90,9 +91,9 @@ bool _requestDeclaresTools(Map<String, Object?> body) {
 }
 
 bool? _readGoogleWebSearchFlagFromJson(Map<String, Object?> body) {
-  final extraBody = (body['extra_body'] as Map?)?.cast<String, Object?>();
-  final google = (extraBody?['google'] as Map?)?.cast<String, Object?>();
-  final directGoogle = (body['google'] as Map?)?.cast<String, Object?>();
+  final extraBody = _readRequestMap(body['extra_body'], 'extra_body');
+  final google = _readRequestMap(extraBody?['google'], 'extra_body.google');
+  final directGoogle = _readRequestMap(body['google'], 'google');
   return _parseBooleanFlag(google?['web_search']) ??
       _parseBooleanFlag(google?['webSearch']) ??
       _parseBooleanFlag(extraBody?['web_search']) ??
@@ -101,6 +102,58 @@ bool? _readGoogleWebSearchFlagFromJson(Map<String, Object?> body) {
       _parseBooleanFlag(directGoogle?['webSearch']) ??
       _parseBooleanFlag(body['web_search']) ??
       _parseBooleanFlag(body['webSearch']);
+}
+
+String _runtimeHostFromSettings(Map<String, Object?>? settings) {
+  final raw = settings?['host'];
+  final trimmed = raw is String ? raw.trim() : '';
+  if (trimmed.isEmpty || _looksLikeInvalidRuntimeHost(trimmed)) {
+    return _defaultProxyRuntimeHost;
+  }
+  if (settings?['allow_lan'] != true && trimmed == '0.0.0.0') {
+    return _defaultProxyRuntimeHost;
+  }
+  return trimmed;
+}
+
+bool _looksLikeInvalidRuntimeHost(String value) {
+  return value.contains('://') ||
+      value.contains('/') ||
+      value.contains('\\') ||
+      value.contains('?') ||
+      value.contains('#') ||
+      RegExp(r'\s').hasMatch(value);
+}
+
+int _runtimePortFromSettings(Map<String, Object?>? settings) {
+  final raw = settings?['port'];
+  final port = switch (raw) {
+    int value => value,
+    num value => value.toInt(),
+    _ => _defaultProxyRuntimePort,
+  };
+  if (port < 0 || port > 65535) {
+    return _defaultProxyRuntimePort;
+  }
+  return port;
+}
+
+Map<String, Object?>? _readRequestMap(Object? raw, String fieldName) {
+  if (raw == null) {
+    return null;
+  }
+  if (raw is! Map) {
+    throw FormatException('`$fieldName` must be an object.');
+  }
+  final result = <String, Object?>{};
+  for (final entry in raw.entries) {
+    final key = entry.key;
+    if (key is! String) {
+      throw FormatException('`$fieldName` keys must be strings.');
+    }
+    result[key] = entry.value;
+  }
+  return result;
 }
 
 bool? _readGoogleWebSearchFlagFromHeaders(Map<String, String> headers) {
@@ -263,7 +316,8 @@ class _ProxyIsolateHost {
   String? _lastRuntimeError;
 
   bool get _allowLan => _settings?['allow_lan'] == true;
-  String get _configuredHost => _settings?['host'] as String? ?? '127.0.0.1';
+  String get _configuredHost => _runtimeHostFromSettings(_settings);
+  int get _configuredPort => _runtimePortFromSettings(_settings);
   bool get _defaultGoogleWebSearchEnabled =>
       _settings?['default_google_web_search_enabled'] == true;
   bool get _renderGoogleGroundingInMessage =>
@@ -339,7 +393,7 @@ class _ProxyIsolateHost {
         .addMiddleware(_corsMiddleware(this))
         .addHandler(_router.call);
     final host = _allowLan ? '0.0.0.0' : _configuredHost;
-    final port = _settings?['port'] as int? ?? 3000;
+    final port = _configuredPort;
     try {
       _server = await retryProxyPortBind(() => shelf_io.serve(handler, host, port));
       _startedAt = DateTime.now();
@@ -399,21 +453,21 @@ class _ProxyIsolateHost {
     }
 
     final route = request.requestedUri.path;
-    final rawBody = await _readJson(request);
-    if (rawBody == null) {
-      return _errorResponse(400, 'invalid_request_error', 'Request body must be valid JSON.');
-    }
-    final body = normalizeOpenAiCompatRequest(
-      body: rawBody,
-      headers: request.headers,
-      defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
-    );
-    _thoughtSignatures.enrichChatRequest(body);
     final requestId = _uuid.v4().replaceAll('-', '');
     UnifiedPromptRequest? prompt;
     _RequestRetryTracker? retryTracker;
 
     try {
+      final rawBody = await _readJson(request);
+      if (rawBody == null) {
+        return _errorResponse(400, 'invalid_request_error', 'Request body must be valid JSON.');
+      }
+      final body = normalizeOpenAiCompatRequest(
+        body: rawBody,
+        headers: request.headers,
+        defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
+      );
+      _thoughtSignatures.enrichChatRequest(body);
       final resolvedPrompt = prompt = OpenAiRequestParser.parseChatRequest(
         body,
         requestId: requestId,
@@ -600,21 +654,21 @@ class _ProxyIsolateHost {
     }
 
     final route = request.requestedUri.path;
-    final rawBody = await _readJson(request);
-    if (rawBody == null) {
-      return _errorResponse(400, 'invalid_request_error', 'Request body must be valid JSON.');
-    }
-    final body = normalizeOpenAiCompatRequest(
-      body: rawBody,
-      headers: request.headers,
-      defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
-    );
-    _thoughtSignatures.enrichResponsesRequest(body);
     final requestId = _uuid.v4().replaceAll('-', '');
     UnifiedPromptRequest? prompt;
     _RequestRetryTracker? retryTracker;
 
     try {
+      final rawBody = await _readJson(request);
+      if (rawBody == null) {
+        return _errorResponse(400, 'invalid_request_error', 'Request body must be valid JSON.');
+      }
+      final body = normalizeOpenAiCompatRequest(
+        body: rawBody,
+        headers: request.headers,
+        defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
+      );
+      _thoughtSignatures.enrichResponsesRequest(body);
       final resolvedPrompt = prompt = OpenAiRequestParser.parseResponsesRequest(
         body,
         requestId: requestId,
@@ -2154,8 +2208,8 @@ class _ProxyIsolateHost {
 
     final previousHost = _effectiveBindHost(previousSettings);
     final nextHost = _effectiveBindHost(nextSettings);
-    final previousPort = previousSettings['port'] as int? ?? 3000;
-    final nextPort = nextSettings['port'] as int? ?? 3000;
+    final previousPort = _runtimePortFromSettings(previousSettings);
+    final nextPort = _runtimePortFromSettings(nextSettings);
     return previousHost != nextHost || previousPort != nextPort;
   }
 
@@ -2164,7 +2218,7 @@ class _ProxyIsolateHost {
     if (allowLan) {
       return '0.0.0.0';
     }
-    return settings['host'] as String? ?? '127.0.0.1';
+    return _runtimeHostFromSettings(settings);
   }
 
   String? resolveCorsOrigin(String? origin) {
@@ -2198,8 +2252,8 @@ class _ProxyIsolateHost {
       'payload': {
         'ready': _settings != null,
         'running': _server != null,
-        'bound_host': _server?.address.address ?? (_settings?['host'] as String? ?? '127.0.0.1'),
-        'port': _server?.port ?? (_settings?['port'] as int? ?? 3000),
+        'bound_host': _server?.address.address ?? _configuredHost,
+        'port': _server?.port ?? _configuredPort,
         'started_at': _startedAt?.toIso8601String(),
         'request_count': _requestCount,
         'active_accounts': _pool.accounts.where((account) => account.enabled).length,

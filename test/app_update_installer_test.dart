@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -74,6 +75,130 @@ void main() {
           installerUrl: 'https://example.com/releases/download/v1.1.0/kick-windows-1.1.0-setup.exe',
           installerFileName: 'kick-windows-1.1.0-setup.exe',
           checksumUrl: 'https://example.com/releases/download/v1.1.0/kick-1.1.0-checksums.txt',
+        ),
+        onProgress: (_, _) {},
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('aborts oversized downloads and removes the partial file', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_app_update_test_');
+    addTearDown(() async {
+      if (await tempDirectory.exists()) {
+        await tempDirectory.delete(recursive: true);
+      }
+    });
+
+    final installer = AppUpdateInstaller(
+      httpClient: QueueHttpClient([
+        (_) async =>
+            http.StreamedResponse(Stream.value(utf8.encode('too large')), 200, contentLength: 9),
+      ]),
+      directoryProvider: () async => tempDirectory,
+      maxDownloadBytes: 4,
+    );
+    addTearDown(installer.dispose);
+
+    await expectLater(
+      installer.downloadUpdate(
+        updateInfo: const AppUpdateInfo(
+          currentVersion: '1.0.0',
+          latestVersion: '1.1.0',
+          releaseUrl: 'https://example.com/releases/tag/v1.1.0',
+          hasUpdate: true,
+          installerUrl: 'https://example.com/releases/download/v1.1.0/kick-windows-1.1.0.exe',
+          installerFileName: 'kick-windows-1.1.0.exe',
+        ),
+        onProgress: (_, _) {},
+      ),
+      throwsA(isA<StateError>()),
+    );
+
+    final partFile = File(
+      '${tempDirectory.path}${Platform.pathSeparator}updates${Platform.pathSeparator}1.1.0'
+      '${Platform.pathSeparator}kick-windows-1.1.0.exe.part',
+    );
+    expect(await partFile.exists(), isFalse);
+  });
+
+  test('times out stalled downloads and removes the partial file', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_app_update_test_');
+    final stalledStream = StreamController<List<int>>();
+    addTearDown(() async {
+      await stalledStream.close();
+      if (await tempDirectory.exists()) {
+        await tempDirectory.delete(recursive: true);
+      }
+    });
+
+    final installer = AppUpdateInstaller(
+      httpClient: QueueHttpClient([(_) async => http.StreamedResponse(stalledStream.stream, 200)]),
+      directoryProvider: () async => tempDirectory,
+      downloadIdleTimeout: const Duration(milliseconds: 10),
+    );
+    addTearDown(installer.dispose);
+
+    await expectLater(
+      installer.downloadUpdate(
+        updateInfo: const AppUpdateInfo(
+          currentVersion: '1.0.0',
+          latestVersion: '1.1.0',
+          releaseUrl: 'https://example.com/releases/tag/v1.1.0',
+          hasUpdate: true,
+          installerUrl: 'https://example.com/releases/download/v1.1.0/kick-windows-1.1.0.exe',
+          installerFileName: 'kick-windows-1.1.0.exe',
+        ),
+        onProgress: (_, _) {},
+      ),
+      throwsA(isA<TimeoutException>()),
+    );
+
+    final partFile = File(
+      '${tempDirectory.path}${Platform.pathSeparator}updates${Platform.pathSeparator}1.1.0'
+      '${Platform.pathSeparator}kick-windows-1.1.0.exe.part',
+    );
+    expect(await partFile.exists(), isFalse);
+  });
+
+  test('rejects traversal metadata before resolving update cache paths', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_app_update_test_');
+    addTearDown(() async {
+      if (await tempDirectory.exists()) {
+        await tempDirectory.delete(recursive: true);
+      }
+    });
+
+    final installer = AppUpdateInstaller(
+      httpClient: QueueHttpClient([]),
+      directoryProvider: () async => tempDirectory,
+    );
+    addTearDown(installer.dispose);
+
+    await expectLater(
+      installer.downloadUpdate(
+        updateInfo: const AppUpdateInfo(
+          currentVersion: '1.0.0',
+          latestVersion: r'..\..\x',
+          releaseUrl: 'https://example.com/releases/tag/v1.1.0',
+          hasUpdate: true,
+          installerUrl: 'https://example.com/releases/download/v1.1.0/kick.exe',
+          installerFileName: 'kick.exe',
+        ),
+        onProgress: (_, _) {},
+      ),
+      throwsA(isA<StateError>()),
+    );
+
+    await expectLater(
+      installer.downloadUpdate(
+        updateInfo: const AppUpdateInfo(
+          currentVersion: '1.0.0',
+          latestVersion: '1.1.0',
+          releaseUrl: 'https://example.com/releases/tag/v1.1.0',
+          hasUpdate: true,
+          installerUrl: 'https://example.com/releases/download/v1.1.0/evil.exe',
+          installerFileName: r'..\evil.exe',
         ),
         onProgress: (_, _) {},
       ),
