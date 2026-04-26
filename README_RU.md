@@ -17,6 +17,9 @@
   <a href="https://github.com/mxnix/kick/blob/main/LICENSE.md">
     <img src="https://img.shields.io/github/license/mxnix/kick?style=flat-square" alt="Лицензия">
   </a>
+  <a href="https://aur.archlinux.org/packages/kick-bin">
+    <img src="https://img.shields.io/aur/version/kick-bin?style=flat-square&color=1793D1&logo=arch-linux&logoColor=white" alt="AUR Package">
+  </a>
 </p>
 
 **Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном Flutter-приложении**
@@ -167,6 +170,16 @@ Server = https://mxnix.github.io/kick/linux/pacman/x86_64
 SigLevel = DatabaseRequired PackageOptional
 EOF
 sudo pacman -Sy kick
+```
+
+Или установите из [AUR](https://aur.archlinux.org/packages/kick-bin) с помощью yay или paru:
+
+```bash
+yay -S kick-bin
+```
+
+```bash
+paru -S kick-bin
 ```
 
 Также можно скачать AppImage, `.deb`, `.rpm`, `.pkg.tar.zst` или `.tar.gz` из раздела выпусков. В GNOME для трея может понадобиться расширение AppIndicator.
