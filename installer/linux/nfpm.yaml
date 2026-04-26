@@ -21,7 +21,7 @@ contents:
       mode: 0755
   - src: installer/linux/com.nikzmx.kick.desktop
     dst: /usr/share/applications/com.nikzmx.kick.desktop
-  - src: static/github/logo/linux.png
+  - src: static/github/logo/logo.png
     dst: /usr/share/icons/hicolor/256x256/apps/com.nikzmx.kick.png
   - src: installer/linux/com.nikzmx.kick.metainfo.xml
     dst: /usr/share/metainfo/com.nikzmx.kick.metainfo.xml

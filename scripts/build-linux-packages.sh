@@ -89,12 +89,12 @@ cp -R "$source_dir" "$app_dir/opt/kick"
 install -m 0755 "installer/linux/kick" "$app_dir/usr/bin/kick"
 install -m 0644 "installer/linux/com.nikzmx.kick.desktop" \
   "$app_dir/usr/share/applications/com.nikzmx.kick.desktop"
-install -m 0644 "static/github/logo/linux.png" \
+install -m 0644 "static/github/logo/logo.png" \
   "$app_dir/usr/share/icons/hicolor/256x256/apps/com.nikzmx.kick.png"
 install -m 0644 "installer/linux/com.nikzmx.kick.metainfo.xml" \
   "$app_dir/usr/share/metainfo/com.nikzmx.kick.metainfo.xml"
 install -m 0644 "installer/linux/com.nikzmx.kick.desktop" "$app_dir/com.nikzmx.kick.desktop"
-install -m 0644 "static/github/logo/linux.png" "$app_dir/com.nikzmx.kick.png"
+install -m 0644 "static/github/logo/logo.png" "$app_dir/com.nikzmx.kick.png"
 cat > "$app_dir/AppRun" <<'APPRUN'
 #!/usr/bin/env sh
 set -e

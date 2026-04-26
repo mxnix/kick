@@ -85,4 +85,5 @@ flutter:
     - assets/icons/providers/kiro_brand.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
     - windows/runner/resources/app_icon.ico
+    - static/github/logo/logo.png
     - static/github/logo/linux.png
