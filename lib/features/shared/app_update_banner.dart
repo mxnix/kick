@@ -189,6 +189,7 @@ class AppUpdateBanner extends ConsumerWidget {
       return false;
     }
     return defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
         defaultTargetPlatform == TargetPlatform.android;
   }
 

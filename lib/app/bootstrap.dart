@@ -7,8 +7,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../analytics/kick_analytics.dart';
 import '../core/platform/android_foreground_runtime.dart';
+import '../core/platform/desktop_runtime.dart';
 import '../core/platform/window_bootstrap.dart';
-import '../core/platform/windows_desktop_runtime.dart';
 import '../core/security/proxy_api_key.dart';
 import '../data/app_database.dart';
 import '../data/models/account_profile.dart';
@@ -55,7 +55,7 @@ class AppBootstrap {
   final List<AccountProfile> initialAccounts;
 
   Future<void> dispose() async {
-    await WindowsDesktopRuntime.dispose();
+    await DesktopRuntime.dispose();
     await proxyController.dispose();
     await database.close();
   }
@@ -95,16 +95,14 @@ Future<AppBootstrap> initializeAppBootstrap() async {
     await AndroidForegroundRuntime.configure();
     timings.mark('android_runtime_ready');
     await logsRepository.setRetentionLimit(effectiveSettings.logRetentionCount);
-    await WindowsDesktopRuntime.configure(
+    await DesktopRuntime.configure(
       settings: effectiveSettings,
       readTrayNotificationShown: () =>
-          settingsRepository.readBooleanFlag(WindowsDesktopRuntime.trayNotificationShownKey),
-      writeTrayNotificationShown: (value) => settingsRepository.writeBooleanFlag(
-        WindowsDesktopRuntime.trayNotificationShownKey,
-        value,
-      ),
+          settingsRepository.readBooleanFlag(DesktopRuntime.trayNotificationShownKey),
+      writeTrayNotificationShown: (value) =>
+          settingsRepository.writeBooleanFlag(DesktopRuntime.trayNotificationShownKey, value),
     );
-    timings.mark('windows_runtime_ready');
+    timings.mark('desktop_runtime_ready');
     final initialAccounts = await accountsRepository.readAll();
     timings.mark('accounts_ready');
     final analytics = KickAnalytics(trackingAllowed: analyticsTrackingAllowed(effectiveSettings));

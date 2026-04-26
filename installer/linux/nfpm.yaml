@@ -1,0 +1,54 @@
+name: kick
+arch: amd64
+platform: linux
+version: "__VERSION__"
+section: utils
+priority: optional
+maintainer: nikzmx
+description: Local OpenAI-compatible proxy for Gemini CLI and Kiro.
+vendor: nikzmx
+homepage: https://github.com/mxnix/kick
+license: Apache-2.0
+bindir: /usr/bin
+
+contents:
+  - src: "__SOURCE_DIR__"
+    dst: /opt/kick
+    type: tree
+  - src: installer/linux/kick
+    dst: /usr/bin/kick
+    file_info:
+      mode: 0755
+  - src: installer/linux/com.nikzmx.kick.desktop
+    dst: /usr/share/applications/com.nikzmx.kick.desktop
+  - src: static/github/logo/logo.png
+    dst: /usr/share/icons/hicolor/256x256/apps/com.nikzmx.kick.png
+  - src: installer/linux/com.nikzmx.kick.metainfo.xml
+    dst: /usr/share/metainfo/com.nikzmx.kick.metainfo.xml
+  - src: LICENSE.md
+    dst: /usr/share/doc/kick/LICENSE.md
+
+overrides:
+  deb:
+    depends:
+      - libgtk-3-0
+      - libcurl4
+      - libsecret-1-0
+      - libjsoncpp25 | libjsoncpp1
+      - libayatana-appindicator3-1 | libappindicator3-1
+      - libnotify4
+  rpm:
+    depends:
+      - gtk3
+      - libcurl
+      - libsecret
+      - jsoncpp
+      - libnotify
+  archlinux:
+    depends:
+      - gtk3
+      - curl
+      - libsecret
+      - jsoncpp
+      - libayatana-appindicator
+      - libnotify

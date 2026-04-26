@@ -11,6 +11,7 @@ body:
       description: Where does the issue reproduce?
       options:
         - Windows
+        - Linux
         - Android
         - Other
     validations:

@@ -6,8 +6,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/errors/user_facing_error_formatter.dart';
+import '../core/platform/desktop_runtime.dart';
 import '../core/platform/window_bootstrap.dart';
-import '../core/platform/windows_desktop_runtime.dart';
 import '../core/theme/kick_theme.dart';
 import '../features/shared/kick_surfaces.dart';
 import '../features/shared/kick_window_frame.dart';
@@ -109,7 +109,7 @@ class _KickBootstrapGateState extends State<KickBootstrapGate> {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         WidgetsBinding.instance.allowFirstFrame();
       }
-      if (!WindowsDesktopRuntime.startHiddenOnLaunch) {
+      if (!DesktopRuntime.startHiddenOnLaunch) {
         unawaited(WindowBootstrap.reveal());
       }
     });

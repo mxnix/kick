@@ -138,7 +138,8 @@ class ConfigurationBackupService {
        _exportDirectoryResolver = exportDirectoryResolver ?? _defaultExportDirectory,
        _saveFileCallback = saveFileCallback ?? _defaultSaveFile,
        _pickFileCallback = pickFileCallback ?? _defaultPickFile,
-       _useNativeSaveDialog = useNativeSaveDialog ?? (Platform.isAndroid || Platform.isWindows),
+       _useNativeSaveDialog =
+           useNativeSaveDialog ?? (Platform.isAndroid || Platform.isWindows || Platform.isLinux),
        _supportDirectoryProvider = supportDirectoryProvider ?? getApplicationSupportDirectory;
 
   final ConfigurationBackupReadTokens _readTokens;
@@ -225,9 +226,7 @@ class ConfigurationBackupService {
     final previousTokensByRef = await _snapshotTokens(existingAccounts);
     final preparedRestore = await _prepareAccountsForRestore(document.accounts);
     final restoredEntries = preparedRestore.accounts;
-    final restoredAccounts = restoredEntries
-        .map((entry) => entry.profile)
-        .toList(growable: false);
+    final restoredAccounts = restoredEntries.map((entry) => entry.profile).toList(growable: false);
     final restoredCredentialSourcePaths = {
       for (final account in restoredAccounts)
         if (account.provider == AccountProvider.kiro &&
@@ -786,7 +785,8 @@ class _ConfigurationBackupAccount {
   Map<String, Object?> toJson() {
     return {
       ...profile.toBackupJson(tokens: tokens),
-      if (kiroManagedCredentialState != null) 'provider_state': kiroManagedCredentialState!.toJson(),
+      if (kiroManagedCredentialState != null)
+        'provider_state': kiroManagedCredentialState!.toJson(),
     };
   }
 }

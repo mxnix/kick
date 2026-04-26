@@ -14,13 +14,13 @@ class SettingsAppearanceSection extends StatelessWidget {
     required this.controller,
     required this.expanded,
     required this.onToggle,
-    required this.isWindowsPlatform,
+    required this.isDesktopTrayPlatform,
   });
 
   final SettingsDraftController controller;
   final bool expanded;
   final VoidCallback onToggle;
-  final bool isWindowsPlatform;
+  final bool isDesktopTrayPlatform;
 
   @override
   Widget build(BuildContext context) {
@@ -115,10 +115,10 @@ class SettingsAppearanceSection extends StatelessWidget {
             value: controller.unsafeRawLoggingEnabled,
             onChanged: controller.setUnsafeRawLoggingEnabled,
           ),
-          if (isWindowsPlatform) ...[
+          if (isDesktopTrayPlatform) ...[
             const SizedBox(height: 18),
             SettingInfoCard(
-              icon: Icons.desktop_windows_rounded,
+              icon: Icons.computer_rounded,
               title: l10n.windowsTrayTitle,
               subtitle: l10n.windowsTraySubtitle,
             ),
