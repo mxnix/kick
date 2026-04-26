@@ -576,6 +576,7 @@ jobs:
             apt-utils \
             dpkg-dev \
             createrepo-c \
+            libarchive-tools \
             pacman-package-manager \
             zstd \
             gzip
