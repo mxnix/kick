@@ -207,6 +207,11 @@ class AppUpdateInstaller {
   }
 
   Future<AppUpdateInstallLaunchResult> launchInstall(DownloadedAppUpdate downloadedUpdate) async {
+    if (!downloadedUpdate.isChecksumVerified) {
+      throw StateError(
+        'Cannot install update ${downloadedUpdate.version}: checksum verification failed or was unavailable.',
+      );
+    }
     return switch (_installPlatform) {
       AppUpdateInstallPlatform.windows => _launchWindowsInstaller(downloadedUpdate),
       AppUpdateInstallPlatform.android => _launchAndroidInstaller(downloadedUpdate),

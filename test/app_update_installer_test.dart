@@ -81,6 +81,27 @@ void main() {
     );
   });
 
+  test('rejects launching an installer that has not been checksum-verified', () async {
+    final installer = AppUpdateInstaller(
+      installPlatform: AppUpdateInstallPlatform.linux,
+      linuxPackageOpener: (filePath) async {},
+    );
+    addTearDown(installer.dispose);
+
+    await expectLater(
+      installer.launchInstall(
+        const DownloadedAppUpdate(
+          version: '1.1.0',
+          filePath: '/tmp/kick-linux-x64-1.1.0.deb',
+          fileName: 'kick-linux-x64-1.1.0.deb',
+          sha256: 'abc',
+          isChecksumVerified: false,
+        ),
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('opens a verified Linux package without invoking a package manager', () async {
     final openedPaths = <String>[];
     final installer = AppUpdateInstaller(
