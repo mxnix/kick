@@ -45,8 +45,17 @@ if [[ -z "$gpg_key_id" ]]; then
 fi
 gpg_sign_args=(--batch --yes --pinentry-mode loopback --local-user "$gpg_key_id")
 if [[ -n "${KICK_RELEASE_GPG_PASSPHRASE:-}" ]]; then
-  gpg_sign_args+=(--passphrase "$KICK_RELEASE_GPG_PASSPHRASE")
+  gpg_sign_args+=(--passphrase-fd 3)
 fi
+
+gpg_sign() {
+  if [[ -n "${KICK_RELEASE_GPG_PASSPHRASE:-}" ]]; then
+    gpg "${gpg_sign_args[@]}" "$@" 3<<<"$KICK_RELEASE_GPG_PASSPHRASE"
+    return
+  fi
+
+  gpg "${gpg_sign_args[@]}" "$@"
+}
 
 artifact_dir="$(cd "$artifact_dir" && pwd)"
 mkdir -p "$pages_dir/linux"
@@ -74,9 +83,9 @@ cp "$deb" "$apt_root/pool/main/k/kick/"
   dpkg-scanpackages --arch amd64 pool > dists/stable/main/binary-amd64/Packages
   gzip -9kf dists/stable/main/binary-amd64/Packages
   apt-ftparchive release dists/stable > dists/stable/Release
-  gpg "${gpg_sign_args[@]}" \
+  gpg_sign \
     --clearsign --digest-algo SHA256 -o dists/stable/InRelease dists/stable/Release
-  gpg "${gpg_sign_args[@]}" \
+  gpg_sign \
     --detach-sign --armor -o dists/stable/Release.gpg dists/stable/Release
 )
 
@@ -85,7 +94,7 @@ rm -rf "$rpm_root"
 mkdir -p "$rpm_root/Packages"
 cp "$rpm" "$rpm_root/Packages/"
 createrepo_c "$rpm_root"
-gpg "${gpg_sign_args[@]}" \
+gpg_sign \
   --detach-sign --armor -o "$rpm_root/repodata/repomd.xml.asc" "$rpm_root/repodata/repomd.xml"
 
 pacman_root="$pages_dir/linux/pacman/x86_64"
@@ -97,7 +106,7 @@ cp "$pacman_pkg" "$pacman_root/"
   repo-add "$repo_name.db.tar.gz" "$(basename "$pacman_pkg")"
   cp "$repo_name.db.tar.gz" "$repo_name.db"
   cp "$repo_name.files.tar.gz" "$repo_name.files"
-  gpg "${gpg_sign_args[@]}" \
+  gpg_sign \
     --detach-sign --armor -o "$repo_name.db.tar.gz.sig" "$repo_name.db.tar.gz"
   cp "$repo_name.db.tar.gz.sig" "$repo_name.db.sig"
 )

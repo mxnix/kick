@@ -31,12 +31,15 @@ class DesktopRuntime with TrayListener, WindowListener {
 
   static const trayNotificationShownKey = 'desktop_tray_notification_shown';
   static final DesktopRuntime _instance = DesktopRuntime._();
-  static final DesktopLaunchOptions launchOptions = DesktopLaunchOptions.fromArguments(
-    Platform.executableArguments,
-  );
+  static DesktopLaunchOptions _launchOptions = const DesktopLaunchOptions(startHidden: false);
 
   static bool get isSupported => Platform.isWindows || Platform.isLinux;
+  static DesktopLaunchOptions get launchOptions => _launchOptions;
   static bool get startHiddenOnLaunch => isSupported && launchOptions.startHidden;
+
+  static void configureLaunchOptions(DesktopLaunchOptions launchOptions) {
+    _launchOptions = launchOptions;
+  }
 
   static Future<void> configure({
     required AppSettings settings,

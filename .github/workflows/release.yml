@@ -520,11 +520,11 @@ jobs:
         run: |
           checksum_file="release-artifacts/kick-${{ needs.metadata.outputs.version }}-checksums.txt"
           gpg --batch --yes --pinentry-mode loopback \
-            --passphrase "$KICK_RELEASE_GPG_PASSPHRASE" \
+            --passphrase-fd 3 \
             --local-user "$KICK_RELEASE_GPG_KEY_ID" \
             --armor --detach-sign \
             --output "$checksum_file.asc" \
-            "$checksum_file"
+            "$checksum_file" 3<<<"$KICK_RELEASE_GPG_PASSPHRASE"
 
       - name: Create or update GitHub release
         uses: softprops/action-gh-release@v3
@@ -610,11 +610,12 @@ jobs:
         shell: bash
         run: |
           gpg --batch --yes --pinentry-mode loopback \
-            --passphrase "$KICK_RELEASE_GPG_PASSPHRASE" \
+            --passphrase-fd 3 \
             --local-user "$KICK_RELEASE_GPG_KEY_ID" \
             --detach-sign --armor \
             --output /tmp/kick-signing-smoke.asc \
-            linux-artifacts/kick-linux-x64-${{ needs.metadata.outputs.version }}.deb
+            linux-artifacts/kick-linux-x64-${{ needs.metadata.outputs.version }}.deb \
+            3<<<"$KICK_RELEASE_GPG_PASSPHRASE"
           rm -f /tmp/kick-signing-smoke.asc
           chmod +x scripts/publish-linux-repos.sh
           scripts/publish-linux-repos.sh \

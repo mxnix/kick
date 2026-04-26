@@ -323,23 +323,11 @@ Future<void> _openLinuxPackage(String filePath) async {
       throw StateError('Linux AppImage could not be marked executable.');
     }
 
-    final process = await Process.start(filePath, const [], mode: ProcessStartMode.detached);
-    await _waitForLinuxPackageLaunch(process, 'Linux AppImage could not be opened.');
+    await Process.start(filePath, const [], mode: ProcessStartMode.detached);
     return;
   }
 
-  final process = await Process.start('xdg-open', [filePath], mode: ProcessStartMode.detached);
-  await _waitForLinuxPackageLaunch(process, 'Linux package could not be opened.');
-}
-
-Future<void> _waitForLinuxPackageLaunch(Process process, String failureMessage) async {
-  final exitCode = await process.exitCode.timeout(
-    const Duration(milliseconds: 500),
-    onTimeout: () => 0,
-  );
-  if (exitCode != 0) {
-    throw StateError(failureMessage);
-  }
+  await Process.start('xdg-open', [filePath], mode: ProcessStartMode.detached);
 }
 
 class AppUpdateController extends Notifier<AppUpdateFlowState> {

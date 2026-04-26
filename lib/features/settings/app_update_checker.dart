@@ -80,7 +80,7 @@ class AppUpdateChecker {
         ? map['html_url']!.toString().trim()
         : kickLatestReleaseUrl;
     final linuxPackageFormat = _targetPlatform == TargetPlatform.linux
-        ? (_linuxPackageFormat ?? LinuxPackageFormat.detect())
+        ? (_linuxPackageFormat ?? await LinuxPackageFormat.detect())
         : null;
     final installerAsset = _resolveInstallerAsset(
       releasePayload: map,
@@ -249,17 +249,17 @@ enum LinuxPackageFormat {
   rpm,
   pacman;
 
-  static LinuxPackageFormat? detect({String osReleasePath = '/etc/os-release'}) {
+  static Future<LinuxPackageFormat?> detect({String osReleasePath = '/etc/os-release'}) async {
     if (!Platform.isLinux) {
       return null;
     }
 
     try {
       final file = File(osReleasePath);
-      if (!file.existsSync()) {
+      if (!await file.exists()) {
         return null;
       }
-      return fromOsRelease(file.readAsStringSync());
+      return fromOsRelease(await file.readAsString());
     } on FileSystemException {
       return null;
     }
