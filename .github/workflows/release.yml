@@ -577,6 +577,7 @@ jobs:
             dpkg-dev \
             createrepo-c \
             pacman-package-manager \
+            zstd \
             gzip
 
       - name: Validate release signing secrets

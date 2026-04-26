@@ -77,10 +77,10 @@ gpg --export "$gpg_key_id" > "$pages_dir/linux/kick.gpg"
 apt_root="$pages_dir/linux/apt"
 rm -rf "$apt_root"
 mkdir -p "$apt_root/pool/main/k/kick" "$apt_root/dists/stable/main/binary-amd64"
-cp "$deb" "$apt_root/pool/main/k/kick/"
+cp "$deb" "$apt_root/pool/main/k/kick/kick_${app_version}_amd64.deb"
 (
   cd "$apt_root"
-  dpkg-scanpackages --arch amd64 pool > dists/stable/main/binary-amd64/Packages
+  dpkg-scanpackages pool > dists/stable/main/binary-amd64/Packages
   gzip -9kf dists/stable/main/binary-amd64/Packages
   apt-ftparchive release dists/stable > dists/stable/Release
   gpg_sign \
@@ -100,10 +100,11 @@ gpg_sign \
 pacman_root="$pages_dir/linux/pacman/x86_64"
 rm -rf "$pacman_root"
 mkdir -p "$pacman_root"
-cp "$pacman_pkg" "$pacman_root/"
+pacman_repo_pkg="$pacman_root/kick-${app_version}-1-x86_64.pkg.tar.zst"
+cp "$pacman_pkg" "$pacman_repo_pkg"
 (
   cd "$pacman_root"
-  repo-add "$repo_name.db.tar.gz" "$(basename "$pacman_pkg")"
+  repo-add "$repo_name.db.tar.gz" "$(basename "$pacman_repo_pkg")"
   cp "$repo_name.db.tar.gz" "$repo_name.db"
   cp "$repo_name.files.tar.gz" "$repo_name.files"
   gpg_sign \
