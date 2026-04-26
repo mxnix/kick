@@ -232,6 +232,7 @@ class OpenAiResponseMapper {
             'call_id': toolCall['id'],
             'name': ((toolCall['function'] as Map?)?['name']),
             'arguments': ((toolCall['function'] as Map?)?['arguments']) ?? '{}',
+            if (toolCall['extra_content'] != null) 'extra_content': toolCall['extra_content'],
           },
         ),
       );
@@ -384,6 +385,7 @@ class OpenAiResponseMapper {
             'name': function['name'],
             'arguments': '',
             'status': 'in_progress',
+            if (toolCall['extra_content'] != null) 'extra_content': toolCall['extra_content'],
           },
         });
       }
@@ -441,6 +443,7 @@ class OpenAiResponseMapper {
             'name': function['name'],
             'arguments': function['arguments'] ?? '{}',
             'status': 'completed',
+            if (toolCall['extra_content'] != null) 'extra_content': toolCall['extra_content'],
           },
         });
       }
@@ -541,6 +544,10 @@ class OpenAiResponseMapper {
 
   static int currentToolCallCount(Map<String, Object?> payload) {
     return _extractPrimaryChoice(payload).toolCalls.length;
+  }
+
+  static List<Map<String, Object?>> currentToolCalls(Map<String, Object?> payload) {
+    return _extractPrimaryChoice(payload).toolCalls;
   }
 
   static List<String> currentToolCallArguments(Map<String, Object?> payload) {
@@ -657,6 +664,10 @@ class OpenAiResponseMapper {
     return text;
   }
 
+  static String? _partThoughtSignature(Map<String, Object?> part) {
+    return _nonEmptyString(part['thoughtSignature']) ?? _nonEmptyString(part['thought_signature']);
+  }
+
   static int? _parseInt(Object? value) {
     return switch (value) {
       int integer => integer,
@@ -678,6 +689,7 @@ class OpenAiResponseMapper {
     final reasoningBuffer = StringBuffer();
     final googleThoughts = <Map<String, Object?>>[];
     final toolCalls = <Map<String, Object?>>[];
+    String? pendingFunctionCallThoughtSignature;
 
     for (final rawPart in parts) {
       if (rawPart is! Map) {
@@ -686,7 +698,7 @@ class OpenAiResponseMapper {
       final part = rawPart.cast<String, Object?>();
       if (part['thought'] == true) {
         final thoughtText = part['text'] as String? ?? '';
-        final thoughtSignature = (part['thoughtSignature'] as String?)?.trim();
+        final thoughtSignature = _partThoughtSignature(part);
         if (thoughtText.isNotEmpty) {
           reasoningBuffer.write(thoughtText);
         }
@@ -696,6 +708,9 @@ class OpenAiResponseMapper {
             if (thoughtSignature != null && thoughtSignature.isNotEmpty)
               'signature': thoughtSignature,
           });
+        }
+        if (thoughtSignature != null && thoughtSignature.isNotEmpty) {
+          pendingFunctionCallThoughtSignature = thoughtSignature;
         }
         continue;
       }
@@ -708,6 +723,11 @@ class OpenAiResponseMapper {
       if (functionCall != null) {
         final toolIndex = toolCalls.length;
         final explicitId = (functionCall['id'] as String?)?.trim();
+        final thoughtSignature =
+            _partThoughtSignature(part) ??
+            _partThoughtSignature(functionCall) ??
+            pendingFunctionCallThoughtSignature;
+        pendingFunctionCallThoughtSignature = null;
         toolCalls.add({
           'id': explicitId == null || explicitId.isEmpty ? 'call_${toolIndex + 1}' : explicitId,
           'type': 'function',
@@ -716,6 +736,10 @@ class OpenAiResponseMapper {
             'name': functionCall['name'] as String? ?? 'tool',
             'arguments': _stringifyJson(functionCall['args']),
           },
+          if (thoughtSignature != null && thoughtSignature.isNotEmpty)
+            'extra_content': {
+              'google': {'thought_signature': thoughtSignature},
+            },
         });
       }
     }

@@ -1985,6 +1985,66 @@ void main() {
       'thoughtSignature': 'sig_weather',
     });
     expect((assistantParts[1]['functionCall'] as Map)['name'], 'lookupWeather');
+    expect(assistantParts[1]['thoughtSignature'], 'sig_weather');
+  });
+
+  test('adds Gemini 3 fallback thought signatures to model function calls', () async {
+    Map<String, Object?>? capturedBody;
+
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody =
+              jsonDecode(await request.finalize().bytesToString()) as Map<String, Object?>;
+          return http.Response(
+            jsonEncode({
+              'response': {
+                'candidates': [
+                  {
+                    'content': {
+                      'parts': [
+                        {'text': 'ok'},
+                      ],
+                    },
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        model: 'gemini-3.1-pro-preview',
+        turns: const [
+          UnifiedTurn(
+            role: 'assistant',
+            parts: [
+              UnifiedPart.functionCall(
+                callId: 'call_read',
+                name: 'default_api:read_file',
+                arguments: {'path': 'README.md'},
+              ),
+            ],
+          ),
+          UnifiedTurn(role: 'user', parts: [UnifiedPart.text('Continue')]),
+        ],
+      ),
+    );
+
+    final requestMap = (capturedBody?['request'] as Map).cast<String, Object?>();
+    final contents = (requestMap['contents'] as List).cast<Map>();
+    final assistantTurn = contents.first.cast<String, Object?>();
+    final assistantParts = (assistantTurn['parts'] as List).cast<Map>();
+
+    expect(assistantTurn['role'], 'model');
+    expect((assistantParts.single['functionCall'] as Map)['name'], 'default_api:read_file');
+    expect(assistantParts.single['thoughtSignature'], 'skip_thought_signature_validator');
   });
 
   test('keeps trailing system prompts as the final user turn for Gemini requests', () async {

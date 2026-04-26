@@ -75,8 +75,8 @@ class UnifiedPart {
     required this.callId,
     required this.name,
     required this.arguments,
+    this.thoughtSignature,
   }) : type = UnifiedPartType.functionCall,
-       thoughtSignature = null,
        text = null,
        mimeType = null,
        data = null,
@@ -217,6 +217,7 @@ class OpenAiRequestParser {
               callId: id,
               name: name,
               arguments: _parseJsonLike(function['arguments']),
+              thoughtSignature: _extractToolCallThoughtSignature(toolCall),
             ),
           );
         }
@@ -287,6 +288,7 @@ class OpenAiRequestParser {
                   callId: item['call_id'] as String? ?? '',
                   name: item['name'] as String? ?? 'tool',
                   arguments: _parseJsonLike(item['arguments']),
+                  thoughtSignature: _extractToolCallThoughtSignature(item),
                 ),
               ],
             ),
@@ -364,6 +366,28 @@ class OpenAiRequestParser {
       throw FormatException('`$key` is required.');
     }
     return value;
+  }
+
+  static String? _extractToolCallThoughtSignature(Map<String, Object?> toolCall) {
+    final direct =
+        _trimmedString(toolCall['thought_signature']) ??
+        _trimmedString(toolCall['thoughtSignature']);
+    if (direct != null) {
+      return direct;
+    }
+
+    final extraContent = (toolCall['extra_content'] as Map?)?.cast<String, Object?>();
+    final google = (extraContent?['google'] as Map?)?.cast<String, Object?>();
+    return _trimmedString(google?['thought_signature']) ??
+        _trimmedString(google?['thoughtSignature']);
+  }
+
+  static String? _trimmedString(Object? value) {
+    if (value is! String) {
+      return null;
+    }
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   static List<UnifiedToolDeclaration> _parseTools(Object? rawTools) {

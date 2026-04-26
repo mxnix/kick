@@ -175,6 +175,7 @@ const _minimumContinuationOverlap = 6;
 const _fallbackOnboardTierId = 'legacy-tier';
 const _projectDiscoveryPollDelay = Duration(seconds: 2);
 const _projectDiscoveryMaxPollAttempts = 15;
+const _skipThoughtSignatureValidator = 'skip_thought_signature_validator';
 
 GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
   final decoded = _tryDecodeJsonMap(body);
@@ -709,6 +710,7 @@ class GeminiCodeAssistClient {
     for (final turn in request.turns) {
       final role = turn.role == 'assistant' ? 'model' : 'user';
       final parts = <Map<String, Object?>>[];
+      String? pendingFunctionCallThoughtSignature;
       for (final part in turn.parts) {
         switch (part.type) {
           case UnifiedPartType.text:
@@ -726,14 +728,27 @@ class GeminiCodeAssistClient {
                 if (thoughtSignature != null && thoughtSignature.isNotEmpty)
                   'thoughtSignature': thoughtSignature,
               });
+              if (thoughtSignature != null && thoughtSignature.isNotEmpty) {
+                pendingFunctionCallThoughtSignature = thoughtSignature;
+              }
             }
             break;
           case UnifiedPartType.functionCall:
+            final thoughtSignature = part.thoughtSignature?.trim().isNotEmpty == true
+                ? part.thoughtSignature!.trim()
+                : pendingFunctionCallThoughtSignature?.trim().isNotEmpty == true
+                ? pendingFunctionCallThoughtSignature!.trim()
+                : role == 'model' && _isGemini3Model(resolvedModel)
+                ? _skipThoughtSignatureValidator
+                : null;
+            pendingFunctionCallThoughtSignature = null;
             parts.add({
               'functionCall': {
                 'name': part.name,
                 'args': part.arguments ?? const <String, Object?>{},
               },
+              if (thoughtSignature != null && thoughtSignature.isNotEmpty)
+                'thoughtSignature': thoughtSignature,
             });
             break;
           case UnifiedPartType.functionResponse:

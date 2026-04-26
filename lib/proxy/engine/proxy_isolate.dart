@@ -19,6 +19,7 @@ import '../model_catalog.dart';
 import '../openai/openai_request_parser.dart';
 import '../openai/openai_response_mapper.dart';
 import '../openai/sse.dart';
+import '../openai/thought_signature_cache.dart';
 import 'proxy_cors.dart';
 
 const _maxRequestBodyBytes = 20 * 1024 * 1024;
@@ -245,6 +246,7 @@ class _ProxyIsolateHost {
   late final GeminiCodeAssistClient _geminiClient;
   late final KiroCodeAssistClient _kiroClient;
   final _uuid = const Uuid();
+  final OpenAiThoughtSignatureCache _thoughtSignatures = OpenAiThoughtSignatureCache();
 
   Map<String, Object?>? _settings;
   String? _geminiInstallationIdPath;
@@ -406,6 +408,7 @@ class _ProxyIsolateHost {
       headers: request.headers,
       defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
     );
+    _thoughtSignatures.enrichChatRequest(body);
     final requestId = _uuid.v4().replaceAll('-', '');
     UnifiedPromptRequest? prompt;
     _RequestRetryTracker? retryTracker;
@@ -442,6 +445,7 @@ class _ProxyIsolateHost {
           route: route,
           retryTracker: retryTracker,
           mapper: (payload, includePrelude) {
+            _thoughtSignatures.rememberToolCalls(OpenAiResponseMapper.currentToolCalls(payload));
             final events = OpenAiResponseMapper.toChatStreamDeltas(
               requestId: resolvedPrompt.requestId,
               model: resolvedPrompt.model,
@@ -469,6 +473,7 @@ class _ProxyIsolateHost {
         details: _requestContextPayload(prompt: resolvedPrompt),
       );
       final payload = await _executeNonStreamRequest(resolvedPrompt, retryTracker: retryTracker);
+      _thoughtSignatures.rememberToolCalls(OpenAiResponseMapper.currentToolCalls(payload));
       await _logTrace(
         category: 'chat.completions',
         route: route,
@@ -604,6 +609,7 @@ class _ProxyIsolateHost {
       headers: request.headers,
       defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
     );
+    _thoughtSignatures.enrichResponsesRequest(body);
     final requestId = _uuid.v4().replaceAll('-', '');
     UnifiedPromptRequest? prompt;
     _RequestRetryTracker? retryTracker;
@@ -641,6 +647,7 @@ class _ProxyIsolateHost {
           route: route,
           retryTracker: retryTracker,
           mapper: (payload, includePrelude) {
+            _thoughtSignatures.rememberToolCalls(OpenAiResponseMapper.currentToolCalls(payload));
             final events = OpenAiResponseMapper.toResponsesStreamEvents(
               requestId: resolvedPrompt.requestId,
               model: resolvedPrompt.model,
@@ -664,6 +671,7 @@ class _ProxyIsolateHost {
       }
 
       final payload = await _executeNonStreamRequest(resolvedPrompt, retryTracker: retryTracker);
+      _thoughtSignatures.rememberToolCalls(OpenAiResponseMapper.currentToolCalls(payload));
       await _logResponsePreview(
         category: 'responses',
         route: route,

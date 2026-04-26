@@ -248,6 +248,9 @@ void main() {
     expect(message['content'], isNull);
     expect(toolCall['id'], 'call_weather');
     expect(toolCall['index'], 0);
+    expect(toolCall['extra_content'], {
+      'google': {'thought_signature': 'sig_weather'},
+    });
     expect(
       ((toolCall['function'] as Map).cast<String, Object?>())['arguments'],
       '{"city":"Moscow"}',
@@ -389,6 +392,54 @@ void main() {
     expect(reasoning['google_thoughts'], [
       {'text': 'Need a plan.', 'signature': 'sig_plan'},
     ]);
+  });
+
+  test('tool call parts expose Google thought signatures on extra content', () {
+    final payload = <String, Object?>{
+      'response': {
+        'candidates': [
+          {
+            'content': {
+              'parts': [
+                {
+                  'functionCall': {
+                    'id': 'call_read',
+                    'name': 'default_api:read_file',
+                    'args': {'path': 'README.md'},
+                  },
+                  'thoughtSignature': 'sig_read_file',
+                },
+              ],
+            },
+            'finishReason': 'STOP',
+          },
+        ],
+      },
+    };
+
+    final chat = OpenAiResponseMapper.toChatCompletion(
+      requestId: 'req_tool_sig',
+      model: 'gemini-3.1-pro-preview',
+      payload: payload,
+    );
+    final chatMessage = ((((chat['choices'] as List).single as Map)['message'] as Map)
+        .cast<String, Object?>());
+    final chatToolCall = ((chatMessage['tool_calls'] as List).single as Map)
+        .cast<String, Object?>();
+
+    final responses = OpenAiResponseMapper.toResponsesObject(
+      requestId: 'resp_tool_sig',
+      model: 'gemini-3.1-pro-preview',
+      payload: payload,
+    );
+    final responseToolCall = ((responses['output'] as List).first as Map).cast<String, Object?>();
+
+    expect(chatToolCall['extra_content'], {
+      'google': {'thought_signature': 'sig_read_file'},
+    });
+    expect(responseToolCall['extra_content'], {
+      'google': {'thought_signature': 'sig_read_file'},
+    });
   });
 
   test('chat completion surfaces prompt-filtered empty Gemini responses', () {

@@ -161,6 +161,34 @@ void main() {
     expect(request.turns.last.parts.single.arguments?['result'], 'Bananas are berries.');
   });
 
+  test('parses Google thought signatures attached to OpenAI tool calls', () {
+    final request = OpenAiRequestParser.parseChatRequest({
+      'model': 'gemini-3.1-pro-preview',
+      'messages': [
+        {'role': 'user', 'content': 'Read the file'},
+        {
+          'role': 'assistant',
+          'tool_calls': [
+            {
+              'id': 'call_read',
+              'type': 'function',
+              'extra_content': {
+                'google': {'thought_signature': 'sig_read_file'},
+              },
+              'function': {'name': 'default_api:read_file', 'arguments': '{"path":"README.md"}'},
+            },
+          ],
+        },
+      ],
+    }, requestId: 'req_tool_sig');
+
+    final functionCall = request.turns.last.parts.single;
+
+    expect(functionCall.type, UnifiedPartType.functionCall);
+    expect(functionCall.name, 'default_api:read_file');
+    expect(functionCall.thoughtSignature, 'sig_read_file');
+  });
+
   test('keeps only leading system and developer notes in system instruction', () {
     final request = OpenAiRequestParser.parseChatRequest({
       'model': 'gemini-2.5-pro',
