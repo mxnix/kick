@@ -855,6 +855,24 @@ abstract class AppLocalizations {
   /// **'Dark'**
   String get themeModeDark;
 
+  /// No description provided for @fontLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Font'**
+  String get fontLabel;
+
+  /// No description provided for @fontOptionGoogleSans.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Sans'**
+  String get fontOptionGoogleSans;
+
+  /// No description provided for @fontOptionSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get fontOptionSystem;
+
   /// No description provided for @dynamicThemeTitle.
   ///
   /// In en, this message translates to:

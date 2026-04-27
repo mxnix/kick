@@ -39,6 +39,7 @@ class SettingsDraftController extends ChangeNotifier {
   Locale? _appLocale;
   ThemeMode _themeMode = ThemeMode.system;
   KickLogVerbosity _verbosity = KickLogVerbosity.normal;
+  bool _useSystemFont = false;
   bool _useDynamicColor = true;
   bool _allowLan = false;
   bool _apiKeyRequired = true;
@@ -63,6 +64,7 @@ class SettingsDraftController extends ChangeNotifier {
   Locale? get appLocale => _appLocale;
   ThemeMode get themeMode => _themeMode;
   KickLogVerbosity get verbosity => _verbosity;
+  bool get useSystemFont => _useSystemFont;
   bool get useDynamicColor => _useDynamicColor;
   bool get allowLan => _allowLan;
   bool get apiKeyRequired => _apiKeyRequired;
@@ -110,6 +112,15 @@ class SettingsDraftController extends ChangeNotifier {
       return;
     }
     _themeMode = value;
+    notifyListeners();
+    saveImmediately();
+  }
+
+  void setUseSystemFont(bool value) {
+    if (_useSystemFont == value) {
+      return;
+    }
+    _useSystemFont = value;
     notifyListeners();
     saveImmediately();
   }
@@ -305,6 +316,7 @@ class SettingsDraftController extends ChangeNotifier {
     _appLocale = settings.appLocale;
     _themeMode = settings.themeMode;
     _verbosity = settings.loggingVerbosity;
+    _useSystemFont = settings.useSystemFont;
     _useDynamicColor = settings.useDynamicColor;
     _allowLan = settings.allowLan;
     _androidBackgroundRuntime = settings.androidBackgroundRuntime;
@@ -350,6 +362,7 @@ class SettingsDraftController extends ChangeNotifier {
     final updated = currentSettings.copyWith(
       appLocale: _appLocale,
       themeMode: _themeMode,
+      useSystemFont: _useSystemFont,
       useDynamicColor: _useDynamicColor,
       host: hostController.text.trim(),
       port: int.parse(portController.text.trim()),
@@ -458,6 +471,7 @@ class SettingsDraftController extends ChangeNotifier {
         left.apiKeyRequired == right.apiKeyRequired &&
         left.appLocale == right.appLocale &&
         left.themeMode == right.themeMode &&
+        left.useSystemFont == right.useSystemFont &&
         left.useDynamicColor == right.useDynamicColor &&
         left.hasAcknowledgedDisclaimer == right.hasAcknowledgedDisclaimer &&
         left.analyticsConsentEnabled == right.analyticsConsentEnabled &&

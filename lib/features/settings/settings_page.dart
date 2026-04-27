@@ -34,6 +34,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _googleExpanded = false;
   bool _backupExpanded = false;
   bool _configurationTransferInProgress = false;
+  String? _lastPresentedSaveErrorMessage;
 
   @override
   void initState() {
@@ -68,24 +69,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           animation: _draftController,
           builder: (context, child) {
             final saveError = _draftController.saveError;
-            final saveErrorMessage = saveError == null
-                ? null
-                : formatUserFacingError(l10n, saveError);
+            if (_draftController.saveState == SettingsDraftSaveState.error && saveError != null) {
+              _scheduleSaveErrorSnackBar(
+                _combineSaveErrorMessage(
+                  title: l10n.settingsSaveFailedStatus,
+                  message: formatUserFacingError(l10n, saveError),
+                ),
+              );
+            } else {
+              _lastPresentedSaveErrorMessage = null;
+            }
 
             return SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SectionHeading(
-                    title: l10n.settingsTitle,
-                    subtitle: l10n.settingsSubtitle,
-                    trailing: _draftController.showSaveStatus
-                        ? SettingsSaveBadge(
-                            state: _draftController.saveState,
-                            errorMessage: saveErrorMessage,
-                          )
-                        : null,
-                  ),
+                  SectionHeading(title: l10n.settingsTitle, subtitle: l10n.settingsSubtitle),
                   const SizedBox(height: 24),
                   SettingsAppearanceSection(
                     controller: _draftController,
@@ -352,6 +351,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _scheduleSaveErrorSnackBar(String message) {
+    if (_lastPresentedSaveErrorMessage == message) {
+      return;
+    }
+    _lastPresentedSaveErrorMessage = message;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _lastPresentedSaveErrorMessage != message) {
+        return;
+      }
+      _showSnackBar(message);
+    });
+  }
+
+  String _combineSaveErrorMessage({required String title, required String message}) {
+    final trimmedMessage = message.trim();
+    if (trimmedMessage.isEmpty || trimmedMessage == title) {
+      return title;
+    }
+    return '$title: $trimmedMessage';
   }
 
   String _formatConfigurationBackupError(KickLocalizations l10n, Object error) {

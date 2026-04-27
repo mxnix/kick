@@ -435,6 +435,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeModeDark => 'Тёмная';
 
   @override
+  String get fontLabel => 'Шрифт';
+
+  @override
+  String get fontOptionGoogleSans => 'Google Sans';
+
+  @override
+  String get fontOptionSystem => 'Системный';
+
+  @override
   String get dynamicThemeTitle => 'Динамическая тема';
 
   @override

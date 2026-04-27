@@ -26,6 +26,7 @@ class KickApp extends ConsumerWidget {
     final app = KickThemeBuilder(
       themeMode: settings.themeMode,
       useDynamicColor: settings.useDynamicColor,
+      useSystemFont: settings.useSystemFont,
       bootstrapData: themeBootstrapData,
       builder: (lightTheme, darkTheme) {
         return MaterialApp.router(

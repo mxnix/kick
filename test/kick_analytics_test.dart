@@ -36,6 +36,7 @@ void main() {
       apiKey: 'kick_test',
       apiKeyRequired: true,
       themeMode: ThemeMode.system,
+      useSystemFont: false,
       useDynamicColor: true,
       hasAcknowledgedDisclaimer: false,
       analyticsConsentEnabled: false,

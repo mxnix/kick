@@ -14,4 +14,12 @@ void main() {
     expect(theme.textTheme.titleLarge?.fontFamily, KickThemeData.defaultFontFamily);
     expect(theme.textTheme.labelLarge?.fontFamily, KickThemeData.defaultFontFamily);
   });
+
+  test('theme can use the platform system font', () {
+    final theme = KickThemeData.build(KickSchemes.light, useSystemFont: true);
+
+    expect(theme.textTheme.bodyMedium?.fontFamily, isNot(KickThemeData.defaultFontFamily));
+    expect(theme.textTheme.titleLarge?.fontFamily, isNot(KickThemeData.defaultFontFamily));
+    expect(theme.textTheme.labelLarge?.fontFamily, isNot(KickThemeData.defaultFontFamily));
+  });
 }

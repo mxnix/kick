@@ -15,6 +15,7 @@ void main() {
     expect(settings.defaultGoogleWebSearchEnabled, isFalse);
     expect(settings.renderGoogleGroundingInMessage, isFalse);
     expect(settings.appLocale, isNull);
+    expect(settings.useSystemFont, isFalse);
     expect(settings.logRetentionCount, defaultLogRetentionCount);
   });
 
@@ -24,6 +25,7 @@ void main() {
       apiKeyRequired: false,
       appLocale: Locale('ru'),
       themeMode: ThemeMode.dark,
+      useSystemFont: true,
       useDynamicColor: false,
       hasAcknowledgedDisclaimer: true,
       analyticsConsentEnabled: false,
@@ -50,6 +52,7 @@ void main() {
     expect(restored.apiKeyRequired, isFalse);
     expect(restored.appLocale, const Locale('ru'));
     expect(restored.themeMode, ThemeMode.dark);
+    expect(restored.useSystemFont, isTrue);
     expect(restored.allowLan, isTrue);
     expect(restored.requestMaxRetries, 7);
     expect(restored.retry429DelaySeconds, 45);
@@ -68,6 +71,7 @@ void main() {
       apiKeyRequired: false,
       appLocale: Locale('en'),
       themeMode: ThemeMode.dark,
+      useSystemFont: true,
       useDynamicColor: false,
       hasAcknowledgedDisclaimer: true,
       analyticsConsentEnabled: true,
@@ -91,6 +95,7 @@ void main() {
 
     expect(restored.apiKey, 'kick_backup');
     expect(restored.appLocale, const Locale('en'));
+    expect(restored.useSystemFont, isTrue);
     expect(restored.analyticsConsentEnabled, isTrue);
     expect(restored.host, '192.168.1.10');
     expect(restored.port, 4010);

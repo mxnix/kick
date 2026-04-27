@@ -436,6 +436,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeModeDark => 'Dark';
 
   @override
+  String get fontLabel => 'Font';
+
+  @override
+  String get fontOptionGoogleSans => 'Google Sans';
+
+  @override
+  String get fontOptionSystem => 'System';
+
+  @override
   String get dynamicThemeTitle => 'Dynamic theme';
 
   @override

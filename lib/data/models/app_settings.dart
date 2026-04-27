@@ -23,6 +23,7 @@ class AppSettings {
     'api_key_required',
     'app_locale',
     'theme_mode',
+    'use_system_font',
     'use_dynamic_color',
     'has_acknowledged_disclaimer',
     'analytics_consent_enabled',
@@ -47,6 +48,7 @@ class AppSettings {
     required this.apiKeyRequired,
     this.appLocale,
     required this.themeMode,
+    required this.useSystemFont,
     required this.useDynamicColor,
     required this.hasAcknowledgedDisclaimer,
     required this.analyticsConsentEnabled,
@@ -70,6 +72,7 @@ class AppSettings {
   final bool apiKeyRequired;
   final Locale? appLocale;
   final ThemeMode themeMode;
+  final bool useSystemFont;
   final bool useDynamicColor;
   final bool hasAcknowledgedDisclaimer;
   final bool analyticsConsentEnabled;
@@ -94,6 +97,7 @@ class AppSettings {
       apiKeyRequired: true,
       appLocale: null,
       themeMode: ThemeMode.system,
+      useSystemFont: false,
       useDynamicColor: true,
       hasAcknowledgedDisclaimer: false,
       analyticsConsentEnabled: false,
@@ -119,6 +123,7 @@ class AppSettings {
     bool? apiKeyRequired,
     Object? appLocale = _appLocaleUnset,
     ThemeMode? themeMode,
+    bool? useSystemFont,
     bool? useDynamicColor,
     bool? hasAcknowledgedDisclaimer,
     bool? analyticsConsentEnabled,
@@ -145,6 +150,7 @@ class AppSettings {
           ? this.appLocale
           : _normalizeAppLocale(appLocale as Locale?),
       themeMode: themeMode ?? this.themeMode,
+      useSystemFont: useSystemFont ?? this.useSystemFont,
       useDynamicColor: useDynamicColor ?? this.useDynamicColor,
       hasAcknowledgedDisclaimer: hasAcknowledgedDisclaimer ?? this.hasAcknowledgedDisclaimer,
       analyticsConsentEnabled: analyticsConsentEnabled ?? this.analyticsConsentEnabled,
@@ -174,6 +180,7 @@ class AppSettings {
       'api_key_required': apiKeyRequired.toString(),
       'app_locale': _appLocaleToStorageValue(appLocale),
       'theme_mode': themeMode.name,
+      'use_system_font': useSystemFont.toString(),
       'use_dynamic_color': useDynamicColor.toString(),
       'has_acknowledged_disclaimer': hasAcknowledgedDisclaimer.toString(),
       'analytics_consent_enabled': analyticsConsentEnabled.toString(),
@@ -200,6 +207,7 @@ class AppSettings {
       'api_key_required': apiKeyRequired,
       'app_locale': _appLocaleToStorageValue(appLocale),
       'theme_mode': themeMode.name,
+      'use_system_font': useSystemFont,
       'use_dynamic_color': useDynamicColor,
       'has_acknowledged_disclaimer': hasAcknowledgedDisclaimer,
       'analytics_consent_enabled': analyticsConsentEnabled,
@@ -231,6 +239,7 @@ class AppSettings {
         (value) => value.name == json['theme_mode'],
         orElse: () => ThemeMode.system,
       ),
+      useSystemFont: _readBool(json['use_system_font'], defaultValue: false),
       useDynamicColor: _readBool(json['use_dynamic_color'], defaultValue: true),
       hasAcknowledgedDisclaimer: _readBool(
         json['has_acknowledged_disclaimer'],
@@ -275,6 +284,7 @@ class AppSettings {
         (value) => value.name == values['theme_mode'],
         orElse: () => ThemeMode.system,
       ),
+      useSystemFont: values['use_system_font'] == 'true',
       useDynamicColor: values['use_dynamic_color'] != 'false',
       hasAcknowledgedDisclaimer: values['has_acknowledged_disclaimer'] == 'true',
       analyticsConsentEnabled: values['analytics_consent_enabled'] == 'true',

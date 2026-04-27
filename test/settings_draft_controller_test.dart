@@ -130,6 +130,27 @@ void main() {
       expect(controller.saveState, SettingsDraftSaveState.saved);
     });
 
+    test('persists system font selection when the draft is valid', () async {
+      final savedSettings = <AppSettings>[];
+      final controller = SettingsDraftController(
+        saveSettings: (settings) async {
+          savedSettings.add(settings);
+        },
+        regenerateApiKey: () async => 'regenerated-key',
+        saveDebounceDuration: Duration.zero,
+      );
+      addTearDown(controller.dispose);
+
+      controller.syncWithSettings(buildSettings());
+      controller.setUseSystemFont(true);
+
+      await Future<void>.delayed(Duration.zero);
+
+      expect(savedSettings, isNotEmpty);
+      expect(savedSettings.last.useSystemFont, isTrue);
+      expect(controller.saveState, SettingsDraftSaveState.saved);
+    });
+
     test('rehydrates the draft when settings change externally', () async {
       final controller = SettingsDraftController(
         saveSettings: (_) async {},
@@ -150,6 +171,7 @@ void main() {
 
       expect(controller.apiKeyController.text, 'restored-key');
       expect(controller.appLocale, isNull);
+      expect(controller.useSystemFont, isFalse);
       expect(controller.hostController.text, '10.0.0.5');
       expect(controller.portController.text, '4010');
       expect(controller.customModelsController.text, 'gemini-2.5-flash');

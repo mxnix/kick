@@ -62,11 +62,13 @@ class KickThemeBuilder extends StatelessWidget {
     required this.themeMode,
     required this.useDynamicColor,
     required this.builder,
+    this.useSystemFont = false,
     this.bootstrapData = const KickThemeBootstrapData.unresolved(),
   });
 
   final ThemeMode themeMode;
   final bool useDynamicColor;
+  final bool useSystemFont;
   final Widget Function(ThemeData lightTheme, ThemeData darkTheme) builder;
   final KickThemeBootstrapData bootstrapData;
 
@@ -79,7 +81,10 @@ class KickThemeBuilder extends StatelessWidget {
       final darkScheme = useDynamicColor && bootstrapData.darkDynamicScheme != null
           ? bootstrapData.darkDynamicScheme!.harmonized()
           : KickSchemes.dark;
-      return builder(KickThemeData.build(lightScheme), KickThemeData.build(darkScheme));
+      return builder(
+        KickThemeData.build(lightScheme, useSystemFont: useSystemFont),
+        KickThemeData.build(darkScheme, useSystemFont: useSystemFont),
+      );
     }
 
     return DynamicColorBuilder(
@@ -90,7 +95,10 @@ class KickThemeBuilder extends StatelessWidget {
         final darkScheme = useDynamicColor && darkDynamic != null
             ? darkDynamic.harmonized()
             : KickSchemes.dark;
-        return builder(KickThemeData.build(lightScheme), KickThemeData.build(darkScheme));
+        return builder(
+          KickThemeData.build(lightScheme, useSystemFont: useSystemFont),
+          KickThemeData.build(darkScheme, useSystemFont: useSystemFont),
+        );
       },
     );
   }
@@ -191,13 +199,13 @@ extension KickThemeBuildContext on BuildContext {
 class KickThemeData {
   static const defaultFontFamily = 'KickGoogleSans';
 
-  static ThemeData build(ColorScheme scheme) {
+  static ThemeData build(ColorScheme scheme, {bool useSystemFont = false}) {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       brightness: scheme.brightness,
       visualDensity: VisualDensity.standard,
-      fontFamily: defaultFontFamily,
+      fontFamily: useSystemFont ? null : defaultFontFamily,
     );
     const tokens = KickThemeTokens.fallback;
 

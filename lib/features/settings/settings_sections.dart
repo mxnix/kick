@@ -56,6 +56,7 @@ class SettingsAppearanceSection extends StatelessWidget {
           Text(l10n.themeLabel, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           SegmentedButton<ThemeMode>(
+            expandedInsets: EdgeInsets.zero,
             showSelectedIcon: false,
             segments: [
               ButtonSegment(
@@ -78,6 +79,27 @@ class SettingsAppearanceSection extends StatelessWidget {
             onSelectionChanged: (value) => controller.setThemeMode(value.first),
           ),
           const SizedBox(height: 18),
+          Text(l10n.fontLabel, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          SegmentedButton<bool>(
+            expandedInsets: EdgeInsets.zero,
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(
+                value: false,
+                label: Text(l10n.fontOptionGoogleSans),
+                icon: const Icon(Icons.font_download_rounded),
+              ),
+              ButtonSegment(
+                value: true,
+                label: Text(l10n.fontOptionSystem),
+                icon: const Icon(Icons.computer_rounded),
+              ),
+            ],
+            selected: {controller.useSystemFont},
+            onSelectionChanged: (value) => controller.setUseSystemFont(value.first),
+          ),
+          const SizedBox(height: 18),
           SettingToggleCard(
             title: l10n.dynamicThemeTitle,
             subtitle: l10n.dynamicThemeSubtitle,
@@ -88,6 +110,7 @@ class SettingsAppearanceSection extends StatelessWidget {
           Text(l10n.loggingLabel, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           SegmentedButton<KickLogVerbosity>(
+            expandedInsets: EdgeInsets.zero,
             showSelectedIcon: false,
             segments: [
               ButtonSegment(value: KickLogVerbosity.quiet, label: Text(l10n.loggingQuiet)),
