@@ -637,3 +637,92 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  publish-aur-package:
+    name: Publish AUR package
+    runs-on: ubuntu-latest
+    needs:
+      - metadata
+      - linux-release
+      - publish-release
+
+    steps:
+      - name: Checkout workflow sources
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.metadata.outputs.ref }}
+
+      - name: Download Linux release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: kick-linux-release
+          path: linux-artifacts
+
+      - name: Install AUR tooling
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pacman-package-manager \
+            openssh-client
+
+      - name: Validate AUR publishing secrets
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
+            echo "Missing required secret: AUR_SSH_PRIVATE_KEY" >&2
+            exit 1
+          fi
+
+      - name: Configure AUR SSH
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          install -dm700 ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+          {
+            echo "Host aur.archlinux.org"
+            echo "  HostName aur.archlinux.org"
+            echo "  User aur"
+            echo "  IdentityFile ~/.ssh/aur"
+            echo "  IdentitiesOnly yes"
+          } >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Clone AUR package
+        shell: bash
+        run: git clone ssh://aur@aur.archlinux.org/kick-bin.git aur-package
+
+      - name: Update AUR package metadata
+        shell: bash
+        run: |
+          chmod +x scripts/update-aur-package.sh
+          scripts/update-aur-package.sh \
+            --aur-dir aur-package \
+            --artifact-dir linux-artifacts \
+            --version "${{ needs.metadata.outputs.version }}" \
+            --repository "${{ github.repository }}"
+
+      - name: Commit and push AUR package
+        env:
+          AUR_GIT_NAME: ${{ vars.AUR_GIT_NAME }}
+          AUR_GIT_EMAIL: ${{ vars.AUR_GIT_EMAIL }}
+        shell: bash
+        run: |
+          cd aur-package
+          git diff --check
+          if git diff --quiet; then
+            echo "AUR package is already up to date."
+            exit 0
+          fi
+
+          git config user.name "${AUR_GIT_NAME:-github-actions[bot]}"
+          git config user.email "${AUR_GIT_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to ${{ needs.metadata.outputs.version }}"
+          git push origin master

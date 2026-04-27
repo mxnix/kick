@@ -15,6 +15,7 @@
   - Linux x64 tar.gz, AppImage, deb, rpm, and pacman package
   - APK/AAB
 - Linux apt/rpm/pacman repository metadata is published to GitHub Pages after the release packages are built.
+- The `kick-bin` AUR package is updated after the GitHub release is published.
 
 ## Signing
 
@@ -40,6 +41,15 @@ Release signing secrets:
 - `KICK_RELEASE_GPG_KEY_ID`
 
 The release workflow signs the SHA-256 checksum file and Linux repository metadata with this key. Individual Linux package signatures and Windows Authenticode signing are intentionally out of scope for the first Linux release.
+
+AUR publishing secrets:
+
+- `AUR_SSH_PRIVATE_KEY`: a private SSH key whose public key is registered in the AUR account that can push to `kick-bin`.
+
+Optional AUR publishing repository variables:
+
+- `AUR_GIT_NAME`
+- `AUR_GIT_EMAIL`
 
 ## Windows installer
 
@@ -81,6 +91,17 @@ scripts/publish-linux-repos.sh \
   --pages-dir build/pages \
   --version VERSION \
   --gpg-key-id KEY_ID
+```
+
+To refresh the AUR `PKGBUILD` and `.SRCINFO` locally from a built release archive:
+
+```bash
+git clone ssh://aur@aur.archlinux.org/kick-bin.git build/aur/kick-bin
+scripts/update-aur-package.sh \
+  --aur-dir build/aur/kick-bin \
+  --artifact-dir build/dist/linux \
+  --version VERSION \
+  --repository mxnix/kick
 ```
 
 Linux runtime notes:
