@@ -52,6 +52,22 @@ if (-not $SkipBuild) {
   }
 }
 
+$vcRuntimeDlls = @('vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll')
+
+foreach ($dll in $vcRuntimeDlls) {
+  if (Test-Path (Join-Path $SourceDir $dll)) {
+    continue
+  }
+
+  $systemCopy = Join-Path $env:SystemRoot "System32\$dll"
+  if (Test-Path $systemCopy) {
+    Copy-Item $systemCopy -Destination $SourceDir -Force
+    Write-Host "Bundled $dll from System32."
+  } else {
+    Write-Warning "$dll was not found on this system — the installer may fail on clean machines."
+  }
+}
+
 if (-not (Test-Path $SourceDir)) {
   throw "Windows release bundle was not found at '$SourceDir'."
 }
