@@ -369,6 +369,9 @@ class GeminiOAuthService {
     required bool isSuccess,
   }) async {
     final htmlLang = l10n.localeName.replaceAll('_', '-');
+    final escapedTitle = const HtmlEscape().convert(title);
+    final escapedMessage = const HtmlEscape().convert(message);
+    final stateClass = isSuccess ? 'success' : 'error';
     request.response.headers.contentType = ContentType.html;
     request.response.write('''
 <!DOCTYPE html>
@@ -376,20 +379,213 @@ class GeminiOAuthService {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>$title</title>
+    <title>$escapedTitle</title>
     <style>
-      body { font-family: Arial, sans-serif; background: #1d120f; color: #fff2eb; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }
-      .card { max-width: 440px; padding: 24px; border-radius: 24px; background: #2d1e1a; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
-      h1 { margin-top: 0; }
-      p { line-height: 1.5; color: #f7d8cc; }
-      .dot { width: 12px; height: 12px; border-radius: 999px; display:inline-block; margin-right: 8px; background: ${isSuccess ? '#00c26f' : '#ff6a5e'}; }
+      :root {
+        color-scheme: dark;
+        --surface: #101318;
+        --surface-raised: #0b0f14;
+        --surface-panel: #171c22;
+        --surface-panel-high: #1f252d;
+        --outline: rgba(184, 196, 211, 0.17);
+        --outline-strong: rgba(184, 196, 211, 0.28);
+        --text: #edf1f7;
+        --text-muted: #c2c8d2;
+        --shadow: rgba(0, 0, 0, 0.34);
+      }
+
+      body.success {
+        --accent: #9fcaff;
+        --accent-soft: rgba(159, 202, 255, 0.16);
+        --accent-text: #cbe2ff;
+      }
+
+      body.error {
+        --accent: #ffb4ab;
+        --accent-soft: rgba(255, 180, 171, 0.16);
+        --accent-text: #ffd6d1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-height: 100%;
+        background: var(--surface);
+      }
+
+      body {
+        min-height: 100vh;
+        min-height: 100svh;
+        margin: 0;
+        padding:
+          max(24px, env(safe-area-inset-top))
+          max(20px, env(safe-area-inset-right))
+          max(24px, env(safe-area-inset-bottom))
+          max(20px, env(safe-area-inset-left));
+        display: grid;
+        place-items: center;
+        background:
+          linear-gradient(180deg, rgba(159, 202, 255, 0.035), transparent 34%),
+          var(--surface);
+        color: var(--text);
+        font-family:
+          "Google Sans",
+          "Segoe UI",
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        text-rendering: optimizeLegibility;
+      }
+
+      .shell {
+        width: min(100%, 520px);
+      }
+
+      .page-title {
+        margin: 0 0 24px;
+        color: var(--text);
+        font-size: clamp(2rem, 8vw, 3.25rem);
+        line-height: 1.02;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      .panel {
+        padding: 22px;
+        border: 1px solid var(--outline);
+        border-radius: 36px;
+        background: color-mix(in srgb, var(--surface-raised) 94%, var(--accent) 6%);
+        box-shadow: 0 24px 60px var(--shadow);
+      }
+
+      @supports not (background: color-mix(in srgb, black, white)) {
+        .panel {
+          background: var(--surface-raised);
+        }
+      }
+
+      .hero {
+        padding: 10px 14px 18px;
+      }
+
+      .status-icon {
+        width: 56px;
+        height: 56px;
+        margin-bottom: 18px;
+        border-radius: 20px;
+        display: grid;
+        place-items: center;
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .status-icon::before {
+        content: "";
+        width: 20px;
+        height: 11px;
+        border-left: 3px solid currentColor;
+        border-bottom: 3px solid currentColor;
+        transform: translateY(-2px) rotate(-45deg);
+      }
+
+      body.error .status-icon::before {
+        width: auto;
+        height: auto;
+        border: 0;
+        transform: none;
+        content: "!";
+        font-size: 1.6rem;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 11ch;
+        color: var(--text);
+        font-size: clamp(2rem, 8.5vw, 3.1rem);
+        line-height: 1.06;
+        font-weight: 800;
+        letter-spacing: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .message-tile {
+        margin-top: 22px;
+        padding: 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        border: 1px solid var(--outline-strong);
+        border-radius: 24px;
+        background: var(--surface-panel);
+      }
+
+      .message-icon {
+        flex: 0 0 auto;
+        width: 34px;
+        height: 34px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: var(--surface-panel-high);
+      }
+
+      .message-icon::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      p {
+        margin: 3px 0 0;
+        color: var(--text-muted);
+        font-size: 1.03rem;
+        line-height: 1.45;
+      }
+
+      @media (max-width: 420px) {
+        body {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+
+        .page-title {
+          margin-bottom: 20px;
+        }
+
+        .panel {
+          padding: 20px;
+          border-radius: 32px;
+        }
+
+        .hero {
+          padding-left: 4px;
+          padding-right: 4px;
+        }
+      }
     </style>
   </head>
-  <body>
-    <div class="card">
-      <h1><span class="dot"></span>$title</h1>
-      <p>$message</p>
-    </div>
+  <body class="$stateClass">
+    <main class="shell" aria-labelledby="oauth-title">
+      <p class="page-title">KiCk</p>
+      <section class="panel">
+        <div class="hero">
+          <div class="status-icon" aria-hidden="true"></div>
+          <h1 id="oauth-title">$escapedTitle</h1>
+          <div class="message-tile">
+            <span class="message-icon" aria-hidden="true"></span>
+            <p>$escapedMessage</p>
+          </div>
+        </div>
+      </section>
+    </main>
   </body>
 </html>
 ''');
