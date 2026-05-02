@@ -2,14 +2,17 @@
 
 <img src="static/github/logo/logo.png" alt="KiCk logo" width="128" height="128">
 
-# KiCk
+<h1>KiCk</h1>
 
 <p align="center">
   <a href="https://github.com/mxnix/kick/releases/latest">
-    <img src="https://img.shields.io/github/v/release/mxnix/kick?style=flat-square&color=blue" alt="Latest release">
+    <img src="https://img.shields.io/github/v/release/mxnix/kick?style=flat-square&color=2b90d9" alt="Latest release">
   </a>
   <a href="https://github.com/mxnix/kick/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/mxnix/kick/ci.yml?style=flat-square" alt="Build status">
+    <img src="https://img.shields.io/github/actions/workflow/status/mxnix/kick/ci.yml?style=flat-square&label=ci" alt="Build status">
+  </a>
+  <a href="https://github.com/mxnix/kick/releases">
+    <img src="https://img.shields.io/github/downloads/mxnix/kick/total?style=flat-square" alt="Downloads">
   </a>
   <a href="https://flutter.dev/">
     <img src="https://img.shields.io/badge/Flutter-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Built with Flutter">
@@ -18,15 +21,33 @@
     <img src="https://img.shields.io/github/license/mxnix/kick?style=flat-square" alt="License">
   </a>
   <a href="https://aur.archlinux.org/packages/kick-bin">
-    <img src="https://img.shields.io/aur/version/kick-bin?style=flat-square&color=1793D1&logo=arch-linux&logoColor=white" alt="AUR Package">
+    <img src="https://img.shields.io/aur/version/kick-bin?style=flat-square&color=1793D1&logo=arch-linux&logoColor=white" alt="AUR package">
+  </a>
+  <a href="https://deepwiki.com/mxnix/kick">
+    <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
   </a>
 </p>
 
-**A local OpenAI-compatible proxy for Gemini CLI and Kiro in a native Flutter app**
+<p align="center">
+  <em>A local OpenAI-compatible proxy for Gemini CLI and Kiro in a native Flutter app.</em>
+</p>
 
-README на русском: [README_RU.md](README_RU.md)
+<p align="center">
+  <a href="https://github.com/mxnix/kick/releases/latest">Download</a> |
+  <a href="docs/CONTRIBUTING.md">Contributing</a> |
+  <a href="docs/PRIVACY.md">Privacy</a> |
+  <a href="docs/LOCALIZATION.md">Localization</a>
+</p>
 
-**Supported platforms**
+<p align="center">
+  README in Russian: <a href="README_RU.md">README_RU.md</a>
+</p>
+
+</div>
+
+---
+
+## Supported platforms
 
 <p align="center">
   <a href="https://github.com/mxnix/kick/releases/latest">
@@ -42,7 +63,31 @@ README на русском: [README_RU.md](README_RU.md)
   </a>
 </p>
 
-</div>
+## What is KiCk
+
+KiCk starts a local OpenAI-compatible endpoint on your device and forwards requests to Gemini CLI through connected Google accounts, or to Kiro through an AWS Builder ID session. It is built for people who want to use Gemini CLI or Kiro without the terminal, manual sign-in setup, or a separate local server.
+
+## Quickstart
+
+1. Download the latest version from the [releases page](https://github.com/mxnix/kick/releases/latest), or install the Linux package repository below.
+2. Open the accounts screen and connect a Gemini CLI or Kiro account.
+3. If you choose Gemini CLI, enter your `Google Cloud` project ID. For Kiro, complete AWS Builder ID authorization.
+4. Return to the main screen and start the proxy.
+5. Copy the local endpoint and access key if required.
+6. Use them in your app, Gemini CLI, or any other OpenAI-compatible client.
+
+The default endpoint is `http://127.0.0.1:3000/v1`. You can change it in settings.
+
+## Features
+
+- Runs a local endpoint with OpenAI-format requests.
+- Works with multiple Gemini CLI and Kiro accounts with priority ordering.
+- Connects Gemini CLI through Google sign-in and Kiro through AWS Builder ID.
+- Lets you change address, port, access key, retry count, and model list.
+- Shows proxy status, account status, and logs.
+- Supports Android background mode and desktop tray startup.
+
+## Screenshots
 
 <details>
 <summary><strong>Interface</strong></summary>
@@ -57,53 +102,14 @@ README на русском: [README_RU.md](README_RU.md)
 
 </details>
 
-<details>
-<summary><strong>What It Is</strong></summary>
-
-KiCk starts a local OpenAI-compatible endpoint on your device and forwards requests to Gemini CLI through connected Google accounts, or to Kiro through an AWS Builder ID session. It is built for people who want to use Gemini CLI or Kiro without the terminal, manual sign-in setup, or a separate local server.
-
-</details>
-
-<details>
-<summary><strong>What It Does</strong></summary>
-
-- Runs a local endpoint at `http://127.0.0.1:3000/v1` by default.
-- Accepts OpenAI-format requests.
-- Works with multiple Gemini CLI and Kiro accounts, supports priority ordering, and can temporarily remove a problematic account from rotation.
-- Connects Gemini CLI through Google sign-in in the browser and Kiro through AWS Builder ID.
-- Lets you change the address, port, access key, retry count, and model list.
-- Shows proxy status, account status, and logs.
-- Can run in the background on Android.
-- Can start at sign-in and minimize to tray on desktop.
-
-</details>
-
-<details>
-<summary><strong>Get Started</strong></summary>
-
-1. Download the latest version from the [releases page](https://github.com/mxnix/kick/releases/latest), or install the Linux package repository below.
-2. Open the accounts screen and connect a Gemini CLI or Kiro account.
-3. If you choose Gemini CLI, enter your `Google Cloud` project ID. For Kiro, just complete AWS Builder ID authorization.
-4. Return to the main screen and start the proxy.
-5. Copy the local endpoint and access key, if required.
-6. Use them in your app, Gemini CLI, or any other OpenAI-compatible client.
-
-The default endpoint is `http://127.0.0.1:3000/v1`. You can change it in settings.
-
-</details>
-
-<details>
-<summary><strong>Supported Endpoints</strong></summary>
+## Supported endpoints
 
 - `GET /health`
 - `GET /v1/models`
 - `POST /v1/chat/completions`
 - `POST /v1/responses`
 
-</details>
-
-<details>
-<summary><strong>Request Example</strong></summary>
+## Request example
 
 ```bash
 curl http://127.0.0.1:3000/v1/chat/completions \
@@ -119,10 +125,7 @@ curl http://127.0.0.1:3000/v1/chat/completions \
 
 If you disabled the access key requirement, you can remove the `Authorization` header.
 
-</details>
-
-<details>
-<summary><strong>What You Can Configure</strong></summary>
+## Configuration
 
 - Network settings: address, port, and LAN access.
 - Access control: API key requirement, viewing the current key, and rotating it.
@@ -130,8 +133,6 @@ If you disabled the access key requirement, you can remove the `Authorization` h
 - Models: additional model list and blocked models for a specific account.
 - Google: default web search and whether sources are shown in responses.
 - App settings: theme, log verbosity, Android background mode, and desktop auto-start.
-
-</details>
 
 <details>
 <summary><strong>Install on Linux</strong></summary>
@@ -189,7 +190,7 @@ You can also download the Linux AppImage, `.deb`, `.rpm`, `.pkg.tar.zst`, or `.t
 </details>
 
 <details>
-<summary><strong>Where Data Is Stored</strong></summary>
+<summary><strong>Privacy and data</strong></summary>
 
 - Sign-in tokens and the local access key are stored in the device's secure storage.
 - Settings, account lists, and logs are stored locally.
@@ -202,7 +203,7 @@ Details: [Privacy Policy](docs/PRIVACY.md).
 </details>
 
 <details>
-<summary><strong>If Something Does Not Work</strong></summary>
+<summary><strong>Troubleshooting</strong></summary>
 
 - The port is already in use: choose a different port in settings.
 - No active accounts: connect a Gemini CLI or Kiro account, or re-enable an existing one.
@@ -215,7 +216,7 @@ Details: [Privacy Policy](docs/PRIVACY.md).
 </details>
 
 <details>
-<summary><strong>Build From Source</strong></summary>
+<summary><strong>Build from source</strong></summary>
 
 1. Install Flutter and the required Android/Linux tooling for the target you want to build.
 2. Run:
@@ -258,5 +259,3 @@ scripts/build-linux-packages.sh
 Build and release details: [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 </details>
-
-[License](LICENSE.md) | [Privacy Policy](docs/PRIVACY.md) | [Localization](docs/localization.md) | [Contributing](docs/CONTRIBUTING.md)

@@ -2,29 +2,52 @@
 
 <img src="static/github/logo/logo.png" alt="Логотип KiCk" width="128" height="128">
 
-# KiCk
+<h1>KiCk</h1>
 
 <p align="center">
   <a href="https://github.com/mxnix/kick/releases/latest">
-    <img src="https://img.shields.io/github/v/release/mxnix/kick?style=flat-square&color=blue" alt="Последний выпуск">
+    <img src="https://img.shields.io/github/v/release/mxnix/kick?style=flat-square&color=2b90d9" alt="Последний релиз">
   </a>
   <a href="https://github.com/mxnix/kick/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/mxnix/kick/ci.yml?style=flat-square" alt="Состояние сборки">
+    <img src="https://img.shields.io/github/actions/workflow/status/mxnix/kick/ci.yml?style=flat-square&label=ci" alt="Состояние сборки">
+  </a>
+  <a href="https://github.com/mxnix/kick/releases">
+    <img src="https://img.shields.io/github/downloads/mxnix/kick/total?style=flat-square" alt="Загрузки">
   </a>
   <a href="https://flutter.dev/">
-    <img src="https://img.shields.io/badge/Flutter-02569B?style=flat-square&logo=flutter&logoColor=white" alt="Сделано на Flutter">
+    <img src="https://img.shields.io/badge/Flutter-02569B?style=flat-square&logo=flutter&logoColor=white" alt="На Flutter">
   </a>
   <a href="https://github.com/mxnix/kick/blob/main/LICENSE.md">
     <img src="https://img.shields.io/github/license/mxnix/kick?style=flat-square" alt="Лицензия">
   </a>
   <a href="https://aur.archlinux.org/packages/kick-bin">
-    <img src="https://img.shields.io/aur/version/kick-bin?style=flat-square&color=1793D1&logo=arch-linux&logoColor=white" alt="AUR Package">
+    <img src="https://img.shields.io/aur/version/kick-bin?style=flat-square&color=1793D1&logo=arch-linux&logoColor=white" alt="Пакет AUR">
+  </a>
+  <a href="https://deepwiki.com/mxnix/kick">
+    <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
   </a>
 </p>
 
-**Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном Flutter-приложении**
+<p align="center">
+  <em>Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном Flutter-приложении.</em>
+</p>
 
-**Поддерживаемые платформы**
+<p align="center">
+  <a href="https://github.com/mxnix/kick/releases/latest">Скачать</a> |
+  <a href="docs/CONTRIBUTING.md">Как вносить изменения</a> |
+  <a href="docs/PRIVACY.md">Политика конфиденциальности</a> |
+  <a href="docs/LOCALIZATION.md">Локализация</a>
+</p>
+
+<p align="center">
+  README на английском: <a href="README.md">README.md</a>
+</p>
+
+</div>
+
+---
+
+## Поддерживаемые платформы
 
 <p align="center">
   <a href="https://github.com/mxnix/kick/releases/latest">
@@ -40,7 +63,31 @@
   </a>
 </p>
 
-</div>
+## Что такое KiCk
+
+KiCk поднимает у вас на устройстве локальный адрес в формате OpenAI и пересылает запросы в Gemini CLI через подключенные Google-аккаунты, а в Kiro через сессию AWS Builder ID. Приложение нужно для тех, кто хочет работать с Gemini CLI или Kiro без терминала, ручной настройки входа и отдельного локального сервера.
+
+## Быстрый старт
+
+1. Скачайте последнюю версию из [раздела выпусков](https://github.com/mxnix/kick/releases/latest) или подключите Linux-репозиторий ниже.
+2. Откройте экран аккаунтов и подключите аккаунт Gemini CLI или Kiro.
+3. Если выбрали Gemini CLI, укажите идентификатор проекта в `Google Cloud`. Для Kiro завершите авторизацию через AWS Builder ID.
+4. Вернитесь на главный экран и запустите прокси.
+5. Скопируйте локальный адрес и ключ доступа, если требуется.
+6. Используйте их в своем приложении, Gemini CLI или любом другом OpenAI-совместимом клиенте.
+
+По умолчанию используется адрес `http://127.0.0.1:3000/v1`. Его можно поменять в настройках.
+
+## Возможности
+
+- Запускает локальный адрес с запросами в формате OpenAI.
+- Работает с несколькими аккаунтами Gemini CLI и Kiro с приоритетами.
+- Подключает Gemini CLI через вход Google и Kiro через AWS Builder ID.
+- Позволяет менять адрес, порт, ключ доступа, число повторов и список моделей.
+- Показывает состояние прокси, аккаунтов и журнал работы.
+- Поддерживает фон на Android и автозапуск в трее на desktop.
+
+## Скриншоты
 
 <details>
 <summary><strong>Интерфейс</strong></summary>
@@ -55,53 +102,14 @@
 
 </details>
 
-<details>
-<summary><strong>Что это</strong></summary>
-
-KiCk поднимает у вас на устройстве локальный адрес в формате OpenAI и пересылает запросы в Gemini CLI через подключенные Google-аккаунты, а в Kiro через сессию AWS Builder ID. Приложение нужно для тех, кто хочет работать с Gemini CLI или Kiro без терминала, ручной настройки входа и отдельного локального сервера.
-
-</details>
-
-<details>
-<summary><strong>Что умеет</strong></summary>
-
-- Запускает локальный адрес `http://127.0.0.1:3000/v1` по умолчанию.
-- Принимает запросы в формате OpenAI.
-- Работает с несколькими аккаунтами Gemini CLI и Kiro, умеет выставлять приоритеты и временно убирать проблемный аккаунт из очереди.
-- Подключает Gemini CLI через вход Google в браузере, а Kiro через AWS Builder ID.
-- Позволяет менять адрес, порт, ключ доступа, число повторов и список моделей.
-- Показывает состояние прокси, аккаунтов и журнал работы.
-- Работает в фоне на Android.
-- Может запускаться при входе и сворачиваться в трей.
-
-</details>
-
-<details>
-<summary><strong>Как начать</strong></summary>
-
-1. Скачайте последнюю версию из [раздела выпусков](https://github.com/mxnix/kick/releases/latest) или подключите Linux-репозиторий ниже.
-2. Откройте экран аккаунтов и подключите аккаунт Gemini CLI или Kiro.
-3. Если выбрали Gemini CLI, укажите идентификатор проекта в `Google Cloud`. Для Kiro достаточно завершить авторизацию через AWS Builder ID.
-4. Вернитесь на главный экран и запустите прокси.
-5. Скопируйте локальный адрес и ключ доступа (если требуется)
-6. Подставьте их в свою программу, Gemini CLI или другой OpenAI-совместимый клиент.
-
-По умолчанию используется адрес `http://127.0.0.1:3000/v1`. Его можно поменять в настройках.
-
-</details>
-
-<details>
-<summary><strong>Какие адреса поддерживаются</strong></summary>
+## Поддерживаемые адреса
 
 - `GET /health`
 - `GET /v1/models`
 - `POST /v1/chat/completions`
 - `POST /v1/responses`
 
-</details>
-
-<details>
-<summary><strong>Пример запроса</strong></summary>
+## Пример запроса
 
 ```bash
 curl http://127.0.0.1:3000/v1/chat/completions \
@@ -117,19 +125,14 @@ curl http://127.0.0.1:3000/v1/chat/completions \
 
 Если вы отключили проверку ключа доступа, строку с `Authorization` можно убрать.
 
-</details>
+## Настройки
 
-<details>
-<summary><strong>Что можно настроить</strong></summary>
-
-- Сетевые параметры: адрес, порт, доступ из локальной сети.
+- Сетевые параметры: адрес, порт и доступ из локальной сети.
 - Доступ: требование ключа, просмотр и перевыпуск ключа.
 - Надежность: число повторов, задержка после ошибки `429`, временный вывод аккаунта из очереди.
 - Модели: список дополнительных моделей и список недоступных моделей для конкретного аккаунта.
 - Google: веб-поиск по умолчанию и показ источников в ответе.
 - Приложение: тема, подробность журнала, работа в фоне на Android, автозапуск на desktop.
-
-</details>
 
 <details>
 <summary><strong>Установка на Linux</strong></summary>
@@ -187,7 +190,7 @@ paru -S kick-bin
 </details>
 
 <details>
-<summary><strong>Где хранятся данные</strong></summary>
+<summary><strong>Приватность и данные</strong></summary>
 
 - Токены входа и локальный ключ доступа хранятся в защищенном хранилище устройства.
 - Настройки, список аккаунтов и журнал работы хранятся локально.
@@ -256,5 +259,3 @@ scripts/build-linux-packages.sh
 Подробности по сборке и выпуску: [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 </details>
-
-[Лицензия](LICENSE.md) | [Политика конфиденциальности](docs/PRIVACY.md) | [Локализация](docs/localization.md) | [Как вносить изменения](docs/CONTRIBUTING.md)
