@@ -73,11 +73,6 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                       icon: const Icon(Icons.share_rounded),
                     ),
                     IconButton(
-                      onPressed: () => ref.read(logsControllerProvider.notifier).refreshState(),
-                      tooltip: l10n.logsRefreshButton,
-                      icon: const Icon(Icons.refresh_rounded),
-                    ),
-                    IconButton(
                       onPressed: logs.totalCount == 0 ? null : _confirmClearLogs,
                       tooltip: l10n.logsClearButton,
                       style: IconButton.styleFrom(
@@ -234,19 +229,21 @@ class _LogsPageState extends ConsumerState<LogsPage> {
             else
               SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
-                  final itemIndex = index ~/ 2;
-                  if (index.isOdd) {
-                    return const SizedBox(height: 12);
-                  }
-
-                  final entry = entries[itemIndex];
-                  return _LogCard(
-                    entry: entry,
-                    expandedPayload: _expandedPayloadEntries.contains(entry.id),
-                    onCopy: () => _copyLogEntry(entry),
-                    onTogglePayload: () => _togglePayload(entry.id),
+                  final entry = entries[index];
+                  return _LogCardReveal(
+                    key: ValueKey('log-card-${entry.id}'),
+                    animate: logs.appearingEntryIds.contains(entry.id),
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: index == entries.length - 1 ? 0 : 12),
+                      child: _LogCard(
+                        entry: entry,
+                        expandedPayload: _expandedPayloadEntries.contains(entry.id),
+                        onCopy: () => _copyLogEntry(entry),
+                        onTogglePayload: () => _togglePayload(entry.id),
+                      ),
+                    ),
                   );
-                }, childCount: entries.length * 2 - 1),
+                }, childCount: entries.length),
               ),
             if (logs.hasMore)
               SliverToBoxAdapter(
@@ -374,9 +371,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
   }
 
   Future<void> _copyLogEntry(AppLogEntry entry) async {
-    await Clipboard.setData(
-      ClipboardData(text: _formatLogEntryForClipboard(context.l10n, entry)),
-    );
+    await Clipboard.setData(ClipboardData(text: _formatLogEntryForClipboard(context.l10n, entry)));
     if (!mounted) {
       return;
     }
@@ -425,6 +420,71 @@ class _LogsPageState extends ConsumerState<LogsPage> {
       retry429DelaySeconds: settings?.retry429DelaySeconds,
       mark429AsUnhealthy: settings?.mark429AsUnhealthy,
       androidBackgroundRuntime: settings?.androidBackgroundRuntime,
+    );
+  }
+}
+
+class _LogCardReveal extends StatefulWidget {
+  const _LogCardReveal({super.key, required this.animate, required this.child});
+
+  final bool animate;
+  final Widget child;
+
+  @override
+  State<_LogCardReveal> createState() => _LogCardRevealState();
+}
+
+class _LogCardRevealState extends State<_LogCardReveal> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+    value: widget.animate ? 0 : 1,
+  );
+  late final Animation<double> _curve = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeOutCubic,
+  );
+  late final Animation<Offset> _slide = Tween<Offset>(
+    begin: const Offset(0, -0.025),
+    end: Offset.zero,
+  ).animate(_curve);
+  bool _hasAnimated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animate) {
+      _hasAnimated = true;
+      unawaited(_controller.forward());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _LogCardReveal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animate && !_hasAnimated) {
+      _hasAnimated = true;
+      unawaited(_controller.forward(from: 0));
+    } else if (!widget.animate && !_hasAnimated) {
+      _controller.value = 1;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizeTransition(
+      sizeFactor: _curve,
+      axisAlignment: -1,
+      child: FadeTransition(
+        opacity: _curve,
+        child: SlideTransition(position: _slide, child: widget.child),
+      ),
     );
   }
 }

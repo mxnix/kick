@@ -59,6 +59,7 @@ void main() {
     );
 
     expect(scrollView, findsOneWidget);
+    expect(find.byIcon(Icons.refresh_rounded), findsNothing);
 
     await tester.dragUntilVisible(find.text('Log entry 0'), scrollView, const Offset(0, -300));
 

@@ -38,9 +38,20 @@ final proxyStatusProvider = StreamProvider<ProxyRuntimeState>(
   (ref) => ref.watch(proxyControllerProvider).states,
 );
 
-final proxyActivityProvider = StreamProvider<String>(
-  (ref) => ref.watch(proxyControllerProvider).activity,
-);
+final proxyActivityProvider = StreamProvider<ProxyActivityEvent>((ref) {
+  var sequence = 0;
+  return ref
+      .watch(proxyControllerProvider)
+      .activity
+      .map((type) => ProxyActivityEvent(type: type, sequence: sequence++));
+});
+
+class ProxyActivityEvent {
+  const ProxyActivityEvent({required this.type, required this.sequence});
+
+  final String type;
+  final int sequence;
+}
 
 final analyticsProvider = Provider<KickAnalytics>(
   (ref) => ref.watch(appBootstrapProvider).analytics,
@@ -392,6 +403,7 @@ class LogsViewState {
     required this.query,
     required this.selectedLevel,
     required this.selectedCategory,
+    this.appearingEntryIds = const <String>{},
     this.isLoadingMore = false,
   });
 
@@ -402,6 +414,7 @@ class LogsViewState {
   final String query;
   final AppLogLevel? selectedLevel;
   final String? selectedCategory;
+  final Set<String> appearingEntryIds;
   final bool isLoadingMore;
 
   bool get hasActiveFilters =>
@@ -417,6 +430,7 @@ class LogsViewState {
     String? query,
     Object? selectedLevel = _logsFieldUnset,
     Object? selectedCategory = _logsFieldUnset,
+    Set<String>? appearingEntryIds,
     bool? isLoadingMore,
   }) {
     return LogsViewState(
@@ -431,6 +445,7 @@ class LogsViewState {
       selectedCategory: identical(selectedCategory, _logsFieldUnset)
           ? this.selectedCategory
           : selectedCategory as String?,
+      appearingEntryIds: appearingEntryIds ?? this.appearingEntryIds,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
@@ -457,8 +472,8 @@ final proxyConfigurationOrchestratorProvider = Provider<ProxyConfigurationOrches
     (previous, next) => orchestrator.onAccountsChanged(),
     fireImmediately: true,
   );
-  ref.listen<AsyncValue<String>>(proxyActivityProvider, (previous, next) {
-    orchestrator.onProxyActivity(next.asData?.value);
+  ref.listen<AsyncValue<ProxyActivityEvent>>(proxyActivityProvider, (previous, next) {
+    orchestrator.onProxyActivity(next.asData?.value.type);
   });
   ref.onDispose(orchestrator.dispose);
 
@@ -498,6 +513,7 @@ class LogsController extends AsyncNotifier<LogsViewState> {
       query: current?.query ?? '',
       level: current?.selectedLevel,
       category: current?.selectedCategory,
+      markAppearingEntries: current != null,
     );
   }
 
@@ -555,6 +571,7 @@ class LogsController extends AsyncNotifier<LogsViewState> {
         current.copyWith(
           entries: [...current.entries, ...nextEntries],
           filteredCount: nextEntries.isEmpty ? current.entries.length : current.filteredCount,
+          appearingEntryIds: const <String>{},
           isLoadingMore: false,
         ),
       );
@@ -588,10 +605,17 @@ class LogsController extends AsyncNotifier<LogsViewState> {
     required String query,
     required AppLogLevel? level,
     required String? category,
+    bool markAppearingEntries = false,
   }) async {
     final revision = ++_loadRevision;
+    final previous = markAppearingEntries ? state.asData?.value : null;
     try {
-      final next = await _readState(query: query, level: level, category: category);
+      final next = await _readState(
+        query: query,
+        level: level,
+        category: category,
+        previous: previous,
+      );
       if (revision != _loadRevision) {
         return;
       }
@@ -608,6 +632,7 @@ class LogsController extends AsyncNotifier<LogsViewState> {
     String query = '',
     AppLogLevel? level,
     String? category,
+    LogsViewState? previous,
   }) async {
     final bootstrap = ref.read(appBootstrapProvider);
     final categories = await bootstrap.logsRepository.readCategories(
@@ -630,6 +655,13 @@ class LogsController extends AsyncNotifier<LogsViewState> {
       category: normalizedCategory,
       excludedCategories: internalUserHiddenLogCategories,
     );
+    final previousEntryIds = previous?.entries.map((entry) => entry.id).toSet() ?? const <String>{};
+    final appearingEntryIds = previous == null
+        ? const <String>{}
+        : entries
+              .where((entry) => !previousEntryIds.contains(entry.id))
+              .map((entry) => entry.id)
+              .toSet();
 
     return LogsViewState(
       entries: entries,
@@ -639,6 +671,7 @@ class LogsController extends AsyncNotifier<LogsViewState> {
       query: query,
       selectedLevel: level,
       selectedCategory: normalizedCategory,
+      appearingEntryIds: appearingEntryIds,
       isLoadingMore: false,
     );
   }

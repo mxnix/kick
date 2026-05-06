@@ -103,6 +103,52 @@ void main() {
     final exported = await container.read(logsControllerProvider.notifier).readAllMatchingEntries();
     expect(exported.map((entry) => entry.id), ['visible-log']);
   });
+
+  test('marks newly visible entries after refreshing log state', () async {
+    final bootstrap = await _createBootstrap();
+    final baseTime = DateTime.utc(2026, 4, 6, 9);
+    await bootstrap.logsRepository.insert(
+      AppLogEntry(
+        id: 'initial-log',
+        timestamp: baseTime,
+        level: AppLogLevel.info,
+        category: 'proxy',
+        route: '/v1/chat/completions',
+        message: 'Initial entry',
+        maskedPayload: '{"index":1}',
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [appBootstrapProvider.overrideWithValue(bootstrap)],
+    );
+
+    addTearDown(() async {
+      container.dispose();
+      await bootstrap.dispose();
+    });
+
+    final initial = await container.read(logsControllerProvider.future);
+    expect(initial.appearingEntryIds, isEmpty);
+
+    await bootstrap.logsRepository.insert(
+      AppLogEntry(
+        id: 'new-log',
+        timestamp: baseTime.add(const Duration(seconds: 1)),
+        level: AppLogLevel.warning,
+        category: 'proxy',
+        route: '/v1/chat/completions',
+        message: 'Fresh entry',
+        maskedPayload: '{"index":2}',
+      ),
+    );
+
+    await container.read(logsControllerProvider.notifier).refreshState();
+
+    final refreshed = await container.read(logsControllerProvider.future);
+    expect(refreshed.entries.map((entry) => entry.id).take(2), ['new-log', 'initial-log']);
+    expect(refreshed.appearingEntryIds, {'new-log'});
+  });
 }
 
 Future<AppBootstrap> _createBootstrap() async {
