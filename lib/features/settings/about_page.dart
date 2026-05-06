@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:m3e_collection/m3e_collection.dart' as m3e;
 
 import '../../app/app_metadata.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
+import '../../core/theme/kick_icons.dart';
 import '../../core/theme/kick_theme.dart';
 import '../../l10n/kick_localizations.dart';
+import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
 import '../shared/app_update_banner.dart';
+import '../shared/kick_actions.dart';
+import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import 'app_update_checker.dart';
 
@@ -26,7 +31,8 @@ class AboutPage extends ConsumerWidget {
     );
 
     return settingsValue.when(
-      data: (settings) => SingleChildScrollView(
+      data: (settings) => KickSmoothSingleChildScrollView(
+        padding: EdgeInsets.only(bottom: AppShell.floatingNavigationClearanceOf(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -57,11 +63,11 @@ class AboutPage extends ConsumerWidget {
         ),
       ),
       error: (error, stackTrace) => EmptyStateCard(
-        icon: Icons.error_rounded,
+        icon: KickIcons.error,
         title: l10n.settingsLoadErrorTitle,
         message: formatUserFacingError(l10n, error),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: KickLoadingIndicator()),
     );
   }
 }
@@ -83,7 +89,7 @@ class _AboutUpdatesCard extends StatelessWidget {
         }
 
         return _AboutActionCard(
-          icon: Icons.verified_rounded,
+          icon: KickIcons.verified,
           title: l10n.aboutUpToDateTitle,
           message: l10n.aboutUpToDateMessage(updateInfo.currentVersion),
           actionLabel: l10n.aboutRetryUpdateCheckButton,
@@ -91,14 +97,14 @@ class _AboutUpdatesCard extends StatelessWidget {
         );
       },
       error: (error, stackTrace) => _AboutActionCard(
-        icon: Icons.cloud_off_rounded,
+        icon: KickIcons.cloudOff,
         title: l10n.aboutUpdateCheckFailedTitle,
         message: l10n.aboutUpdateCheckFailedMessage,
         actionLabel: l10n.aboutRetryUpdateCheckButton,
         onPressed: onRetry,
       ),
       loading: () => _AboutActionCard(
-        icon: Icons.sync_rounded,
+        icon: KickIcons.sync,
         title: l10n.aboutUpdatesTitle,
         message: l10n.aboutUpdatesChecking,
         actionLabel: l10n.loadingValue,
@@ -146,13 +152,11 @@ class _AboutActionCard extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onPressed,
-              icon: Icon(onPressed == null ? Icons.hourglass_top_rounded : Icons.refresh_rounded),
-              label: Text(actionLabel),
-            ),
+          KickSecondaryAction(
+            onPressed: onPressed,
+            icon: onPressed == null ? KickIcons.hourglass : KickIcons.refresh,
+            label: actionLabel,
+            fullWidth: true,
           ),
         ],
       ),
@@ -169,10 +173,11 @@ class _AboutHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton.filledTonal(
+        KickIconAction(
           onPressed: () => context.pop(),
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: KickIcons.back,
+          variant: m3e.IconButtonM3EVariant.tonal,
         ),
         const SizedBox(width: 8),
         Text(title, style: Theme.of(context).textTheme.headlineLarge),

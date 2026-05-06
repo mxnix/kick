@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/theme/kick_icons.dart';
 import '../../core/theme/kick_theme.dart';
 import '../../data/models/app_settings.dart';
 import '../../l10n/kick_localizations.dart';
+import '../shared/kick_actions.dart';
 import '../shared/kick_surfaces.dart';
 import 'settings_draft_controller.dart';
 
@@ -325,12 +327,13 @@ class SettingsAccessSection extends StatelessWidget {
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: KickSecondaryAction(
               onPressed: () {
                 unawaited(onRegenerateApiKey());
               },
-              icon: const Icon(Icons.key_rounded),
-              label: Text(l10n.regenerateApiKeyAction),
+              icon: KickIcons.apiKey,
+              label: l10n.regenerateApiKeyAction,
+              fullWidth: true,
             ),
           ),
           if (isAndroidPlatform) ...[
@@ -459,7 +462,7 @@ class SettingsBackupSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SettingInfoCard(
-            icon: Icons.security_rounded,
+            icon: KickIcons.security,
             title: l10n.settingsBackupInfoTitle,
             subtitle: l10n.settingsBackupInfoSubtitle,
           ),
@@ -470,7 +473,7 @@ class SettingsBackupSection extends StatelessWidget {
               _SettingsActionButton(
                 variant: _SettingsActionButtonVariant.outlined,
                 busy: busy,
-                icon: Icons.download_rounded,
+                icon: KickIcons.download,
                 label: l10n.settingsBackupExportButton,
                 onPressed: () {
                   unawaited(onExport());
@@ -480,7 +483,7 @@ class SettingsBackupSection extends StatelessWidget {
               _SettingsActionButton(
                 variant: _SettingsActionButtonVariant.filled,
                 busy: busy,
-                icon: Icons.settings_backup_restore_rounded,
+                icon: KickIcons.backup,
                 label: l10n.settingsBackupImportButton,
                 onPressed: () {
                   unawaited(onImport());
@@ -513,60 +516,22 @@ class _SettingsActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final child = _SettingsActionButtonContent(icon: icon, label: label);
-    final style = switch (variant) {
-      _SettingsActionButtonVariant.outlined => OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(56),
+    return switch (variant) {
+      _SettingsActionButtonVariant.outlined => KickSecondaryAction(
+        onPressed: onPressed,
+        busy: busy,
+        icon: icon,
+        label: label,
+        fullWidth: true,
       ),
-      _SettingsActionButtonVariant.filled => FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(56),
+      _SettingsActionButtonVariant.filled => KickPrimaryAction(
+        onPressed: onPressed,
+        busy: busy,
+        icon: icon,
+        label: label,
+        fullWidth: true,
       ),
     };
-
-    return SizedBox(
-      width: double.infinity,
-      child: switch (variant) {
-        _SettingsActionButtonVariant.outlined => OutlinedButton(
-          onPressed: busy ? null : onPressed,
-          style: style,
-          child: child,
-        ),
-        _SettingsActionButtonVariant.filled => FilledButton(
-          onPressed: busy ? null : onPressed,
-          style: style,
-          child: child,
-        ),
-      },
-    );
-  }
-}
-
-class _SettingsActionButtonContent extends StatelessWidget {
-  const _SettingsActionButtonContent({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 22,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(alignment: Alignment.centerLeft, child: Icon(icon, size: 18)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

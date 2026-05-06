@@ -7,8 +7,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../core/platform/android_foreground_runtime.dart';
+import '../../core/theme/kick_icons.dart';
 import '../../l10n/kick_localizations.dart';
+import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
+import '../shared/kick_actions.dart';
+import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import 'configuration_backup_service.dart';
 import 'settings_draft_controller.dart';
@@ -80,7 +84,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               _lastPresentedSaveErrorMessage = null;
             }
 
-            return SingleChildScrollView(
+            return KickSmoothSingleChildScrollView(
+              padding: EdgeInsets.only(bottom: AppShell.floatingNavigationClearanceOf(context)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -153,7 +158,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   SettingsNavigationTile(
                     title: l10n.aboutTitle,
                     subtitle: l10n.aboutMenuSubtitle,
-                    icon: Icons.info_rounded,
+                    icon: KickIcons.info,
                     onTap: () => context.push('/settings/about'),
                   ),
                 ],
@@ -163,11 +168,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         );
       },
       error: (error, stackTrace) => EmptyStateCard(
-        icon: Icons.error_rounded,
+        icon: KickIcons.error,
         title: l10n.settingsLoadErrorTitle,
         message: formatUserFacingError(l10n, error),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: KickLoadingIndicator()),
     );
   }
 

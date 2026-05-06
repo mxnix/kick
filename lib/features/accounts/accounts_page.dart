@@ -8,11 +8,15 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/accounts/account_runtime_notice.dart';
 import '../../core/errors/gemini_error_actions.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
+import '../../core/theme/kick_icons.dart';
 import '../../data/models/account_profile.dart';
 import '../../l10n/kick_localizations.dart';
 import '../../proxy/kiro/kiro_auth_source.dart';
 import '../../proxy/kiro/kiro_link_auth_service.dart';
+import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
+import '../shared/kick_actions.dart';
+import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import '../shared/provider_icon.dart';
 import 'account_editor_dialog.dart';
@@ -54,22 +58,21 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         final filteredEnabledCount = filteredAccounts.where((account) => account.enabled).length;
         final hasSearch = _query.trim().isNotEmpty;
 
-        return SingleChildScrollView(
+        return KickSmoothSingleChildScrollView(
+          padding: EdgeInsets.only(bottom: AppShell.floatingNavigationClearanceOf(context)),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final useCompactHeader = constraints.maxWidth < 680;
 
               Widget buildAddButton({required bool fullWidth}) {
-                final button = FilledButton.icon(
+                final button = KickPrimaryAction(
                   onPressed: () => _authenticateNewAccount(context, ref),
-                  icon: const Icon(Icons.add_rounded),
-                  label: Text(l10n.addButton),
+                  icon: KickIcons.add,
+                  label: l10n.addButton,
+                  fullWidth: fullWidth,
                 );
-                if (!fullWidth) {
-                  return button;
-                }
-                return SizedBox(width: double.infinity, child: button);
+                return button;
               }
 
               return Column(
@@ -95,13 +98,13 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                           final searchField = TextField(
                             controller: _searchController,
                             decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.search_rounded),
+                              prefixIcon: const Icon(KickIcons.search),
                               hintText: l10n.accountsSearchHint,
                               suffixIcon: hasSearch
                                   ? IconButton(
                                       onPressed: _clearSearch,
                                       tooltip: MaterialLocalizations.of(context).clearButtonTooltip,
-                                      icon: const Icon(Icons.close_rounded),
+                                      icon: const Icon(KickIcons.clear),
                                     )
                                   : null,
                             ),
@@ -114,7 +117,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                             isExpanded: true,
                             decoration: InputDecoration(
                               labelText: l10n.accountsSortLabel,
-                              prefixIcon: const Icon(Icons.sort_rounded),
+                              prefixIcon: const Icon(KickIcons.sort),
                             ),
                             items: _AccountSortOption.values
                                 .map(
@@ -156,15 +159,15 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                                 children: [
                                   KickBadge(
                                     label: l10n.accountsTotalCount(accounts.length),
-                                    leading: const Icon(Icons.manage_accounts_rounded),
+                                    leading: const Icon(KickIcons.manageAccounts),
                                   ),
                                   KickBadge(
                                     label: l10n.activeAccounts(filteredEnabledCount),
-                                    leading: const Icon(Icons.check_circle_outline_rounded),
+                                    leading: const Icon(KickIcons.check),
                                   ),
                                   KickBadge(
                                     label: l10n.accountsFilteredCount(filteredAccounts.length),
-                                    leading: const Icon(Icons.filter_alt_rounded),
+                                    leading: const Icon(KickIcons.filter),
                                     emphasis: hasSearch,
                                   ),
                                 ],
@@ -178,20 +181,22 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                   const SizedBox(height: 24),
                   if (accounts.isEmpty)
                     EmptyStateCard(
-                      icon: Icons.group_add_rounded,
+                      icon: KickIcons.addAccount,
                       title: l10n.accountsEmptyTitle,
                       message: l10n.accountsEmptyMessage,
                       action: SizedBox(
                         width: double.infinity,
-                        child: FilledButton(
+                        child: KickPrimaryAction(
+                          label: l10n.connectAccountButton,
+                          icon: KickIcons.addAccount,
+                          fullWidth: true,
                           onPressed: () => _authenticateNewAccount(context, ref),
-                          child: Text(l10n.connectAccountButton),
                         ),
                       ),
                     )
                   else if (filteredAccounts.isEmpty)
                     EmptyStateCard(
-                      icon: Icons.manage_search_rounded,
+                      icon: KickIcons.search,
                       title: l10n.accountsFilteredEmptyTitle,
                       message: l10n.accountsFilteredEmptyMessage,
                     )
@@ -225,11 +230,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         );
       },
       error: (error, stackTrace) => EmptyStateCard(
-        icon: Icons.error_rounded,
+        icon: KickIcons.error,
         title: l10n.accountsLoadErrorTitle,
         message: formatUserFacingError(l10n, error),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: KickLoadingIndicator()),
     );
   }
 
@@ -302,16 +307,16 @@ class _AccountCard extends ConsumerWidget {
         ? l10n.accountQuotaWarningStatus
         : l10n.accountReadyStatus;
     final statusIcon = !account.enabled
-        ? Icons.pause_circle_rounded
+        ? Icons.pause_rounded
         : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
-        ? Icons.report_gmailerrorred_rounded
+        ? KickIcons.report
         : account.isCoolingDown
-        ? Icons.schedule_rounded
+        ? KickIcons.schedule
         : runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending
-        ? Icons.manage_search_rounded
+        ? KickIcons.search
         : hasQuotaWarning
-        ? Icons.query_stats_rounded
-        : Icons.check_circle_rounded;
+        ? KickIcons.queryStats
+        : KickIcons.check;
     final statusTint = !account.enabled
         ? scheme.onSurfaceVariant
         : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
@@ -356,9 +361,9 @@ class _AccountCard extends ConsumerWidget {
                 value: account.enabled,
                 onChanged: (value) {
                   unawaited(
-                    ref.read(accountsControllerProvider.notifier).saveAccount(
-                      account.copyWith(enabled: value),
-                    ),
+                    ref
+                        .read(accountsControllerProvider.notifier)
+                        .saveAccount(account.copyWith(enabled: value)),
                   );
                 },
               ),
@@ -380,11 +385,11 @@ class _AccountCard extends ConsumerWidget {
                   label: account.projectId.trim().isEmpty
                       ? l10n.projectIdAutoChip
                       : l10n.projectIdChip(account.projectId),
-                  leading: const Icon(Icons.badge_rounded),
+                  leading: const Icon(KickIcons.badge),
                 ),
               KickBadge(
                 label: l10n.priorityChip(priorityLabel),
-                leading: const Icon(Icons.low_priority_rounded),
+                leading: const Icon(KickIcons.lowPriority),
               ),
               KickBadge(
                 label: statusLabel,
@@ -416,10 +421,10 @@ class _AccountCard extends ConsumerWidget {
             if (runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation &&
                 runtimeNotice?.actionUrl?.trim().isNotEmpty == true) ...[
               const SizedBox(height: 10),
-              OutlinedButton.icon(
+              KickSecondaryAction(
                 onPressed: () => unawaited(_openErrorAction(context, runtimeNotice!.actionUrl!)),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: Text(l10n.accountSubmitAppealButton),
+                icon: KickIcons.openInNew,
+                label: l10n.accountSubmitAppealButton,
               ),
             ],
           ],
@@ -429,7 +434,7 @@ class _AccountCard extends ConsumerWidget {
             runSpacing: 8,
             children: [
               _AccountActionButton(
-                icon: Icons.edit_rounded,
+                icon: KickIcons.edit,
                 label: l10n.editButton,
                 onPressed: () async {
                   final draft = await showAccountEditorDialog(
@@ -467,7 +472,7 @@ class _AccountCard extends ConsumerWidget {
               ),
               if (account.supportsUsageDiagnostics)
                 _AccountActionButton(
-                  icon: Icons.query_stats_rounded,
+                  icon: KickIcons.queryStats,
                   label: l10n.accountUsageOpenTooltip,
                   onPressed: () =>
                       context.pushNamed('account-usage', pathParameters: {'accountId': account.id}),
@@ -714,7 +719,7 @@ Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfil
             const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2.4),
+              child: KickLoadingIndicator(size: 24, contained: false),
             ),
             const SizedBox(width: 16),
             Expanded(child: Text(l10n.accountProjectCheckInProgressMessage)),
@@ -829,7 +834,7 @@ String _formatAccountRuntimeNoticeMessage(KickLocalizations l10n, String snapsho
 IconData _accountRuntimeNoticeIcon(AccountRuntimeNotice? runtimeNotice) {
   return switch (runtimeNotice?.kind) {
     AccountRuntimeNoticeKind.banCheckPending => Icons.manage_search_rounded,
-    AccountRuntimeNoticeKind.termsOfServiceViolation => Icons.report_gmailerrorred_rounded,
+    AccountRuntimeNoticeKind.termsOfServiceViolation => KickIcons.report,
     null => Icons.query_stats_rounded,
   };
 }
@@ -923,7 +928,7 @@ class _KiroLinkAuthDialogState extends State<_KiroLinkAuthDialog> {
                     const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2.2),
+                      child: KickLoadingIndicator(size: 18, contained: false),
                     ),
                     const SizedBox(width: 12),
                     Expanded(child: Text(l10n.kiroLinkAuthWaitingMessage)),
@@ -1051,20 +1056,7 @@ class _AccountActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        foregroundColor: scheme.onSurface,
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.72)),
-        visualDensity: VisualDensity.compact,
-      ),
-      icon: Icon(icon, size: 18),
-      label: Text(label),
-    );
+    return KickSecondaryAction(onPressed: onPressed, icon: icon, label: label);
   }
 }
 
@@ -1123,7 +1115,7 @@ class _AccountMoreActionsButton extends StatelessWidget {
         ),
       ],
       builder: (context, controller, child) {
-        return OutlinedButton.icon(
+        return KickSecondaryAction(
           onPressed: () {
             if (controller.isOpen) {
               controller.close();
@@ -1131,15 +1123,8 @@ class _AccountMoreActionsButton extends StatelessWidget {
               controller.open();
             }
           },
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            foregroundColor: scheme.onSurface,
-            side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.72)),
-            visualDensity: VisualDensity.compact,
-          ),
-          icon: const Icon(Icons.more_horiz_rounded, size: 18),
-          label: Text(label),
+          icon: KickIcons.more,
+          label: label,
         );
       },
     );

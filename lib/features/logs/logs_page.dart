@@ -7,9 +7,13 @@ import 'package:intl/intl.dart';
 
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../core/logging/log_sanitizer.dart';
+import '../../core/theme/kick_icons.dart';
 import '../../data/models/app_log_entry.dart';
 import '../../l10n/kick_localizations.dart';
+import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
+import '../shared/kick_actions.dart';
+import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import 'log_export_service.dart';
 import 'log_message_localizer.dart';
@@ -47,7 +51,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
           );
         }
         final entries = logs.entries;
-        return CustomScrollView(
+        return KickSmoothCustomScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
             SliverToBoxAdapter(
@@ -58,30 +62,25 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    IconButton(
+                    KickIconAction(
                       onPressed: logs.filteredCount == 0 || _isExporting || _isSharing
                           ? null
                           : _exportLogs,
                       tooltip: l10n.logsExportTooltip,
-                      icon: const Icon(Icons.download_rounded),
+                      icon: KickIcons.download,
                     ),
-                    IconButton(
+                    KickIconAction(
                       onPressed: logs.filteredCount == 0 || _isExporting || _isSharing
                           ? null
                           : _shareLogs,
                       tooltip: l10n.logsShareTooltip,
-                      icon: const Icon(Icons.share_rounded),
+                      icon: KickIcons.share,
                     ),
-                    IconButton(
+                    KickIconAction(
                       onPressed: logs.totalCount == 0 ? null : _confirmClearLogs,
                       tooltip: l10n.logsClearButton,
-                      style: IconButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.32),
-                        ),
-                      ),
-                      icon: const Icon(Icons.delete_sweep_rounded),
+                      icon: KickIcons.deleteSweep,
+                      dangerous: true,
                     ),
                   ],
                 ),
@@ -98,7 +97,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                     TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search_rounded),
+                        prefixIcon: const Icon(KickIcons.search),
                         hintText: l10n.logsSearchHint,
                       ),
                       onChanged: (value) {
@@ -112,17 +111,17 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                       children: [
                         KickBadge(
                           label: l10n.logsTotalCount(logs.totalCount),
-                          leading: const Icon(Icons.article_rounded),
+                          leading: const Icon(KickIcons.logs),
                         ),
                         KickBadge(
                           label: l10n.logsFilteredCount(logs.filteredCount),
-                          leading: const Icon(Icons.filter_alt_rounded),
+                          leading: const Icon(KickIcons.filter),
                           emphasis: logs.hasActiveFilters,
                         ),
                         if (logs.filteredCount != entries.length)
                           KickBadge(
                             label: l10n.logsLoadedCount(entries.length),
-                            leading: const Icon(Icons.unfold_more_rounded),
+                            leading: const Icon(KickIcons.expandMore),
                             emphasis: true,
                           ),
                       ],
@@ -220,7 +219,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                 child: SizedBox(
                   width: double.infinity,
                   child: EmptyStateCard(
-                    icon: Icons.article_rounded,
+                    icon: KickIcons.logs,
                     title: logs.totalCount == 0 ? l10n.logsEmptyTitle : l10n.logsFilteredEmptyTitle,
                     message: logs.totalCount == 0 ? null : l10n.logsFilteredEmptyMessage,
                   ),
@@ -250,31 +249,29 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(0, 20, 0, 8),
                   child: Center(
-                    child: OutlinedButton.icon(
+                    child: KickSecondaryAction(
                       onPressed: logs.isLoadingMore
                           ? null
                           : () => ref.read(logsControllerProvider.notifier).loadMore(),
-                      icon: logs.isLoadingMore
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.expand_more_rounded),
-                      label: Text(l10n.logsLoadMoreButton),
+                      busy: logs.isLoadingMore,
+                      icon: KickIcons.expandMore,
+                      label: l10n.logsLoadMoreButton,
                     ),
                   ),
                 ),
               ),
+            SliverToBoxAdapter(
+              child: SizedBox(height: AppShell.floatingNavigationClearanceOf(context)),
+            ),
           ],
         );
       },
       error: (error, stackTrace) => EmptyStateCard(
-        icon: Icons.error_rounded,
+        icon: KickIcons.error,
         title: l10n.logsLoadErrorTitle,
         message: formatUserFacingError(l10n, error),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: KickLoadingIndicator()),
     );
   }
 
@@ -341,7 +338,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          icon: const Icon(Icons.delete_sweep_rounded),
+          icon: const Icon(KickIcons.deleteSweep),
           title: Text(l10n.logsClearDialogTitle),
           content: Text(l10n.logsClearDialogMessage),
           actions: [
@@ -534,12 +531,12 @@ class _LogCard extends StatelessWidget {
     return KickPanel(
       tone: entry.level == AppLogLevel.info ? KickPanelTone.soft : KickPanelTone.muted,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      radius: 30,
+      radius: 24,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 10,
+            width: 6,
             height: 112,
             decoration: BoxDecoration(color: levelColor, borderRadius: BorderRadius.circular(999)),
           ),
@@ -559,7 +556,7 @@ class _LogCard extends StatelessWidget {
                       emphasis: true,
                       tint: levelColor,
                     ),
-                    KickBadge(label: entry.category, leading: const Icon(Icons.label_rounded)),
+                    KickBadge(label: entry.category, leading: const Icon(KickIcons.label)),
                     Text(
                       formatter.format(entry.timestamp),
                       style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
@@ -580,23 +577,20 @@ class _LogCard extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    TextButton.icon(
+                    KickSecondaryAction(
                       onPressed: onCopy,
-                      icon: const Icon(Icons.copy_all_rounded, size: 18),
-                      label: Text(context.l10n.logsCopyEntryButton),
+                      icon: KickIcons.copyAll,
+                      label: context.l10n.logsCopyEntryButton,
+                      variant: KickSecondaryActionVariant.text,
                     ),
                     if (sanitizedPayload?.isNotEmpty == true)
-                      TextButton.icon(
+                      KickSecondaryAction(
                         onPressed: onTogglePayload,
-                        icon: Icon(
-                          expandedPayload ? Icons.unfold_less_rounded : Icons.data_object_rounded,
-                          size: 18,
-                        ),
-                        label: Text(
-                          expandedPayload
-                              ? context.l10n.logsPayloadHideButton
-                              : context.l10n.logsPayloadShowButton,
-                        ),
+                        icon: expandedPayload ? KickIcons.unfoldLess : KickIcons.data,
+                        label: expandedPayload
+                            ? context.l10n.logsPayloadHideButton
+                            : context.l10n.logsPayloadShowButton,
+                        variant: KickSecondaryActionVariant.text,
                       ),
                   ],
                 ),
@@ -629,9 +623,9 @@ String _logLevelLabel(KickLocalizations l10n, AppLogLevel level) {
 
 IconData _logLevelIcon(AppLogLevel level) {
   return switch (level) {
-    AppLogLevel.info => Icons.info_rounded,
-    AppLogLevel.warning => Icons.warning_amber_rounded,
-    AppLogLevel.error => Icons.error_rounded,
+    AppLogLevel.info => KickIcons.info,
+    AppLogLevel.warning => KickIcons.warning,
+    AppLogLevel.error => KickIcons.error,
   };
 }
 

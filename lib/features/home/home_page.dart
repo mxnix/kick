@@ -5,9 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/errors/user_facing_error_formatter.dart';
+import '../../core/theme/kick_icons.dart';
 import '../../l10n/kick_localizations.dart';
+import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
 import '../shared/app_update_banner.dart';
+import '../shared/kick_actions.dart';
+import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 
 class HomePage extends ConsumerWidget {
@@ -49,10 +53,11 @@ class HomePage extends ConsumerWidget {
         ? (totalAccounts == 0 ? l10n.connectAccountShortButton : l10n.openAccountsButton)
         : (proxyStatus.running ? l10n.stopProxyButton : l10n.startProxyButton);
     final primaryActionIcon = showAccountSetup
-        ? (totalAccounts == 0 ? Icons.person_add_alt_1_rounded : Icons.groups_2_rounded)
-        : (proxyStatus.running ? Icons.pause_rounded : Icons.play_arrow_rounded);
+        ? (totalAccounts == 0 ? KickIcons.addAccount : KickIcons.accounts)
+        : (proxyStatus.running ? KickIcons.pause : KickIcons.play);
 
-    return SingleChildScrollView(
+    return KickSmoothSingleChildScrollView(
+      padding: EdgeInsets.only(bottom: AppShell.floatingNavigationClearanceOf(context)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -102,12 +107,14 @@ class HomePage extends ConsumerWidget {
           if (proxyStatus.lastError != null) ...[
             const SizedBox(height: 20),
             EmptyStateCard(
-              icon: Icons.error_rounded,
+              icon: KickIcons.error,
               title: l10n.lastErrorTitle,
               message: formatUserFacingMessage(l10n, proxyStatus.lastError!),
-              action: TextButton(
+              action: KickSecondaryAction(
+                label: l10n.openLogsButton,
+                icon: KickIcons.logs,
+                variant: KickSecondaryActionVariant.text,
                 onPressed: () => context.go('/logs'),
-                child: Text(l10n.openLogsButton),
               ),
             ),
           ],
@@ -157,7 +164,7 @@ class _ProxyStatusHero extends StatelessWidget {
 
     return KickPanel(
       tone: KickPanelTone.soft,
-      radius: 36,
+      radius: 32,
       padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,7 +173,7 @@ class _ProxyStatusHero extends StatelessWidget {
             children: [
               KickBadge(
                 label: l10n.embeddedProxyTitle,
-                leading: const Icon(Icons.hub_rounded),
+                leading: const Icon(KickIcons.hub),
                 emphasis: running,
               ),
               if (showInlineStatus) ...[const Spacer(), _StatusPill(running: running)],
@@ -204,27 +211,21 @@ class _ProxyStatusHero extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              KickBadge(label: activeAccountsText, leading: const Icon(Icons.groups_2_rounded)),
+              KickBadge(label: activeAccountsText, leading: const Icon(KickIcons.accounts)),
               KickBadge(
                 label: '${l10n.uptimeTitle}: $uptimeText',
-                leading: const Icon(Icons.schedule_rounded),
+                leading: const Icon(KickIcons.schedule),
                 tint: scheme.secondary,
               ),
             ],
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: startPending ? null : onPrimaryAction,
-              icon: startPending
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(primaryActionIcon),
-              label: Text(primaryActionLabel),
-            ),
+          KickPrimaryAction(
+            label: primaryActionLabel,
+            icon: primaryActionIcon,
+            fullWidth: true,
+            busy: startPending,
+            onPressed: onPrimaryAction,
           ),
         ],
       ),
@@ -260,21 +261,21 @@ class _HomeOnboardingCard extends StatelessWidget {
             number: 1,
             title: l10n.homeOnboardingAccountsTitle,
             message: l10n.homeOnboardingAccountsMessage,
-            icon: Icons.person_add_alt_1_rounded,
+            icon: KickIcons.addAccount,
           ),
           const SizedBox(height: 12),
           _OnboardingStep(
             number: 2,
             title: l10n.homeOnboardingEndpointTitle,
             message: l10n.homeOnboardingEndpointMessage(proxyEndpoint),
-            icon: Icons.link_rounded,
+            icon: KickIcons.link,
           ),
           const SizedBox(height: 12),
           _OnboardingStep(
             number: 3,
             title: l10n.homeOnboardingStartTitle,
             message: l10n.homeOnboardingStartMessage,
-            icon: Icons.rocket_launch_rounded,
+            icon: KickIcons.rocket,
           ),
           const SizedBox(height: 16),
           Text(
@@ -375,7 +376,7 @@ class _StatusPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(running ? Icons.play_arrow_rounded : Icons.pause_rounded, size: 16, color: tone),
+          Icon(running ? KickIcons.play : KickIcons.pause, size: 16, color: tone),
           const SizedBox(width: 6),
           Text(
             running ? context.l10n.proxyRunningStatus : context.l10n.proxyStoppedStatus,
@@ -440,12 +441,10 @@ class _QuickAccessTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: onCopy,
-                tooltip: tooltip,
-                icon: const Icon(Icons.content_copy_rounded, size: 20),
-              ),
+              if (onCopy != null) ...[
+                const SizedBox(width: 8),
+                KickIconAction(onPressed: onCopy, tooltip: tooltip, icon: KickIcons.copy),
+              ],
             ],
           ),
           if (footer != null) ...[const SizedBox(height: 6), footer!],
