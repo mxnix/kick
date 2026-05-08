@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:m3e_collection/m3e_collection.dart' as m3e;
 
+import 'kick_haptics.dart';
+
 class KickPrimaryAction extends StatelessWidget {
   const KickPrimaryAction({
     super.key,
@@ -28,7 +30,12 @@ class KickPrimaryAction extends StatelessWidget {
         final hasIcon = busy || icon != null;
         final labelMaxWidth = _buttonLabelMaxWidth(constraints, size: size, hasIcon: hasIcon);
         final button = m3e.ButtonM3E(
-          onPressed: onPressed,
+          onPressed: onPressed == null
+              ? null
+              : () {
+                  KickHaptics.light();
+                  onPressed!();
+                },
           enabled: !busy && onPressed != null,
           style: m3e.ButtonM3EStyle.filled,
           size: size,
@@ -88,7 +95,12 @@ class KickSecondaryAction extends StatelessWidget {
         final hasIcon = busy || icon != null;
         final labelMaxWidth = _buttonLabelMaxWidth(constraints, size: size, hasIcon: hasIcon);
         final button = m3e.ButtonM3E(
-          onPressed: onPressed,
+          onPressed: onPressed == null
+              ? null
+              : () {
+                  KickHaptics.light();
+                  onPressed!();
+                },
           enabled: !busy && onPressed != null,
           style: style,
           size: size,
@@ -233,7 +245,12 @@ class KickIconAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = dangerous ? Theme.of(context).colorScheme.error : null;
     return m3e.IconButtonM3E(
-      onPressed: onPressed,
+      onPressed: onPressed == null
+          ? null
+          : () {
+              KickHaptics.selection();
+              onPressed!();
+            },
       tooltip: tooltip,
       semanticLabel: tooltip,
       icon: Icon(icon, color: color),

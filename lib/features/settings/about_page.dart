@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m3e_collection/m3e_collection.dart' as m3e;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_metadata.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
@@ -12,6 +15,7 @@ import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
 import '../shared/app_update_banner.dart';
 import '../shared/kick_actions.dart';
+import '../shared/kick_haptics.dart';
 import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import 'app_update_checker.dart';
@@ -59,6 +63,35 @@ class AboutPage extends ConsumerWidget {
                     .save(settings.copyWith(analyticsConsentEnabled: value));
               },
             ),
+            const SizedBox(height: 14),
+            _AboutInfoGrid(
+              cards: [
+                _AboutInfoCardData(
+                  icon: KickIcons.verifiedUser,
+                  title: l10n.aboutLicenseTitle,
+                  message: l10n.aboutLicenseMessage,
+                  actionLabel: l10n.aboutOpenLicenseButton,
+                  url: 'https://github.com/mxnix/kick/blob/main/LICENSE.md',
+                ),
+                _AboutInfoCardData(
+                  icon: KickIcons.security,
+                  title: l10n.aboutPrivacyTitle,
+                  message: l10n.aboutPrivacyMessage,
+                  actionLabel: l10n.aboutOpenPrivacyButton,
+                  url: 'https://github.com/mxnix/kick/blob/main/docs/PRIVACY.md',
+                ),
+                _AboutInfoCardData(
+                  icon: KickIcons.warning,
+                  title: l10n.aboutDisclaimerTitle,
+                  message: l10n.aboutDisclaimerMessage,
+                ),
+                _AboutInfoCardData(
+                  icon: KickIcons.info,
+                  title: l10n.aboutCreditsTitle,
+                  message: l10n.aboutCreditsMessage,
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -68,6 +101,102 @@ class AboutPage extends ConsumerWidget {
         message: formatUserFacingError(l10n, error),
       ),
       loading: () => const Center(child: KickLoadingIndicator()),
+    );
+  }
+}
+
+class _AboutInfoGrid extends StatelessWidget {
+  const _AboutInfoGrid({required this.cards});
+
+  final List<_AboutInfoCardData> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useTwoColumns = constraints.maxWidth >= 760;
+        if (!useTwoColumns) {
+          return Column(
+            children: [
+              for (final entry in cards.indexed) ...[
+                if (entry.$1 > 0) const SizedBox(height: 14),
+                _AboutInfoCard(data: entry.$2),
+              ],
+            ],
+          );
+        }
+
+        final spacing = 14.0;
+        final width = (constraints.maxWidth - spacing) / 2;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final card in cards)
+              SizedBox(
+                width: width,
+                child: _AboutInfoCard(data: card),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AboutInfoCardData {
+  const _AboutInfoCardData({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.url,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final String? url;
+}
+
+class _AboutInfoCard extends StatelessWidget {
+  const _AboutInfoCard({required this.data});
+
+  final _AboutInfoCardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return KickPanel(
+      tone: KickPanelTone.soft,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(data.icon, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 10),
+              Expanded(child: Text(data.title, style: Theme.of(context).textTheme.titleMedium)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            data.message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          if (data.url != null && data.actionLabel != null) ...[
+            const SizedBox(height: 14),
+            KickSecondaryAction(
+              onPressed: () => unawaited(_openAboutLink(data.url!)),
+              icon: KickIcons.openInNew,
+              label: data.actionLabel!,
+              variant: KickSecondaryActionVariant.text,
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -289,9 +418,23 @@ class _AboutSettingToggle extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Switch(value: value, onChanged: onChanged),
+          Switch(
+            value: value,
+            onChanged: (nextValue) {
+              KickHaptics.selection();
+              onChanged(nextValue);
+            },
+          ),
         ],
       ),
     );
   }
+}
+
+Future<void> _openAboutLink(String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null) {
+    return;
+  }
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

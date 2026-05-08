@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../core/theme/kick_icons.dart';
+import '../../data/models/app_settings.dart';
 import '../../l10n/kick_localizations.dart';
 import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
@@ -13,12 +14,20 @@ import '../shared/app_update_banner.dart';
 import '../shared/kick_actions.dart';
 import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
+import 'silly_tavern_push_service.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  bool _pushingSillyTavern = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     ref.watch(clockTickerProvider);
 
@@ -55,6 +64,22 @@ class HomePage extends ConsumerWidget {
     final primaryActionIcon = showAccountSetup
         ? (totalAccounts == 0 ? KickIcons.addAccount : KickIcons.accounts)
         : (proxyStatus.running ? KickIcons.pause : KickIcons.play);
+    final secondaryCards = <Widget>[
+      if (showAccountSetup) _HomeOnboardingCard(proxyEndpoint: proxyEndpoint),
+      if (updateInfo?.hasUpdate == true) AppUpdateBanner(updateInfo: updateInfo!),
+      if (proxyStatus.lastError != null)
+        EmptyStateCard(
+          icon: KickIcons.error,
+          title: l10n.lastErrorTitle,
+          message: formatUserFacingMessage(l10n, proxyStatus.lastError!),
+          action: KickSecondaryAction(
+            label: l10n.openLogsButton,
+            icon: KickIcons.logs,
+            variant: KickSecondaryActionVariant.text,
+            onPressed: () => context.go('/logs'),
+          ),
+        ),
+    ];
 
     return KickSmoothSingleChildScrollView(
       padding: EdgeInsets.only(bottom: AppShell.floatingNavigationClearanceOf(context)),
@@ -63,63 +88,149 @@ class HomePage extends ConsumerWidget {
         children: [
           SectionHeading(title: l10n.homeTitle),
           const SizedBox(height: 28),
-          _ProxyStatusHero(
-            running: proxyStatus.running,
-            startPending: proxyStatus.startPending,
-            showInlineStatus: _showInlineStatusForCurrentPlatform(),
-            proxyEndpoint: proxyEndpoint,
-            apiKeyValue: apiKeyValue,
-            activeAccountsText: l10n.activeAccounts(activeAccounts),
-            uptimeText: uptimeText,
-            copyProxyEndpointTooltip: l10n.copyProxyEndpointTooltip,
-            copyApiKeyTooltip: l10n.copyApiKeyTooltip,
-            onCopyProxyEndpoint: () =>
-                _copyText(context, proxyEndpoint, l10n.proxyEndpointCopiedMessage),
-            onCopyApiKey: settings == null || !settings.apiKeyRequired
-                ? null
-                : () => _copyText(context, settings.apiKey, l10n.apiKeyCopiedMessage),
-            primaryActionLabel: primaryActionLabel,
-            primaryActionIcon: primaryActionIcon,
-            onPrimaryAction: () async {
-              if (showAccountSetup) {
-                context.go('/accounts');
-                return;
-              }
-
-              if (proxyStatus.running) {
-                await ref.read(proxyControllerProvider).stop();
-              } else {
-                if (accounts != null && activeAccounts == 0) {
-                  _showSnackBar(context, l10n.noActiveAccountsWarning);
+          _HomeDashboardLayout(
+            hero: _ProxyStatusHero(
+              running: proxyStatus.running,
+              startPending: proxyStatus.startPending,
+              showInlineStatus: _showInlineStatusForCurrentPlatform(),
+              proxyEndpoint: proxyEndpoint,
+              apiKeyValue: apiKeyValue,
+              activeAccountsText: l10n.activeAccounts(activeAccounts),
+              uptimeText: uptimeText,
+              copyProxyEndpointTooltip: l10n.copyProxyEndpointTooltip,
+              copyApiKeyTooltip: l10n.copyApiKeyTooltip,
+              onCopyProxyEndpoint: () =>
+                  _copyText(context, proxyEndpoint, l10n.proxyEndpointCopiedMessage),
+              onCopyApiKey: settings == null || !settings.apiKeyRequired
+                  ? null
+                  : () => _copyText(context, settings.apiKey, l10n.apiKeyCopiedMessage),
+              primaryActionLabel: primaryActionLabel,
+              primaryActionIcon: primaryActionIcon,
+              pushSillyTavernBusy: _pushingSillyTavern,
+              onPushSillyTavern: settings == null
+                  ? null
+                  : () => _pushToSillyTavern(
+                      context,
+                      settings: settings,
+                      proxyEndpoint: proxyEndpoint,
+                    ),
+              onPrimaryAction: () async {
+                if (showAccountSetup) {
+                  context.go('/accounts');
+                  return;
                 }
-                await ref.read(proxyControllerProvider).start();
-              }
-            },
-          ),
-          if (showAccountSetup) ...[
-            const SizedBox(height: 20),
-            _HomeOnboardingCard(proxyEndpoint: proxyEndpoint),
-          ],
-          if (updateInfo?.hasUpdate == true) ...[
-            const SizedBox(height: 20),
-            AppUpdateBanner(updateInfo: updateInfo!),
-          ],
-          if (proxyStatus.lastError != null) ...[
-            const SizedBox(height: 20),
-            EmptyStateCard(
-              icon: KickIcons.error,
-              title: l10n.lastErrorTitle,
-              message: formatUserFacingMessage(l10n, proxyStatus.lastError!),
-              action: KickSecondaryAction(
-                label: l10n.openLogsButton,
-                icon: KickIcons.logs,
-                variant: KickSecondaryActionVariant.text,
-                onPressed: () => context.go('/logs'),
-              ),
+
+                if (proxyStatus.running) {
+                  await ref.read(proxyControllerProvider).stop();
+                } else {
+                  if (accounts != null && activeAccounts == 0) {
+                    _showSnackBar(context, l10n.noActiveAccountsWarning);
+                  }
+                  await ref.read(proxyControllerProvider).start();
+                }
+              },
             ),
-          ],
+            secondaryCards: secondaryCards,
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _pushToSillyTavern(
+    BuildContext context, {
+    required AppSettings settings,
+    required String proxyEndpoint,
+  }) async {
+    if (_pushingSillyTavern) {
+      return;
+    }
+
+    final draft = await _showSillyTavernPushDialog(context, settings);
+    if (!mounted || !context.mounted || draft == null) {
+      return;
+    }
+
+    setState(() => _pushingSillyTavern = true);
+    try {
+      final result = await ref
+          .read(sillyTavernPushServiceProvider)
+          .pushProfile(
+            sillyTavernUrl: draft.sillyTavernUrl,
+            proxyEndpoint: proxyEndpoint,
+            apiKey: settings.apiKeyRequired ? settings.apiKey : '',
+            profileName: draft.profileName,
+            model: draft.model,
+          );
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      _showSnackBar(context, context.l10n.pushSillyTavernSuccessMessage(result.profileName));
+    } catch (error) {
+      if (!mounted || !context.mounted) {
+        return;
+      }
+      final message = _formatSillyTavernPushError(context.l10n, error);
+      _showSnackBar(context, context.l10n.pushSillyTavernFailedMessage(message));
+    } finally {
+      if (mounted) {
+        setState(() => _pushingSillyTavern = false);
+      }
+    }
+  }
+}
+
+class _HomeDashboardLayout extends StatelessWidget {
+  const _HomeDashboardLayout({required this.hero, required this.secondaryCards});
+
+  final Widget hero;
+  final List<Widget> secondaryCards;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useWideLayout = constraints.maxWidth >= 1040 && secondaryCards.isNotEmpty;
+        final secondaryColumn = _HomeSecondaryColumn(cards: secondaryCards);
+
+        if (!useWideLayout) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              hero,
+              if (secondaryCards.isNotEmpty) ...[const SizedBox(height: 20), secondaryColumn],
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 7, child: hero),
+            const SizedBox(width: 20),
+            Expanded(flex: 5, child: secondaryColumn),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _HomeSecondaryColumn extends StatelessWidget {
+  const _HomeSecondaryColumn({required this.cards});
+
+  final List<Widget> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final entry in cards.indexed) ...[
+          if (entry.$1 > 0) const SizedBox(height: 14),
+          entry.$2,
+        ],
+      ],
     );
   }
 }
@@ -140,6 +251,8 @@ class _ProxyStatusHero extends StatelessWidget {
     required this.primaryActionLabel,
     required this.primaryActionIcon,
     required this.onPrimaryAction,
+    required this.pushSillyTavernBusy,
+    required this.onPushSillyTavern,
   });
 
   final bool running;
@@ -156,6 +269,8 @@ class _ProxyStatusHero extends StatelessWidget {
   final String primaryActionLabel;
   final IconData primaryActionIcon;
   final VoidCallback? onPrimaryAction;
+  final bool pushSillyTavernBusy;
+  final VoidCallback? onPushSillyTavern;
 
   @override
   Widget build(BuildContext context) {
@@ -220,15 +335,213 @@ class _ProxyStatusHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          KickPrimaryAction(
-            label: primaryActionLabel,
-            icon: primaryActionIcon,
-            fullWidth: true,
-            busy: startPending,
-            onPressed: onPrimaryAction,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final horizontal = constraints.maxWidth >= 560;
+              final startButton = KickPrimaryAction(
+                label: primaryActionLabel,
+                icon: primaryActionIcon,
+                fullWidth: true,
+                busy: startPending,
+                onPressed: onPrimaryAction,
+              );
+              final sillyTavernButton = _SillyTavernActionButton(
+                label: l10n.pushSillyTavernButton,
+                busy: pushSillyTavernBusy,
+                onPressed: onPushSillyTavern,
+              );
+
+              if (!horizontal) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [startButton, const SizedBox(height: 10), sillyTavernButton],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: startButton),
+                  const SizedBox(width: 10),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 220),
+                    child: sillyTavernButton,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
+    );
+  }
+}
+
+const _sillyTavernLogoUrl = 'https://sillytavern.app/img/logo.png';
+
+class _SillyTavernActionButton extends StatelessWidget {
+  const _SillyTavernActionButton({
+    required this.label,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool busy;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return OutlinedButton.icon(
+      onPressed: busy ? null : onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 54),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.72)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+      icon: busy
+          ? const KickLoadingIndicator(size: 22, contained: false)
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.network(
+                _sillyTavernLogoUrl,
+                width: 22,
+                height: 22,
+                errorBuilder: (_, _, _) => const Icon(KickIcons.link, size: 22),
+              ),
+            ),
+      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+    );
+  }
+}
+
+class _SillyTavernPushDraft {
+  const _SillyTavernPushDraft({
+    required this.sillyTavernUrl,
+    required this.profileName,
+    required this.model,
+  });
+
+  final String sillyTavernUrl;
+  final String profileName;
+  final String model;
+}
+
+Future<_SillyTavernPushDraft?> _showSillyTavernPushDialog(
+  BuildContext context,
+  AppSettings settings,
+) {
+  return showDialog<_SillyTavernPushDraft>(
+    context: context,
+    builder: (context) => _SillyTavernPushDialog(settings: settings),
+  );
+}
+
+class _SillyTavernPushDialog extends StatefulWidget {
+  const _SillyTavernPushDialog({required this.settings});
+
+  final AppSettings settings;
+
+  @override
+  State<_SillyTavernPushDialog> createState() => _SillyTavernPushDialogState();
+}
+
+class _SillyTavernPushDialogState extends State<_SillyTavernPushDialog> {
+  late final TextEditingController _urlController;
+  late final TextEditingController _profileNameController;
+  late final TextEditingController _modelController;
+
+  @override
+  void initState() {
+    super.initState();
+    _urlController = TextEditingController(text: 'http://127.0.0.1:8000');
+    _profileNameController = TextEditingController(text: 'KiCk');
+    _modelController = TextEditingController(text: _defaultSillyTavernModel(widget.settings));
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    _profileNameController.dispose();
+    _modelController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      icon: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          _sillyTavernLogoUrl,
+          width: 34,
+          height: 34,
+          errorBuilder: (_, _, _) => const Icon(KickIcons.link),
+        ),
+      ),
+      title: Text(l10n.pushSillyTavernDialogTitle),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.pushSillyTavernDialogMessage,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _urlController,
+              decoration: InputDecoration(
+                labelText: l10n.pushSillyTavernUrlLabel,
+                hintText: 'http://127.0.0.1:8000',
+                prefixIcon: const Icon(KickIcons.link),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _profileNameController,
+              decoration: InputDecoration(
+                labelText: l10n.pushSillyTavernProfileNameLabel,
+                prefixIcon: const Icon(KickIcons.label),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _modelController,
+              decoration: InputDecoration(
+                labelText: l10n.pushSillyTavernModelLabel,
+                prefixIcon: const Icon(KickIcons.hub),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.cancelButton)),
+        FilledButton(
+          onPressed: () {
+            final url = _urlController.text.trim();
+            final name = _profileNameController.text.trim();
+            final model = _modelController.text.trim();
+            if (url.isEmpty || name.isEmpty || model.isEmpty) {
+              return;
+            }
+            Navigator.of(
+              context,
+            ).pop(_SillyTavernPushDraft(sillyTavernUrl: url, profileName: name, model: model));
+          },
+          child: Text(l10n.pushSillyTavernConfirmButton),
+        ),
+      ],
     );
   }
 }
@@ -507,4 +820,29 @@ void _showSnackBar(BuildContext context, String message) {
   final messenger = ScaffoldMessenger.of(context);
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(SnackBar(content: Text(message)));
+}
+
+String _defaultSillyTavernModel(AppSettings settings) {
+  for (final model in settings.customModels) {
+    final trimmed = model.trim();
+    if (trimmed.isNotEmpty) {
+      return trimmed;
+    }
+  }
+  return 'google/gemini-2.5-pro';
+}
+
+String _formatSillyTavernPushError(KickLocalizations l10n, Object error) {
+  if (error is SillyTavernPushException) {
+    return switch (error.failure) {
+      SillyTavernPushFailure.invalidUrl => l10n.pushSillyTavernErrorInvalidUrl,
+      SillyTavernPushFailure.missingCsrfToken => l10n.pushSillyTavernErrorMissingCsrf,
+      SillyTavernPushFailure.httpError => l10n.pushSillyTavernErrorHttp(
+        error.statusCode ?? 0,
+        error.path ?? '/api',
+      ),
+      SillyTavernPushFailure.invalidJson => l10n.pushSillyTavernErrorInvalidJson,
+    };
+  }
+  return error.toString();
 }

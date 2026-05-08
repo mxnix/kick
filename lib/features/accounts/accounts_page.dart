@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +18,7 @@ import '../../proxy/kiro/kiro_link_auth_service.dart';
 import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
 import '../shared/kick_actions.dart';
+import '../shared/kick_haptics.dart';
 import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import '../shared/provider_icon.dart';
@@ -204,10 +207,13 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final spacing = 14.0;
-                        final cardWidth = switch (constraints.maxWidth) {
-                          > 980 => (constraints.maxWidth - spacing) / 2,
-                          _ => constraints.maxWidth,
+                        final columns = switch (constraints.maxWidth) {
+                          >= 1320 => 3,
+                          >= 860 => 2,
+                          _ => 1,
                         };
+                        final cardWidth =
+                            (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
                         return Wrap(
                           spacing: spacing,
@@ -342,7 +348,20 @@ class _AccountCard extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _AccountAvatar(account: account),
+              _AccountAvatar(
+                account: account,
+                onAvatarChanged: (avatarUrl) {
+                  unawaited(
+                    ref
+                        .read(accountsControllerProvider.notifier)
+                        .saveAccount(
+                          avatarUrl == null
+                              ? account.copyWith(clearAvatarUrl: true)
+                              : account.copyWith(avatarUrl: avatarUrl),
+                        ),
+                  );
+                },
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -360,6 +379,7 @@ class _AccountCard extends ConsumerWidget {
               Switch(
                 value: account.enabled,
                 onChanged: (value) {
+                  KickHaptics.selection();
                   unawaited(
                     ref
                         .read(accountsControllerProvider.notifier)
@@ -566,38 +586,340 @@ Future<bool> _confirmDeleteAccount(BuildContext context, AccountProfile account)
   return confirmed == true;
 }
 
-class _AccountAvatar extends StatelessWidget {
-  const _AccountAvatar({required this.account});
+class _AccountAvatar extends StatefulWidget {
+  const _AccountAvatar({required this.account, required this.onAvatarChanged});
 
   final AccountProfile account;
+  final ValueChanged<String?> onAvatarChanged;
+
+  @override
+  State<_AccountAvatar> createState() => _AccountAvatarState();
+}
+
+class _AccountAvatarState extends State<_AccountAvatar> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final avatarUrl = account.avatarUrl;
-    final fallback = Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        color: scheme.secondaryContainer.withValues(alpha: 0.84),
-        borderRadius: BorderRadius.circular(20),
+    return Semantics(
+      button: true,
+      label: context.l10n.accountAvatarOpenTooltip,
+      child: GestureDetector(
+        onTap: () async {
+          KickHaptics.selection();
+          final nextAvatar = await _showAvatarPickerDialog(context, widget.account);
+          if (!mounted || nextAvatar == _avatarPickerCancelled) {
+            return;
+          }
+          widget.onAvatarChanged(nextAvatar?.trim().isEmpty == true ? null : nextAvatar);
+        },
+        onLongPressStart: (_) {
+          setState(() => _pressed = true);
+          KickHaptics.light();
+          unawaited(
+            _showAccountAvatarPreview(context, widget.account).whenComplete(() {
+              if (mounted) {
+                setState(() => _pressed = false);
+              }
+            }),
+          );
+        },
+        onLongPressEnd: (_) {
+          if (mounted) {
+            setState(() => _pressed = false);
+          }
+        },
+        child: AnimatedScale(
+          scale: _pressed ? 0.92 : 1,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOutCubic,
+          child: _AccountAvatarImage(account: widget.account, size: 52, radius: 20),
+        ),
       ),
-      child: Icon(Icons.account_circle_rounded, color: scheme.onSecondaryContainer, size: 30),
     );
+  }
+}
+
+class _AccountAvatarImage extends StatelessWidget {
+  const _AccountAvatarImage({required this.account, required this.size, required this.radius});
+
+  final AccountProfile account;
+  final double size;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = _effectiveAvatarUrl(account);
+    final fallback = _AccountAvatarFallback(account: account, size: size, radius: radius);
 
     if (avatarUrl == null || avatarUrl.isEmpty) {
       return fallback;
     }
 
+    final image = _isFileAvatarUrl(avatarUrl)
+        ? Image.file(
+            File.fromUri(Uri.parse(avatarUrl)),
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallback,
+          )
+        : Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback);
+
     return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: SizedBox(
-        width: 52,
-        height: 52,
-        child: Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
+      borderRadius: BorderRadius.circular(radius),
+      child: SizedBox(width: size, height: size, child: image),
+    );
+  }
+}
+
+class _AccountAvatarFallback extends StatelessWidget {
+  const _AccountAvatarFallback({required this.account, required this.size, required this.radius});
+
+  final AccountProfile account;
+  final double size;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final initial = _accountInitial(account);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: Center(
+        child: initial == null
+            ? Icon(
+                Icons.account_circle_rounded,
+                color: scheme.onSecondaryContainer,
+                size: size * 0.58,
+              )
+            : Text(
+                initial,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: scheme.onSecondaryContainer,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
     );
   }
+}
+
+const String _avatarPickerCancelled = '__kick_avatar_cancelled__';
+
+Future<String?> _showAvatarPickerDialog(BuildContext context, AccountProfile account) {
+  return showDialog<String?>(
+    context: context,
+    builder: (dialogContext) => _AvatarPickerDialog(account: account),
+  );
+}
+
+class _AvatarPickerDialog extends StatefulWidget {
+  const _AvatarPickerDialog({required this.account});
+
+  final AccountProfile account;
+
+  @override
+  State<_AvatarPickerDialog> createState() => _AvatarPickerDialogState();
+}
+
+class _AvatarPickerDialogState extends State<_AvatarPickerDialog> {
+  bool _pickingFile = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final seeds = _avatarSeedOptions(widget.account);
+
+    return AlertDialog(
+      icon: const Icon(Icons.account_circle_rounded),
+      title: Text(l10n.accountAvatarDialogTitle),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: _AccountAvatarImage(account: widget.account, size: 132, radius: 34)),
+              const SizedBox(height: 18),
+              Text(l10n.accountAvatarDiceBearTitle, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final seed in seeds)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(22),
+                      onTap: () {
+                        KickHaptics.selection();
+                        Navigator.of(context).pop(_diceBearAvatarUrl(seed));
+                      },
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.42)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: _NetworkAvatarPreview(url: _diceBearAvatarUrl(seed)),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.accountAvatarDiceBearLicense,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _pickingFile ? null : () => Navigator.of(context).pop(_avatarPickerCancelled),
+          child: Text(l10n.cancelButton),
+        ),
+        TextButton.icon(
+          onPressed: _pickingFile ? null : _pickFileAvatar,
+          icon: _pickingFile
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: KickLoadingIndicator(size: 18, contained: false),
+                )
+              : const Icon(Icons.image_rounded),
+          label: Text(l10n.accountAvatarChooseFileButton),
+        ),
+        FilledButton.icon(
+          onPressed: _pickingFile ? null : () => Navigator.of(context).pop(null),
+          icon: const Icon(Icons.restart_alt_rounded),
+          label: Text(
+            widget.account.provider == AccountProvider.kiro
+                ? l10n.accountAvatarResetToDiceBearButton
+                : l10n.accountAvatarResetButton,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickFileAvatar() async {
+    setState(() => _pickingFile = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+      if (!mounted) {
+        return;
+      }
+      final path = result?.files.single.path;
+      if (path == null || path.trim().isEmpty) {
+        setState(() => _pickingFile = false);
+        return;
+      }
+      Navigator.of(context).pop(Uri.file(path).toString());
+    } finally {
+      if (mounted) {
+        setState(() => _pickingFile = false);
+      }
+    }
+  }
+}
+
+class _NetworkAvatarPreview extends StatelessWidget {
+  const _NetworkAvatarPreview({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(width: 58, height: 58, child: Image.network(url, fit: BoxFit.cover)),
+    );
+  }
+}
+
+Future<void> _showAccountAvatarPreview(BuildContext context, AccountProfile account) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: Colors.black.withValues(alpha: 0.58),
+    transitionDuration: const Duration(milliseconds: 240),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: _AccountAvatarImage(account: account, size: 260, radius: 52),
+        ),
+      );
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
+      return FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.78, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+String? _effectiveAvatarUrl(AccountProfile account) {
+  final stored = account.avatarUrl?.trim();
+  if (stored != null && stored.isNotEmpty) {
+    return stored;
+  }
+  if (account.provider == AccountProvider.kiro) {
+    return _diceBearAvatarUrl(account.id);
+  }
+  return null;
+}
+
+String _diceBearAvatarUrl(String seed) {
+  return Uri.https('api.dicebear.com', '/9.x/identicon/png', {
+    'seed': seed.trim().isEmpty ? 'kick' : seed.trim(),
+    'radius': '28',
+    'backgroundType': 'solid',
+  }).toString();
+}
+
+List<String> _avatarSeedOptions(AccountProfile account) {
+  final base = account.id.trim().isEmpty ? account.label : account.id;
+  return [
+    base,
+    '$base-orbit',
+    '$base-nova',
+    '$base-quartz',
+    account.label.trim().isEmpty ? '$base-label' : account.label.trim(),
+    account.email.trim().isEmpty ? '$base-identity' : account.email.trim(),
+  ];
+}
+
+bool _isFileAvatarUrl(String value) {
+  return value.startsWith('file://');
+}
+
+String? _accountInitial(AccountProfile account) {
+  final text = (account.label.trim().isNotEmpty ? account.label : account.displayIdentity).trim();
+  if (text.isEmpty) {
+    return null;
+  }
+  return String.fromCharCode(text.runes.first).toUpperCase();
 }
 
 Future<void> _connectGoogleAccount(

@@ -148,6 +148,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountsFilteredEmptyMessage => 'Try another name, email, or project ID.';
 
   @override
+  String get accountAvatarOpenTooltip => 'Open avatar';
+
+  @override
+  String get accountAvatarDialogTitle => 'Account avatar';
+
+  @override
+  String get accountAvatarDiceBearTitle => 'DiceBear Identicon';
+
+  @override
+  String get accountAvatarDiceBearLicense => 'DiceBear Identicon CC0 1.0.';
+
+  @override
+  String get accountAvatarChooseFileButton => 'Custom file';
+
+  @override
+  String get accountAvatarResetButton => 'Reset';
+
+  @override
+  String get accountAvatarResetToDiceBearButton => 'Reset to DiceBear';
+
+  @override
   String get accountProviderLabel => 'Account type';
 
   @override
@@ -178,11 +199,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String projectIdChip(String projectId) {
-    return 'PROJECT_ID: $projectId';
+    return 'Project ID: $projectId';
   }
 
   @override
-  String get projectIdAutoChip => 'PROJECT_ID: auto';
+  String get projectIdAutoChip => 'Project ID: auto';
 
   @override
   String priorityChip(String priorityLabel) {
@@ -863,6 +884,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutAnalyticsSubtitle => 'Anonymous usage statistics help improve KiCk.';
 
   @override
+  String get aboutLicenseTitle => 'License';
+
+  @override
+  String get aboutLicenseMessage => 'KiCk is distributed as an open project';
+
+  @override
+  String get aboutOpenLicenseButton => 'Open license';
+
+  @override
+  String get aboutPrivacyTitle => 'Privacy';
+
+  @override
+  String get aboutPrivacyMessage => 'KiCk stores accounts, tokens, and settings locally';
+
+  @override
+  String get aboutOpenPrivacyButton => 'Open privacy notes';
+
+  @override
+  String get aboutDisclaimerTitle => 'Disclaimer';
+
+  @override
+  String get aboutDisclaimerMessage =>
+      'KiCk is not affiliated with Google, AWS, Kiro, or SillyTavern';
+
+  @override
+  String get aboutCreditsTitle => 'Credits';
+
+  @override
+  String get aboutCreditsMessage =>
+      'Built with Flutter and Material Symbols. DiceBear Identicon CC0 1.0.';
+
+  @override
   String get copyProxyEndpointTooltip => 'Copy proxy address';
 
   @override
@@ -873,6 +926,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get apiKeyCopiedMessage => 'API key copied';
+
+  @override
+  String get pushSillyTavernButton => 'Push to ST';
+
+  @override
+  String get pushSillyTavernDialogTitle => 'Push to running SillyTavern';
+
+  @override
+  String get pushSillyTavernDialogMessage =>
+      'KiCk will add a profile and select it in Connection Manager.';
+
+  @override
+  String get pushSillyTavernUrlLabel => 'SillyTavern URL';
+
+  @override
+  String get pushSillyTavernProfileNameLabel => 'Profile name';
+
+  @override
+  String get pushSillyTavernModelLabel => 'Model';
+
+  @override
+  String get pushSillyTavernConfirmButton => 'Add profile';
+
+  @override
+  String pushSillyTavernSuccessMessage(String profileName) {
+    return 'Profile \"$profileName\" was added to SillyTavern.';
+  }
+
+  @override
+  String pushSillyTavernFailedMessage(String error) {
+    return 'Failed to push the profile to SillyTavern: $error';
+  }
+
+  @override
+  String get pushSillyTavernErrorInvalidUrl =>
+      'Enter a full SillyTavern URL, for example http://127.0.0.1:8000.';
+
+  @override
+  String get pushSillyTavernErrorMissingCsrf => 'SillyTavern did not return a CSRF token.';
+
+  @override
+  String pushSillyTavernErrorHttp(int statusCode, String path) {
+    return 'SillyTavern returned HTTP $statusCode for $path.';
+  }
+
+  @override
+  String get pushSillyTavernErrorInvalidJson => 'SillyTavern returned an invalid JSON response.';
 
   @override
   String get homeOnboardingTitle => 'Getting started';
@@ -1057,6 +1157,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String logsFilteredCount(int count) {
     return 'After filtering: $count';
   }
+
+  @override
+  String logsRequestGroupTitle(String requestLabel) {
+    return 'Request $requestLabel';
+  }
+
+  @override
+  String logsRequestStatusCount(int count) {
+    return 'Statuses: $count';
+  }
+
+  @override
+  String logsRequestRetryCount(int count) {
+    return 'Retries: $count';
+  }
+
+  @override
+  String get logsRequestDetailsShowButton => 'Show statuses';
+
+  @override
+  String get logsRequestDetailsHideButton => 'Hide statuses';
 
   @override
   String logsLoadedCount(int count) {
@@ -1267,7 +1388,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'If you don\'t want to configure it manually, you can leave this section as is.';
 
   @override
-  String get projectIdLabel => 'PROJECT_ID';
+  String get projectIdLabel => 'Project ID';
 
   @override
   String get projectIdHint => 'my-google-cloud-project';

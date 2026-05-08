@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -8,6 +7,7 @@ import 'package:m3e_collection/m3e_collection.dart' as m3e;
 import '../../core/theme/kick_icons.dart';
 import '../../core/theme/kick_theme.dart';
 import '../../l10n/kick_localizations.dart';
+import '../shared/kick_haptics.dart';
 import '../shared/kick_surfaces.dart';
 import 'first_run_disclaimer_gate.dart';
 
@@ -102,17 +102,25 @@ class AppShell extends StatelessWidget {
                                 const SizedBox(width: 24),
                                 Expanded(
                                   child: KickContentFrame(
-                                    maxWidth: 1080,
+                                    maxWidth: 1360,
                                     expandHeight: true,
-                                    child: _AnimatedShellContent(location: location, child: child),
+                                    child: _AnimatedShellContent(
+                                      location: location,
+                                      selectedIndex: selectedIndex,
+                                      child: child,
+                                    ),
                                   ),
                                 ),
                               ],
                             )
                           : KickContentFrame(
-                              maxWidth: 920,
+                              maxWidth: 980,
                               expandHeight: true,
-                              child: _AnimatedShellContent(location: location, child: child),
+                              child: _AnimatedShellContent(
+                                location: location,
+                                selectedIndex: selectedIndex,
+                                child: child,
+                              ),
                             ),
                     ),
                   ),
@@ -164,57 +172,58 @@ class _AppShellLayoutScope extends InheritedWidget {
 }
 
 class _AnimatedShellContent extends StatefulWidget {
-  const _AnimatedShellContent({required this.location, required this.child});
+  const _AnimatedShellContent({
+    required this.location,
+    required this.selectedIndex,
+    required this.child,
+  });
 
   final String location;
+  final int selectedIndex;
   final Widget child;
 
   @override
   State<_AnimatedShellContent> createState() => _AnimatedShellContentState();
 }
 
-class _AnimatedShellContentState extends State<_AnimatedShellContent>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 220),
-    reverseDuration: const Duration(milliseconds: 160),
-    value: 1,
-  );
-  late final Animation<double> _fade = CurvedAnimation(
-    parent: _controller,
-    curve: Curves.easeOutCubic,
-  );
-  late final Animation<Offset> _slide = Tween<Offset>(
-    begin: const Offset(0, 0.012),
-    end: Offset.zero,
-  ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+class _AnimatedShellContentState extends State<_AnimatedShellContent> {
+  int _direction = 1;
 
   @override
   void didUpdateWidget(covariant _AnimatedShellContent oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.location != widget.location) {
-      unawaited(() async {
-        try {
-          await _controller.forward(from: 0).orCancel;
-        } on TickerCanceled {
-          // The animation can be canceled during widget disposal.
-        }
-      }());
+      final indexDelta = widget.selectedIndex - oldWidget.selectedIndex;
+      _direction = indexDelta == 0 ? 1 : indexDelta.sign;
     }
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fade,
-      child: SlideTransition(position: _slide, child: widget.child),
+    final tokens = context.kickTokens;
+    return AnimatedSwitcher(
+      duration: tokens.mediumDuration,
+      reverseDuration: const Duration(milliseconds: 240),
+      switchInCurve: tokens.emphasizedCurve,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final currentKey = ValueKey<String>(widget.location);
+        final entering = child.key == currentKey;
+        final curve = CurvedAnimation(
+          parent: animation,
+          curve: entering ? tokens.emphasizedCurve : Curves.easeInCubic,
+        );
+        final direction = _direction == 0 ? 1 : _direction;
+        final slide = Tween<Offset>(
+          begin: Offset(entering ? direction * 0.08 : -direction * 0.08, 0),
+          end: Offset.zero,
+        ).animate(curve);
+        return FadeTransition(
+          opacity: curve,
+          child: SlideTransition(position: slide, child: child),
+        );
+      },
+      child: KeyedSubtree(key: ValueKey<String>(widget.location), child: widget.child),
     );
   }
 }
@@ -341,7 +350,10 @@ class _FloatingNavItem extends StatelessWidget {
       child: ExcludeSemantics(
         child: IconButton(
           tooltip: destination.label,
-          onPressed: onPressed,
+          onPressed: () {
+            KickHaptics.selection();
+            onPressed();
+          },
           style: ButtonStyle(
             fixedSize: const WidgetStatePropertyAll(Size.square(_floatingNavigationItemSize)),
             minimumSize: const WidgetStatePropertyAll(Size.square(_floatingNavigationItemSize)),

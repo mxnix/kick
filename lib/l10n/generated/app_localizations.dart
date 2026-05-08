@@ -351,6 +351,48 @@ abstract class AppLocalizations {
   /// **'Try another name, email, or project ID.'**
   String get accountsFilteredEmptyMessage;
 
+  /// No description provided for @accountAvatarOpenTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open avatar'**
+  String get accountAvatarOpenTooltip;
+
+  /// No description provided for @accountAvatarDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account avatar'**
+  String get accountAvatarDialogTitle;
+
+  /// No description provided for @accountAvatarDiceBearTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DiceBear Identicon'**
+  String get accountAvatarDiceBearTitle;
+
+  /// No description provided for @accountAvatarDiceBearLicense.
+  ///
+  /// In en, this message translates to:
+  /// **'DiceBear Identicon CC0 1.0.'**
+  String get accountAvatarDiceBearLicense;
+
+  /// No description provided for @accountAvatarChooseFileButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom file'**
+  String get accountAvatarChooseFileButton;
+
+  /// No description provided for @accountAvatarResetButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get accountAvatarResetButton;
+
+  /// No description provided for @accountAvatarResetToDiceBearButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to DiceBear'**
+  String get accountAvatarResetToDiceBearButton;
+
   /// No description provided for @accountProviderLabel.
   ///
   /// In en, this message translates to:
@@ -408,13 +450,13 @@ abstract class AppLocalizations {
   /// No description provided for @projectIdChip.
   ///
   /// In en, this message translates to:
-  /// **'PROJECT_ID: {projectId}'**
+  /// **'Project ID: {projectId}'**
   String projectIdChip(String projectId);
 
   /// No description provided for @projectIdAutoChip.
   ///
   /// In en, this message translates to:
-  /// **'PROJECT_ID: auto'**
+  /// **'Project ID: auto'**
   String get projectIdAutoChip;
 
   /// No description provided for @priorityChip.
@@ -1611,6 +1653,66 @@ abstract class AppLocalizations {
   /// **'Anonymous usage statistics help improve KiCk.'**
   String get aboutAnalyticsSubtitle;
 
+  /// No description provided for @aboutLicenseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'License'**
+  String get aboutLicenseTitle;
+
+  /// No description provided for @aboutLicenseMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'KiCk is distributed as an open project'**
+  String get aboutLicenseMessage;
+
+  /// No description provided for @aboutOpenLicenseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Open license'**
+  String get aboutOpenLicenseButton;
+
+  /// No description provided for @aboutPrivacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get aboutPrivacyTitle;
+
+  /// No description provided for @aboutPrivacyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'KiCk stores accounts, tokens, and settings locally'**
+  String get aboutPrivacyMessage;
+
+  /// No description provided for @aboutOpenPrivacyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Open privacy notes'**
+  String get aboutOpenPrivacyButton;
+
+  /// No description provided for @aboutDisclaimerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Disclaimer'**
+  String get aboutDisclaimerTitle;
+
+  /// No description provided for @aboutDisclaimerMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'KiCk is not affiliated with Google, AWS, Kiro, or SillyTavern'**
+  String get aboutDisclaimerMessage;
+
+  /// No description provided for @aboutCreditsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Credits'**
+  String get aboutCreditsTitle;
+
+  /// No description provided for @aboutCreditsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Built with Flutter and Material Symbols. DiceBear Identicon CC0 1.0.'**
+  String get aboutCreditsMessage;
+
   /// No description provided for @copyProxyEndpointTooltip.
   ///
   /// In en, this message translates to:
@@ -1634,6 +1736,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'API key copied'**
   String get apiKeyCopiedMessage;
+
+  /// No description provided for @pushSillyTavernButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Push to ST'**
+  String get pushSillyTavernButton;
+
+  /// No description provided for @pushSillyTavernDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Push to running SillyTavern'**
+  String get pushSillyTavernDialogTitle;
+
+  /// No description provided for @pushSillyTavernDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'KiCk will add a profile and select it in Connection Manager.'**
+  String get pushSillyTavernDialogMessage;
+
+  /// No description provided for @pushSillyTavernUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SillyTavern URL'**
+  String get pushSillyTavernUrlLabel;
+
+  /// No description provided for @pushSillyTavernProfileNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile name'**
+  String get pushSillyTavernProfileNameLabel;
+
+  /// No description provided for @pushSillyTavernModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get pushSillyTavernModelLabel;
+
+  /// No description provided for @pushSillyTavernConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add profile'**
+  String get pushSillyTavernConfirmButton;
+
+  /// No description provided for @pushSillyTavernSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile \"{profileName}\" was added to SillyTavern.'**
+  String pushSillyTavernSuccessMessage(String profileName);
+
+  /// No description provided for @pushSillyTavernFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to push the profile to SillyTavern: {error}'**
+  String pushSillyTavernFailedMessage(String error);
+
+  /// No description provided for @pushSillyTavernErrorInvalidUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a full SillyTavern URL, for example http://127.0.0.1:8000.'**
+  String get pushSillyTavernErrorInvalidUrl;
+
+  /// No description provided for @pushSillyTavernErrorMissingCsrf.
+  ///
+  /// In en, this message translates to:
+  /// **'SillyTavern did not return a CSRF token.'**
+  String get pushSillyTavernErrorMissingCsrf;
+
+  /// No description provided for @pushSillyTavernErrorHttp.
+  ///
+  /// In en, this message translates to:
+  /// **'SillyTavern returned HTTP {statusCode} for {path}.'**
+  String pushSillyTavernErrorHttp(int statusCode, String path);
+
+  /// No description provided for @pushSillyTavernErrorInvalidJson.
+  ///
+  /// In en, this message translates to:
+  /// **'SillyTavern returned an invalid JSON response.'**
+  String get pushSillyTavernErrorInvalidJson;
 
   /// No description provided for @homeOnboardingTitle.
   ///
@@ -1970,6 +2150,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'After filtering: {count}'**
   String logsFilteredCount(int count);
+
+  /// No description provided for @logsRequestGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request {requestLabel}'**
+  String logsRequestGroupTitle(String requestLabel);
+
+  /// No description provided for @logsRequestStatusCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Statuses: {count}'**
+  String logsRequestStatusCount(int count);
+
+  /// No description provided for @logsRequestRetryCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Retries: {count}'**
+  String logsRequestRetryCount(int count);
+
+  /// No description provided for @logsRequestDetailsShowButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Show statuses'**
+  String get logsRequestDetailsShowButton;
+
+  /// No description provided for @logsRequestDetailsHideButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide statuses'**
+  String get logsRequestDetailsHideButton;
 
   /// No description provided for @logsLoadedCount.
   ///
@@ -2358,7 +2568,7 @@ abstract class AppLocalizations {
   /// No description provided for @projectIdLabel.
   ///
   /// In en, this message translates to:
-  /// **'PROJECT_ID'**
+  /// **'Project ID'**
   String get projectIdLabel;
 
   /// No description provided for @projectIdHint.

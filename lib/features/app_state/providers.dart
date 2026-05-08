@@ -25,6 +25,7 @@ import '../../proxy/gemini/gemini_usage_models.dart';
 import '../../proxy/gemini/gemini_usage_service.dart';
 import '../../proxy/kiro/kiro_auth_source.dart';
 import '../../proxy/kiro/kiro_link_auth_service.dart';
+import '../home/silly_tavern_push_service.dart';
 import '../logs/log_export_service.dart';
 import '../settings/app_update_checker.dart';
 import '../settings/configuration_backup_service.dart';
@@ -481,6 +482,12 @@ final proxyConfigurationOrchestratorProvider = Provider<ProxyConfigurationOrches
 });
 
 final logExportServiceProvider = Provider<LogExportService>((ref) => LogExportService());
+
+final sillyTavernPushServiceProvider = Provider<SillyTavernPushService>((ref) {
+  final service = SillyTavernPushService();
+  ref.onDispose(service.dispose);
+  return service;
+});
 
 final appVersionReaderProvider = Provider<AppVersionReader>((ref) => const AppVersionReader());
 

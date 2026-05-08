@@ -7,6 +7,7 @@ import '../../core/theme/kick_theme.dart';
 import '../../data/models/app_settings.dart';
 import '../../l10n/kick_localizations.dart';
 import '../shared/kick_actions.dart';
+import '../shared/kick_haptics.dart';
 import '../shared/kick_surfaces.dart';
 import 'settings_draft_controller.dart';
 
@@ -565,41 +566,45 @@ class SettingsExpandableSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InkWell(
-                onTap: onToggle,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title, style: textTheme.titleLarge),
-                            if (subtitle != null) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                subtitle!,
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: scheme.onSurfaceVariant,
+              Semantics(
+                button: true,
+                expanded: expanded,
+                child: InkWell(
+                  onTap: onToggle,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title, style: textTheme.titleLarge),
+                              if (subtitle != null) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  subtitle!,
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      AnimatedRotation(
-                        turns: expanded ? 0.5 : 0,
-                        duration: context.kickTokens.shortDuration,
-                        curve: context.kickTokens.standardCurve,
-                        child: Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: scheme.onSurfaceVariant,
+                        const SizedBox(width: 12),
+                        AnimatedRotation(
+                          turns: expanded ? 0.5 : 0,
+                          duration: context.kickTokens.shortDuration,
+                          curve: context.kickTokens.standardCurve,
+                          child: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -609,17 +614,23 @@ class SettingsExpandableSection extends StatelessWidget {
                   curve: context.kickTokens.emphasizedCurve,
                   alignment: Alignment.topCenter,
                   heightFactor: expanded ? 1 : 0,
-                  child: IgnorePointer(
-                    ignoring: !expanded,
-                    child: AnimatedOpacity(
-                      duration: context.kickTokens.shortDuration,
-                      curve: context.kickTokens.standardCurve,
-                      opacity: expanded ? 1 : 0,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [const Divider(), const SizedBox(height: 18), child],
+                  child: ExcludeFocus(
+                    excluding: !expanded,
+                    child: ExcludeSemantics(
+                      excluding: !expanded,
+                      child: IgnorePointer(
+                        ignoring: !expanded,
+                        child: AnimatedOpacity(
+                          duration: context.kickTokens.shortDuration,
+                          curve: context.kickTokens.standardCurve,
+                          opacity: expanded ? 1 : 0,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [const Divider(), const SizedBox(height: 18), child],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -811,7 +822,13 @@ class SettingToggleCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Switch(value: value, onChanged: onChanged),
+          Switch(
+            value: value,
+            onChanged: (nextValue) {
+              KickHaptics.selection();
+              onChanged(nextValue);
+            },
+          ),
         ],
       ),
     );

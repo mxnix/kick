@@ -1,9 +1,7 @@
 import '../../analytics/android_background_session_log.dart';
 import '../../l10n/kick_localizations.dart';
 
-final RegExp _usingAccountPattern = RegExp(
-  r'^Using account `(.+)`( \(.+\))? for `(.+)`$',
-);
+final RegExp _usingAccountPattern = RegExp(r'^Using account `(.+)`( \(.+\))? for `(.+)`$');
 
 String localizeLogMessage(KickLocalizations l10n, String rawMessage) {
   final message = rawMessage.trim();

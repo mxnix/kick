@@ -61,12 +61,16 @@ class _KickSmoothSingleChildScrollViewState extends State<KickSmoothSingleChildS
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return Scrollbar(
       controller: _controller,
-      padding: widget.padding,
-      physics: widget.physics,
-      keyboardDismissBehavior: widget.keyboardDismissBehavior,
-      child: widget.child,
+      interactive: true,
+      child: SingleChildScrollView(
+        controller: _controller,
+        padding: widget.padding,
+        physics: widget.physics,
+        keyboardDismissBehavior: widget.keyboardDismissBehavior,
+        child: widget.child,
+      ),
     );
   }
 }
@@ -102,12 +106,16 @@ class _KickSmoothListViewState extends State<KickSmoothListView> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return Scrollbar(
       controller: _controller,
-      padding: widget.padding,
-      physics: widget.physics,
-      keyboardDismissBehavior: widget.keyboardDismissBehavior,
-      children: widget.children,
+      interactive: true,
+      child: ListView(
+        controller: _controller,
+        padding: widget.padding,
+        physics: widget.physics,
+        keyboardDismissBehavior: widget.keyboardDismissBehavior,
+        children: widget.children,
+      ),
     );
   }
 }
@@ -141,11 +149,15 @@ class _KickSmoothCustomScrollViewState extends State<KickSmoothCustomScrollView>
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
+    return Scrollbar(
       controller: _controller,
-      physics: widget.physics,
-      keyboardDismissBehavior: widget.keyboardDismissBehavior,
-      slivers: widget.slivers,
+      interactive: true,
+      child: CustomScrollView(
+        controller: _controller,
+        physics: widget.physics,
+        keyboardDismissBehavior: widget.keyboardDismissBehavior,
+        slivers: widget.slivers,
+      ),
     );
   }
 }
