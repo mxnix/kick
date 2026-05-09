@@ -1,4 +1,5 @@
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +19,7 @@ import 'package:kick/features/home/home_page.dart';
 import 'package:kick/features/settings/app_update_checker.dart';
 import 'package:kick/features/shared/app_update_banner.dart';
 import 'package:kick/features/shared/kick_actions.dart';
+import 'package:kick/features/shared/kick_surfaces.dart';
 import 'package:kick/l10n/kick_localizations.dart';
 import 'package:kick/proxy/engine/proxy_controller.dart';
 import 'package:kick/proxy/gemini/gemini_oauth_service.dart';
@@ -211,6 +213,79 @@ void main() {
 
     expect(find.text(ruL10n.homeTitle), findsOneWidget);
     expect(find.text(ruL10n.homeOnboardingTitle), findsOneWidget);
+  });
+
+  testWidgets('stretches inline proxy status on phone layouts', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+
+    AppBootstrap? bootstrap;
+    try {
+      bootstrap = await _createBootstrap();
+
+      await tester.pumpWidget(
+        _TestApp(
+          bootstrap: bootstrap,
+          locale: const Locale('ru'),
+          updateInfo: const AppUpdateInfo(
+            currentVersion: '1.0.2',
+            latestVersion: '1.0.2',
+            releaseUrl: 'https://example.com/releases/tag/v1.0.2',
+            hasUpdate: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final heroRect = tester.getRect(find.byType(KickPanel).first);
+      final statusRect = tester.getRect(find.text(ruL10n.proxyStoppedStatus));
+      expect((statusRect.center.dx - heroRect.center.dx).abs(), lessThan(24));
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap?.dispose();
+    }
+  });
+
+  testWidgets('keeps inline proxy status right aligned on wide layouts', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1;
+
+    AppBootstrap? bootstrap;
+    try {
+      bootstrap = await _createBootstrap();
+
+      await tester.pumpWidget(
+        _TestApp(
+          bootstrap: bootstrap,
+          locale: const Locale('ru'),
+          updateInfo: const AppUpdateInfo(
+            currentVersion: '1.0.2',
+            latestVersion: '1.0.2',
+            releaseUrl: 'https://example.com/releases/tag/v1.0.2',
+            hasUpdate: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final heroRect = tester.getRect(find.byType(KickPanel).first);
+      final statusRect = tester.getRect(find.text(ruL10n.proxyStoppedStatus));
+      expect(statusRect.center.dx, greaterThan(heroRect.center.dx + 80));
+      expect(heroRect.right - statusRect.right, lessThan(48));
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap?.dispose();
+    }
   });
 
   testWidgets('primary action elides long labels in narrow layouts', (tester) async {

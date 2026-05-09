@@ -276,74 +276,82 @@ class _ProxyStatusHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return KickPanel(
-      tone: KickPanelTone.soft,
-      radius: 32,
-      padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (showInlineStatus)
-            Align(
-              alignment: Alignment.centerRight,
-              child: _StatusPill(running: running),
-            ),
-          if (showInlineStatus) const SizedBox(height: 14),
-          _QuickAccessTile(
-            title: l10n.proxyEndpointTitle,
-            value: proxyEndpoint,
-            tooltip: copyProxyEndpointTooltip,
-            onCopy: onCopyProxyEndpoint,
-          ),
-          const SizedBox(height: 12),
-          _QuickAccessTile(
-            title: l10n.apiKeyTitle,
-            value: apiKeyValue,
-            tooltip: copyApiKeyTooltip,
-            onCopy: onCopyApiKey,
-            footer: Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () => context.go('/settings?section=access'),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                ),
-                child: Text(l10n.changeApiKeyLinkLabel),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _HomeMetricsGrid(
-            activeAccountsText: activeAccountsText,
-            uptimeText: uptimeText,
-            uptimeTitle: l10n.uptimeTitle,
-          ),
-          const SizedBox(height: 20),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stretchInlineStatus = constraints.maxWidth < 520;
+
+        return KickPanel(
+          tone: KickPanelTone.soft,
+          radius: 32,
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SillyTavernActionButton(
-                tooltip: l10n.pushSillyTavernButton,
-                busy: pushSillyTavernBusy,
-                onPressed: onPushSillyTavern,
+              if (showInlineStatus)
+                stretchInlineStatus
+                    ? _StatusPill(running: running, fullWidth: true)
+                    : Align(
+                        alignment: Alignment.centerRight,
+                        child: _StatusPill(running: running),
+                      ),
+              if (showInlineStatus) const SizedBox(height: 14),
+              _QuickAccessTile(
+                title: l10n.proxyEndpointTitle,
+                value: proxyEndpoint,
+                tooltip: copyProxyEndpointTooltip,
+                onCopy: onCopyProxyEndpoint,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: KickPrimaryAction(
-                  label: primaryActionLabel,
-                  icon: primaryActionIcon,
-                  fullWidth: true,
-                  busy: startPending,
-                  onPressed: onPrimaryAction,
+              const SizedBox(height: 12),
+              _QuickAccessTile(
+                title: l10n.apiKeyTitle,
+                value: apiKeyValue,
+                tooltip: copyApiKeyTooltip,
+                onCopy: onCopyApiKey,
+                footer: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => context.go('/settings?section=access'),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: Text(l10n.changeApiKeyLinkLabel),
+                  ),
                 ),
+              ),
+              const SizedBox(height: 16),
+              _HomeMetricsGrid(
+                activeAccountsText: activeAccountsText,
+                uptimeText: uptimeText,
+                uptimeTitle: l10n.uptimeTitle,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _SillyTavernActionButton(
+                    tooltip: l10n.pushSillyTavernButton,
+                    busy: pushSillyTavernBusy,
+                    onPressed: onPushSillyTavern,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: KickPrimaryAction(
+                      label: primaryActionLabel,
+                      icon: primaryActionIcon,
+                      fullWidth: true,
+                      busy: startPending,
+                      onPressed: onPrimaryAction,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -758,15 +766,18 @@ class _OnboardingStep extends StatelessWidget {
 }
 
 class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.running});
+  const _StatusPill({required this.running, this.fullWidth = false});
 
   final bool running;
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tone = running ? scheme.primary : scheme.outline;
     return Container(
+      width: fullWidth ? double.infinity : null,
+      alignment: fullWidth ? Alignment.center : null,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Color.alphaBlend(tone.withValues(alpha: 0.12), scheme.surfaceContainerHigh),
@@ -779,6 +790,8 @@ class _StatusPill extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             running ? context.l10n.proxyRunningStatus : context.l10n.proxyStoppedStatus,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(color: tone),
           ),
         ],
