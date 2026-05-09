@@ -84,6 +84,7 @@ jobs:
           DISPATCH_TAG: ${{ inputs.tag }}
           EVENT_NAME: ${{ github.event_name }}
           PUSH_TAG: ${{ github.ref_name }}
+          WORKFLOW_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           version=$(sed -n 's/^version: *//p' pubspec.yaml | head -n1 | cut -d+ -f1)
           if [ -z "$version" ]; then
@@ -103,6 +104,17 @@ jobs:
               actual_tag="$expected_tag"
               if ! git rev-parse -q --verify "refs/tags/$actual_tag" >/dev/null; then
                 echo "Expected tag '$actual_tag' was not found after Sync Version Tag completed." >&2
+                exit 1
+              fi
+              if [ -z "$WORKFLOW_HEAD_SHA" ]; then
+                echo "Missing workflow_run.head_sha; cannot verify that the tag was just created." >&2
+                exit 1
+              fi
+              tag_sha=$(git rev-list -n 1 "refs/tags/$actual_tag")
+              if [ "$tag_sha" != "$WORKFLOW_HEAD_SHA" ]; then
+                echo "Tag '$actual_tag' points to $tag_sha but Sync Version Tag ran on $WORKFLOW_HEAD_SHA." >&2
+                echo "The tag already existed at a different commit, so Sync Version Tag did not create a new release." >&2
+                echo "Refusing to overwrite the existing release. Bump pubspec.yaml to trigger a new release." >&2
                 exit 1
               fi
               ;;
