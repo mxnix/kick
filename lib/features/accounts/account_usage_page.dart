@@ -4,16 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:m3e_collection/m3e_collection.dart' as m3e;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/accounts/account_runtime_notice.dart';
 import '../../core/errors/gemini_error_actions.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
+import '../../core/theme/kick_icons.dart';
 import '../../core/theme/kick_theme.dart';
 import '../../data/models/account_profile.dart';
 import '../../l10n/kick_localizations.dart';
 import '../../proxy/gemini/gemini_usage_models.dart';
+import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
+import '../shared/kick_actions.dart';
+import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import 'account_priority_presentation.dart';
 
@@ -44,7 +49,7 @@ class AccountUsagePage extends ConsumerWidget {
             title: l10n.accountUsageTitle,
             subtitle: l10n.accountUsageMissingSubtitle,
             child: EmptyStateCard(
-              icon: Icons.manage_search_rounded,
+              icon: KickIcons.search,
               title: l10n.accountUsageMissingTitle,
               message: l10n.accountUsageMissingMessage,
             ),
@@ -56,7 +61,7 @@ class AccountUsagePage extends ConsumerWidget {
             title: l10n.accountUsageTitle,
             subtitle: resolvedAccount.displayIdentity,
             child: EmptyStateCard(
-              icon: Icons.info_outline_rounded,
+              icon: KickIcons.info,
               title: l10n.accountUsageUnavailableTitle,
               message: l10n.accountUsageUnavailableMessage,
             ),
@@ -69,9 +74,10 @@ class AccountUsagePage extends ConsumerWidget {
           title: l10n.accountUsageTitle,
           subtitle: null,
           onRefresh: () => ref.refresh(accountUsageQueryProvider(resolvedAccount.id).future),
-          child: RefreshIndicator(
+          child: KickRefresh(
             onRefresh: () => ref.refresh(accountUsageQueryProvider(resolvedAccount.id).future),
-            child: ListView(
+            child: KickSmoothListView(
+              padding: EdgeInsets.only(bottom: AppShell.floatingNavigationClearanceOf(context)),
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 _UsageAccountCard(account: resolvedAccount, usage: usageSnapshot),
@@ -96,7 +102,7 @@ class AccountUsagePage extends ConsumerWidget {
         title: l10n.accountUsageTitle,
         subtitle: l10n.accountUsageMissingSubtitle,
         child: EmptyStateCard(
-          icon: Icons.error_rounded,
+          icon: KickIcons.error,
           title: l10n.accountsLoadErrorTitle,
           message: formatUserFacingError(l10n, error),
         ),
@@ -104,7 +110,7 @@ class AccountUsagePage extends ConsumerWidget {
       loading: () => _UsageScaffold(
         title: l10n.accountUsageTitle,
         subtitle: l10n.loadingValue,
-        child: const Center(child: CircularProgressIndicator()),
+        child: const Center(child: KickLoadingIndicator()),
       ),
     );
   }
@@ -144,10 +150,11 @@ class _UsageHeader extends StatelessWidget {
 
     return Row(
       children: [
-        IconButton.filledTonal(
+        KickIconAction(
           onPressed: () => context.pop(),
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: KickIcons.back,
+          variant: m3e.IconButtonM3EVariant.tonal,
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -170,10 +177,11 @@ class _UsageHeader extends StatelessWidget {
           ),
         ),
         if (onRefresh != null)
-          IconButton.filledTonal(
+          KickIconAction(
             onPressed: () => onRefresh!(),
             tooltip: l10n.accountUsageRefreshTooltip,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: KickIcons.refresh,
+            variant: m3e.IconButtonM3EVariant.tonal,
           ),
       ],
     );
@@ -193,16 +201,16 @@ class _UsageAccountCard extends StatelessWidget {
     final hasQuotaPressure = account.lastQuotaSnapshot?.trim().isNotEmpty == true;
     final runtimeNotice = parseAccountRuntimeNotice(account.lastQuotaSnapshot);
     final statusIcon = !account.enabled
-        ? Icons.pause_circle_rounded
+        ? KickIcons.pause
         : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
-        ? Icons.report_gmailerrorred_rounded
+        ? KickIcons.report
         : account.isCoolingDown
-        ? Icons.schedule_rounded
+        ? KickIcons.schedule
         : runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending
-        ? Icons.manage_search_rounded
+        ? KickIcons.search
         : hasQuotaPressure
-        ? Icons.query_stats_rounded
-        : Icons.check_circle_rounded;
+        ? KickIcons.queryStats
+        : KickIcons.check;
     final statusLabel = !account.enabled
         ? l10n.accountUsageStatusDisabled
         : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
@@ -269,11 +277,11 @@ class _UsageAccountCard extends StatelessWidget {
                 label: account.projectId.trim().isEmpty
                     ? l10n.projectIdAutoChip
                     : l10n.projectIdChip(account.projectId),
-                leading: const Icon(Icons.badge_rounded),
+                leading: const Icon(KickIcons.badge),
               ),
               KickBadge(
                 label: l10n.priorityChip(accountPriorityLabel(l10n, account.priority)),
-                leading: const Icon(Icons.low_priority_rounded),
+                leading: const Icon(KickIcons.lowPriority),
               ),
             ],
           ),
@@ -288,10 +296,10 @@ class _UsageAccountCard extends StatelessWidget {
             if (runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation &&
                 runtimeNotice?.actionUrl?.trim().isNotEmpty == true) ...[
               const SizedBox(height: 10),
-              OutlinedButton.icon(
+              KickSecondaryAction(
                 onPressed: () => unawaited(_openErrorAction(context, runtimeNotice!.actionUrl!)),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: Text(l10n.accountSubmitAppealButton),
+                icon: KickIcons.openInNew,
+                label: l10n.accountSubmitAppealButton,
               ),
             ],
           ],
@@ -299,7 +307,7 @@ class _UsageAccountCard extends StatelessWidget {
             const SizedBox(height: 16),
             KickBadge(
               label: l10n.accountUsageLastUpdated(_formatDateTime(l10n, usage!.fetchedAt)),
-              leading: const Icon(Icons.update_rounded),
+              leading: const Icon(KickIcons.update),
               emphasis: true,
             ),
           ],
@@ -354,7 +362,7 @@ class _UsageContent extends StatelessWidget {
 
     if (usage.buckets.isEmpty) {
       return EmptyStateCard(
-        icon: Icons.query_stats_rounded,
+        icon: KickIcons.queryStats,
         title: l10n.accountUsageEmptyTitle,
         message: l10n.accountUsageEmptyMessage,
       );
@@ -427,7 +435,7 @@ class _UsageBucketCard extends StatelessWidget {
               if (bucket.tokenType.isNotEmpty)
                 KickBadge(
                   label: l10n.accountUsageTokenType(bucket.tokenType),
-                  leading: const Icon(Icons.speed_rounded, size: 16),
+                  leading: const Icon(KickIcons.speed, size: 16),
                 ),
             ],
           ),
@@ -516,10 +524,7 @@ class _UsageLoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: CircularProgressIndicator(),
-      ),
+      child: Padding(padding: EdgeInsets.symmetric(vertical: 32), child: KickLoadingIndicator()),
     );
   }
 }
@@ -536,7 +541,7 @@ class _UsageErrorCard extends StatelessWidget {
     final l10n = context.l10n;
 
     return EmptyStateCard(
-      icon: Icons.error_rounded,
+      icon: KickIcons.error,
       title: l10n.accountUsageLoadErrorTitle,
       message: message,
       action: Wrap(
@@ -544,27 +549,23 @@ class _UsageErrorCard extends StatelessWidget {
         runSpacing: 8,
         children: [
           if (errorAction != null)
-            FilledButton.icon(
+            KickPrimaryAction(
               onPressed: () => unawaited(_openErrorAction(context, errorAction!.url)),
-              icon: Icon(
-                errorAction!.kind == GeminiErrorActionKind.accountVerification
-                    ? Icons.verified_user_rounded
-                    : errorAction!.kind == GeminiErrorActionKind.accountAppeal
-                    ? Icons.mail_outline_rounded
-                    : Icons.open_in_new_rounded,
-              ),
-              label: Text(
-                errorAction!.kind == GeminiErrorActionKind.accountVerification
-                    ? l10n.accountUsageVerifyAccountButton
-                    : errorAction!.kind == GeminiErrorActionKind.accountAppeal
-                    ? l10n.accountSubmitAppealButton
-                    : l10n.openGoogleCloudButton,
-              ),
+              icon: errorAction!.kind == GeminiErrorActionKind.accountVerification
+                  ? KickIcons.verifiedUser
+                  : errorAction!.kind == GeminiErrorActionKind.accountAppeal
+                  ? KickIcons.mail
+                  : KickIcons.openInNew,
+              label: errorAction!.kind == GeminiErrorActionKind.accountVerification
+                  ? l10n.accountUsageVerifyAccountButton
+                  : errorAction!.kind == GeminiErrorActionKind.accountAppeal
+                  ? l10n.accountSubmitAppealButton
+                  : l10n.openGoogleCloudButton,
             ),
-          OutlinedButton.icon(
+          KickSecondaryAction(
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
-            label: Text(l10n.accountUsageRetryButton),
+            icon: KickIcons.refresh,
+            label: l10n.accountUsageRetryButton,
           ),
         ],
       ),
@@ -620,9 +621,9 @@ String _usageHealthLabel(KickLocalizations l10n, GeminiUsageBucketHealth health)
 
 IconData _usageHealthIcon(GeminiUsageBucketHealth health) {
   return switch (health) {
-    GeminiUsageBucketHealth.healthy => Icons.verified_rounded,
-    GeminiUsageBucketHealth.low => Icons.query_stats_rounded,
-    GeminiUsageBucketHealth.critical => Icons.warning_amber_rounded,
+    GeminiUsageBucketHealth.healthy => KickIcons.verified,
+    GeminiUsageBucketHealth.low => KickIcons.queryStats,
+    GeminiUsageBucketHealth.critical => KickIcons.warning,
   };
 }
 

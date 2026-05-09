@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,11 +10,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/accounts/account_runtime_notice.dart';
 import '../../core/errors/gemini_error_actions.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
+import '../../core/theme/kick_icons.dart';
 import '../../data/models/account_profile.dart';
 import '../../l10n/kick_localizations.dart';
 import '../../proxy/kiro/kiro_auth_source.dart';
 import '../../proxy/kiro/kiro_link_auth_service.dart';
+import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
+import '../shared/kick_actions.dart';
+import '../shared/kick_haptics.dart';
+import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import '../shared/provider_icon.dart';
 import 'account_editor_dialog.dart';
@@ -54,22 +61,21 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         final filteredEnabledCount = filteredAccounts.where((account) => account.enabled).length;
         final hasSearch = _query.trim().isNotEmpty;
 
-        return SingleChildScrollView(
+        return KickSmoothSingleChildScrollView(
+          padding: EdgeInsets.only(bottom: AppShell.floatingNavigationClearanceOf(context)),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final useCompactHeader = constraints.maxWidth < 680;
 
               Widget buildAddButton({required bool fullWidth}) {
-                final button = FilledButton.icon(
+                final button = KickPrimaryAction(
                   onPressed: () => _authenticateNewAccount(context, ref),
-                  icon: const Icon(Icons.add_rounded),
-                  label: Text(l10n.addButton),
+                  icon: KickIcons.add,
+                  label: l10n.addButton,
+                  fullWidth: fullWidth,
                 );
-                if (!fullWidth) {
-                  return button;
-                }
-                return SizedBox(width: double.infinity, child: button);
+                return button;
               }
 
               return Column(
@@ -85,113 +91,42 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     buildAddButton(fullWidth: true),
                   ],
                   if (accounts.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    KickPanel(
-                      tone: KickPanelTone.soft,
-                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                      child: LayoutBuilder(
-                        builder: (context, panelConstraints) {
-                          final useHorizontalControls = panelConstraints.maxWidth >= 760;
-                          final searchField = TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.search_rounded),
-                              hintText: l10n.accountsSearchHint,
-                              suffixIcon: hasSearch
-                                  ? IconButton(
-                                      onPressed: _clearSearch,
-                                      tooltip: MaterialLocalizations.of(context).clearButtonTooltip,
-                                      icon: const Icon(Icons.close_rounded),
-                                    )
-                                  : null,
-                            ),
-                            onChanged: (value) {
-                              setState(() => _query = value);
-                            },
-                          );
-                          final sortField = DropdownButtonFormField<_AccountSortOption>(
-                            initialValue: _sortOption,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              labelText: l10n.accountsSortLabel,
-                              prefixIcon: const Icon(Icons.sort_rounded),
-                            ),
-                            items: _AccountSortOption.values
-                                .map(
-                                  (option) => DropdownMenuItem<_AccountSortOption>(
-                                    value: option,
-                                    child: Text(_accountSortOptionLabel(l10n, option)),
-                                  ),
-                                )
-                                .toList(growable: false),
-                            onChanged: (value) {
-                              if (value == null) {
-                                return;
-                              }
-                              setState(() => _sortOption = value);
-                            },
-                          );
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (useHorizontalControls)
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(child: searchField),
-                                    const SizedBox(width: 12),
-                                    SizedBox(width: 260, child: sortField),
-                                  ],
-                                )
-                              else ...[
-                                searchField,
-                                const SizedBox(height: 12),
-                                sortField,
-                              ],
-                              const SizedBox(height: 14),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  KickBadge(
-                                    label: l10n.accountsTotalCount(accounts.length),
-                                    leading: const Icon(Icons.manage_accounts_rounded),
-                                  ),
-                                  KickBadge(
-                                    label: l10n.activeAccounts(filteredEnabledCount),
-                                    leading: const Icon(Icons.check_circle_outline_rounded),
-                                  ),
-                                  KickBadge(
-                                    label: l10n.accountsFilteredCount(filteredAccounts.length),
-                                    leading: const Icon(Icons.filter_alt_rounded),
-                                    emphasis: hasSearch,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                    const SizedBox(height: 20),
+                    _AccountsControlsBar(
+                      searchController: _searchController,
+                      hasSearch: hasSearch,
+                      onSearchChanged: (value) => setState(() => _query = value),
+                      onClearSearch: _clearSearch,
+                      sortOption: _sortOption,
+                      onSortChanged: (value) => setState(() => _sortOption = value),
+                    ),
+                    const SizedBox(height: 14),
+                    _AccountsMetricsBar(
+                      totalCount: accounts.length,
+                      activeCount: filteredEnabledCount,
+                      filteredCount: filteredAccounts.length,
+                      highlightFiltered: hasSearch,
                     ),
                   ],
                   const SizedBox(height: 24),
                   if (accounts.isEmpty)
                     EmptyStateCard(
-                      icon: Icons.group_add_rounded,
+                      icon: KickIcons.addAccount,
                       title: l10n.accountsEmptyTitle,
                       message: l10n.accountsEmptyMessage,
                       action: SizedBox(
                         width: double.infinity,
-                        child: FilledButton(
+                        child: KickPrimaryAction(
+                          label: l10n.connectAccountButton,
+                          icon: KickIcons.addAccount,
+                          fullWidth: true,
                           onPressed: () => _authenticateNewAccount(context, ref),
-                          child: Text(l10n.connectAccountButton),
                         ),
                       ),
                     )
                   else if (filteredAccounts.isEmpty)
                     EmptyStateCard(
-                      icon: Icons.manage_search_rounded,
+                      icon: KickIcons.search,
                       title: l10n.accountsFilteredEmptyTitle,
                       message: l10n.accountsFilteredEmptyMessage,
                     )
@@ -199,10 +134,13 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final spacing = 14.0;
-                        final cardWidth = switch (constraints.maxWidth) {
-                          > 980 => (constraints.maxWidth - spacing) / 2,
-                          _ => constraints.maxWidth,
+                        final columns = switch (constraints.maxWidth) {
+                          >= 1320 => 3,
+                          >= 860 => 2,
+                          _ => 1,
                         };
+                        final cardWidth =
+                            (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
                         return Wrap(
                           spacing: spacing,
@@ -225,11 +163,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         );
       },
       error: (error, stackTrace) => EmptyStateCard(
-        icon: Icons.error_rounded,
+        icon: KickIcons.error,
         title: l10n.accountsLoadErrorTitle,
         message: formatUserFacingError(l10n, error),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: KickLoadingIndicator()),
     );
   }
 
@@ -275,6 +213,288 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   }
 }
 
+class _AccountsControlsBar extends StatelessWidget {
+  const _AccountsControlsBar({
+    required this.searchController,
+    required this.hasSearch,
+    required this.onSearchChanged,
+    required this.onClearSearch,
+    required this.sortOption,
+    required this.onSortChanged,
+  });
+
+  final TextEditingController searchController;
+  final bool hasSearch;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onClearSearch;
+  final _AccountSortOption sortOption;
+  final ValueChanged<_AccountSortOption> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final materialLocalizations = MaterialLocalizations.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(KickIcons.search),
+                hintText: l10n.accountsSearchHint,
+                border: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                filled: false,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
+                suffixIcon: hasSearch
+                    ? IconButton(
+                        onPressed: onClearSearch,
+                        tooltip: materialLocalizations.clearButtonTooltip,
+                        icon: const Icon(KickIcons.clear),
+                      )
+                    : null,
+              ),
+              onChanged: onSearchChanged,
+            ),
+          ),
+          const SizedBox(width: 4),
+          _AccountsSortMenu(sortOption: sortOption, onSortChanged: onSortChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountsSortMenu extends StatelessWidget {
+  const _AccountsSortMenu({required this.sortOption, required this.onSortChanged});
+
+  final _AccountSortOption sortOption;
+  final ValueChanged<_AccountSortOption> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+
+    return MenuAnchor(
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(scheme.surfaceContainerHigh),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        side: WidgetStatePropertyAll(
+          BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.42)),
+        ),
+      ),
+      menuChildren: [
+        for (final option in _AccountSortOption.values)
+          MenuItemButton(
+            leadingIcon: Icon(
+              option == sortOption ? Icons.check_rounded : null,
+              size: 18,
+              color: option == sortOption ? scheme.primary : null,
+            ),
+            onPressed: () => onSortChanged(option),
+            child: Text(_accountSortOptionLabel(l10n, option)),
+          ),
+      ],
+      builder: (context, controller, child) {
+        return Tooltip(
+          message: l10n.accountsSortLabel,
+          child: IconButton(
+            onPressed: () {
+              if (controller.isOpen) {
+                controller.close();
+              } else {
+                controller.open();
+              }
+            },
+            icon: const Icon(KickIcons.sort),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AccountsMetricsBar extends StatelessWidget {
+  const _AccountsMetricsBar({
+    required this.totalCount,
+    required this.activeCount,
+    required this.filteredCount,
+    required this.highlightFiltered,
+  });
+
+  final int totalCount;
+  final int activeCount;
+  final int filteredCount;
+  final bool highlightFiltered;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    Widget buildSegment({
+      required IconData icon,
+      required String label,
+      required String value,
+      bool emphasized = false,
+    }) {
+      final labelColor = emphasized ? scheme.primary : scheme.onSurfaceVariant;
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 15, color: labelColor),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.labelSmall?.copyWith(color: labelColor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: textTheme.titleMedium?.copyWith(
+                  color: emphasized ? scheme.primary : scheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget buildDivider() {
+      return Container(width: 1, height: 34, color: scheme.outlineVariant.withValues(alpha: 0.38));
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.28)),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            buildSegment(
+              icon: KickIcons.manageAccounts,
+              label: _accountsMetricLabel(l10n.accountsTotalCount(totalCount)),
+              value: '$totalCount',
+            ),
+            buildDivider(),
+            buildSegment(
+              icon: KickIcons.check,
+              label: _accountsMetricLabel(l10n.activeAccounts(activeCount)),
+              value: '$activeCount',
+            ),
+            buildDivider(),
+            buildSegment(
+              icon: KickIcons.filter,
+              label: _accountsMetricLabel(l10n.accountsFilteredCount(filteredCount)),
+              value: '$filteredCount',
+              emphasized: highlightFiltered,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _accountsMetricLabel(String combined) {
+    final colon = combined.lastIndexOf(':');
+    if (colon <= 0) {
+      return combined;
+    }
+    return combined.substring(0, colon).trim();
+  }
+}
+
+class _AccountStatusDot extends StatelessWidget {
+  const _AccountStatusDot({required this.color, required this.tooltip});
+
+  final Color color;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+    );
+  }
+}
+
+class _AccountProviderInlineBadge extends StatelessWidget {
+  const _AccountProviderInlineBadge({required this.provider});
+
+  final AccountProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final label = provider == AccountProvider.kiro
+        ? l10n.accountProviderKiro
+        : l10n.accountProviderGemini;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.36)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconTheme(
+            data: IconThemeData(size: 14, color: scheme.onSurfaceVariant),
+            child: ProviderIcon(provider: provider),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AccountCard extends ConsumerWidget {
   const _AccountCard({required this.account});
 
@@ -302,16 +522,16 @@ class _AccountCard extends ConsumerWidget {
         ? l10n.accountQuotaWarningStatus
         : l10n.accountReadyStatus;
     final statusIcon = !account.enabled
-        ? Icons.pause_circle_rounded
+        ? Icons.pause_rounded
         : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
-        ? Icons.report_gmailerrorred_rounded
+        ? KickIcons.report
         : account.isCoolingDown
-        ? Icons.schedule_rounded
+        ? KickIcons.schedule
         : runtimeNotice?.kind == AccountRuntimeNoticeKind.banCheckPending
-        ? Icons.manage_search_rounded
+        ? KickIcons.search
         : hasQuotaWarning
-        ? Icons.query_stats_rounded
-        : Icons.check_circle_rounded;
+        ? KickIcons.queryStats
+        : KickIcons.check;
     final statusTint = !account.enabled
         ? scheme.onSurfaceVariant
         : runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation
@@ -337,28 +557,76 @@ class _AccountCard extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _AccountAvatar(account: account),
+              _AccountAvatar(
+                account: account,
+                onAvatarChanged: (avatarUrl) {
+                  unawaited(
+                    ref
+                        .read(accountsControllerProvider.notifier)
+                        .saveAccount(
+                          avatarUrl == null
+                              ? account.copyWith(clearAvatarUrl: true)
+                              : account.copyWith(avatarUrl: avatarUrl),
+                        ),
+                  );
+                },
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(account.label, style: textTheme.titleLarge),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _AccountStatusDot(color: statusTint, tooltip: statusLabel),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            account.label,
+                            style: textTheme.titleLarge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _AccountProviderInlineBadge(provider: account.provider),
+                      ],
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       account.displayIdentity,
                       style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    if (account.provider != AccountProvider.kiro) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        account.projectId.trim().isEmpty
+                            ? l10n.projectIdAutoChip
+                            : l10n.projectIdChip(account.projectId),
+                        style: textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
               Switch(
                 value: account.enabled,
                 onChanged: (value) {
+                  KickHaptics.selection();
                   unawaited(
-                    ref.read(accountsControllerProvider.notifier).saveAccount(
-                      account.copyWith(enabled: value),
-                    ),
+                    ref
+                        .read(accountsControllerProvider.notifier)
+                        .saveAccount(account.copyWith(enabled: value)),
                   );
                 },
               ),
@@ -370,28 +638,16 @@ class _AccountCard extends ConsumerWidget {
             runSpacing: 8,
             children: [
               KickBadge(
-                label: account.provider == AccountProvider.kiro
-                    ? l10n.accountProviderKiro
-                    : l10n.accountProviderGemini,
-                leading: ProviderIcon(provider: account.provider),
-              ),
-              if (account.provider != AccountProvider.kiro)
-                KickBadge(
-                  label: account.projectId.trim().isEmpty
-                      ? l10n.projectIdAutoChip
-                      : l10n.projectIdChip(account.projectId),
-                  leading: const Icon(Icons.badge_rounded),
-                ),
-              KickBadge(
                 label: l10n.priorityChip(priorityLabel),
-                leading: const Icon(Icons.low_priority_rounded),
+                leading: const Icon(KickIcons.lowPriority),
               ),
-              KickBadge(
-                label: statusLabel,
-                leading: Icon(statusIcon, size: 16),
-                emphasis: statusEmphasis,
-                tint: statusTint,
-              ),
+              if (!statusEmphasis || !account.enabled)
+                KickBadge(
+                  label: statusLabel,
+                  leading: Icon(statusIcon, size: 16),
+                  emphasis: statusEmphasis,
+                  tint: statusTint,
+                ),
               if (showRuntimeNoticeBadge)
                 KickBadge(
                   label: _accountRuntimeNoticeStatusLabel(l10n, account.lastQuotaSnapshot!),
@@ -416,10 +672,10 @@ class _AccountCard extends ConsumerWidget {
             if (runtimeNotice?.kind == AccountRuntimeNoticeKind.termsOfServiceViolation &&
                 runtimeNotice?.actionUrl?.trim().isNotEmpty == true) ...[
               const SizedBox(height: 10),
-              OutlinedButton.icon(
+              KickSecondaryAction(
                 onPressed: () => unawaited(_openErrorAction(context, runtimeNotice!.actionUrl!)),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: Text(l10n.accountSubmitAppealButton),
+                icon: KickIcons.openInNew,
+                label: l10n.accountSubmitAppealButton,
               ),
             ],
           ],
@@ -429,7 +685,7 @@ class _AccountCard extends ConsumerWidget {
             runSpacing: 8,
             children: [
               _AccountActionButton(
-                icon: Icons.edit_rounded,
+                icon: KickIcons.edit,
                 label: l10n.editButton,
                 onPressed: () async {
                   final draft = await showAccountEditorDialog(
@@ -467,7 +723,7 @@ class _AccountCard extends ConsumerWidget {
               ),
               if (account.supportsUsageDiagnostics)
                 _AccountActionButton(
-                  icon: Icons.query_stats_rounded,
+                  icon: KickIcons.queryStats,
                   label: l10n.accountUsageOpenTooltip,
                   onPressed: () =>
                       context.pushNamed('account-usage', pathParameters: {'accountId': account.id}),
@@ -561,38 +817,545 @@ Future<bool> _confirmDeleteAccount(BuildContext context, AccountProfile account)
   return confirmed == true;
 }
 
-class _AccountAvatar extends StatelessWidget {
-  const _AccountAvatar({required this.account});
+class _AccountAvatar extends StatefulWidget {
+  const _AccountAvatar({required this.account, required this.onAvatarChanged});
 
   final AccountProfile account;
+  final ValueChanged<String?> onAvatarChanged;
+
+  @override
+  State<_AccountAvatar> createState() => _AccountAvatarState();
+}
+
+class _AccountAvatarState extends State<_AccountAvatar> {
+  bool _pressed = false;
+
+  bool get _supportsCustomAvatar => widget.account.provider != AccountProvider.gemini;
+
+  void _showPreview() {
+    setState(() => _pressed = true);
+    KickHaptics.light();
+    unawaited(
+      _showAccountAvatarPreview(context, widget.account).whenComplete(() {
+        if (mounted) {
+          setState(() => _pressed = false);
+        }
+      }),
+    );
+  }
+
+  Future<void> _openAvatarPicker() async {
+    KickHaptics.selection();
+    final nextAvatar = await _showAvatarPickerDialog(context, widget.account);
+    if (!mounted || nextAvatar == _avatarPickerCancelled) {
+      return;
+    }
+    widget.onAvatarChanged(nextAvatar?.trim().isEmpty == true ? null : nextAvatar);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final avatarUrl = account.avatarUrl;
-    final fallback = Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        color: scheme.secondaryContainer.withValues(alpha: 0.84),
-        borderRadius: BorderRadius.circular(20),
+    return Semantics(
+      button: true,
+      label: context.l10n.accountAvatarOpenTooltip,
+      child: GestureDetector(
+        onTap: () async {
+          if (_supportsCustomAvatar) {
+            await _openAvatarPicker();
+          } else {
+            _showPreview();
+          }
+        },
+        onLongPressStart: _supportsCustomAvatar ? (_) => _showPreview() : null,
+        onLongPressEnd: _supportsCustomAvatar
+            ? (_) {
+                if (mounted) {
+                  setState(() => _pressed = false);
+                }
+              }
+            : null,
+        child: AnimatedScale(
+          scale: _pressed ? 0.92 : 1,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOutCubic,
+          child: _AccountAvatarImage(account: widget.account, size: 52, radius: 20),
+        ),
       ),
-      child: Icon(Icons.account_circle_rounded, color: scheme.onSecondaryContainer, size: 30),
     );
+  }
+}
+
+class _AccountAvatarImage extends StatelessWidget {
+  const _AccountAvatarImage({required this.account, required this.size, required this.radius});
+
+  final AccountProfile account;
+  final double size;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = _effectiveAvatarUrl(account);
+    final fallback = _AccountAvatarFallback(account: account, size: size, radius: radius);
 
     if (avatarUrl == null || avatarUrl.isEmpty) {
       return fallback;
     }
 
+    final image = _isFileAvatarUrl(avatarUrl)
+        ? Image.file(
+            File.fromUri(Uri.parse(avatarUrl)),
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallback,
+          )
+        : Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback);
+
     return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: SizedBox(
-        width: 52,
-        height: 52,
-        child: Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
+      borderRadius: BorderRadius.circular(radius),
+      child: SizedBox(width: size, height: size, child: image),
+    );
+  }
+}
+
+class _AccountAvatarFallback extends StatelessWidget {
+  const _AccountAvatarFallback({required this.account, required this.size, required this.radius});
+
+  final AccountProfile account;
+  final double size;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final initial = _accountInitial(account);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer.withValues(alpha: 0.84),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: Center(
+        child: initial == null
+            ? Icon(
+                Icons.account_circle_rounded,
+                color: scheme.onSecondaryContainer,
+                size: size * 0.58,
+              )
+            : Text(
+                initial,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: scheme.onSecondaryContainer,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
     );
   }
+}
+
+const String _avatarPickerCancelled = '__kick_avatar_cancelled__';
+
+Future<String?> _showAvatarPickerDialog(BuildContext context, AccountProfile account) {
+  return showDialog<String?>(
+    context: context,
+    builder: (dialogContext) => _AvatarPickerDialog(account: account),
+  );
+}
+
+class _AvatarPickerDialog extends StatefulWidget {
+  const _AvatarPickerDialog({required this.account});
+
+  final AccountProfile account;
+
+  @override
+  State<_AvatarPickerDialog> createState() => _AvatarPickerDialogState();
+}
+
+class _AvatarPickerDialogState extends State<_AvatarPickerDialog> {
+  bool _pickingFile = false;
+  String? _selectedSeed;
+  String? _customFileUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final seeds = _avatarSeedOptions(widget.account);
+    final currentAvatar = widget.account.avatarUrl?.trim();
+    if (currentAvatar != null && currentAvatar.isNotEmpty) {
+      if (_isFileAvatarUrl(currentAvatar)) {
+        _customFileUrl = currentAvatar;
+      } else {
+        for (final seed in seeds) {
+          if (_diceBearAvatarUrl(seed) == currentAvatar) {
+            _selectedSeed = seed;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  bool get _hasSelection => _selectedSeed != null || _customFileUrl != null;
+
+  String? _selectedUrl() {
+    if (_customFileUrl != null) {
+      return _customFileUrl;
+    }
+    if (_selectedSeed != null) {
+      return _diceBearAvatarUrl(_selectedSeed!);
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final seeds = _avatarSeedOptions(widget.account);
+    final previewUrl = _selectedUrl();
+    const contentPadding = EdgeInsets.fromLTRB(24, 16, 24, 16);
+    const maxContentWidth = 380.0;
+    const minDialogWidth = 280.0;
+    const dialogHorizontalInset = 40.0 * 2;
+    const avatarColumns = 3;
+    const avatarGap = 10.0;
+    final contentWidth =
+        (MediaQuery.sizeOf(context).width - dialogHorizontalInset - contentPadding.horizontal)
+            .clamp(minDialogWidth - contentPadding.horizontal, maxContentWidth)
+            .toDouble();
+    final avatarTileSize = ((contentWidth - (avatarGap * (avatarColumns - 1))) / avatarColumns)
+        .clamp(72.0, 120.0)
+        .toDouble();
+
+    return AlertDialog(
+      icon: const Icon(Icons.account_circle_rounded),
+      title: Text(l10n.accountAvatarDialogTitle),
+      contentPadding: contentPadding,
+      content: SizedBox(
+        width: contentWidth,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: _AvatarPickerPreview(
+                  account: widget.account,
+                  selectedUrl: previewUrl,
+                  size: 104,
+                  radius: 28,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                l10n.accountAvatarStandardAvatarsTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: avatarGap,
+                runSpacing: avatarGap,
+                children: [
+                  for (final seed in seeds)
+                    _AvatarOptionTile(
+                      url: _diceBearAvatarUrl(seed),
+                      size: avatarTileSize,
+                      selected: _selectedSeed == seed && _customFileUrl == null,
+                      onTap: () {
+                        KickHaptics.selection();
+                        setState(() {
+                          _selectedSeed = seed;
+                          _customFileUrl = null;
+                        });
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: _pickingFile ? null : _pickFileAvatar,
+                    icon: _pickingFile
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: KickLoadingIndicator(size: 18, contained: false),
+                          )
+                        : const Icon(Icons.image_rounded, size: 18),
+                    label: Text(l10n.accountAvatarChooseFileButton),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _pickingFile ? null : () => Navigator.of(context).pop(null),
+                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                    label: Text(l10n.accountAvatarResetButton),
+                    style: TextButton.styleFrom(foregroundColor: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _pickingFile ? null : () => Navigator.of(context).pop(_avatarPickerCancelled),
+          child: Text(l10n.cancelButton),
+        ),
+        FilledButton(
+          onPressed: _pickingFile || !_hasSelection
+              ? null
+              : () => Navigator.of(context).pop(_selectedUrl()),
+          child: Text(l10n.accountAvatarApplyButton),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickFileAvatar() async {
+    setState(() => _pickingFile = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+      if (!mounted) {
+        return;
+      }
+      final path = result?.files.single.path;
+      if (path == null || path.trim().isEmpty) {
+        setState(() => _pickingFile = false);
+        return;
+      }
+      setState(() {
+        _customFileUrl = Uri.file(path).toString();
+        _selectedSeed = null;
+        _pickingFile = false;
+      });
+    } finally {
+      if (mounted && _pickingFile) {
+        setState(() => _pickingFile = false);
+      }
+    }
+  }
+}
+
+class _AvatarPickerPreview extends StatelessWidget {
+  const _AvatarPickerPreview({
+    required this.account,
+    required this.selectedUrl,
+    required this.size,
+    required this.radius,
+  });
+
+  final AccountProfile account;
+  final String? selectedUrl;
+  final double size;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fallback = _AccountAvatarFallback(account: account, size: size, radius: radius);
+    Widget image;
+    if (selectedUrl == null || selectedUrl!.isEmpty) {
+      image = _AccountAvatarImage(account: account, size: size, radius: radius);
+    } else if (_isFileAvatarUrl(selectedUrl!)) {
+      image = ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Image.file(
+            File.fromUri(Uri.parse(selectedUrl!)),
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallback,
+          ),
+        ),
+      );
+    } else {
+      image = ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Image.network(
+            selectedUrl!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallback,
+            loadingBuilder: (_, child, progress) => progress == null ? child : fallback,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius + 4),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.32), width: 1.5),
+      ),
+      child: image,
+    );
+  }
+}
+
+class _AvatarOptionTile extends StatelessWidget {
+  const _AvatarOptionTile({
+    required this.url,
+    required this.size,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String url;
+  final double size;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fallback = _AvatarOptionFallback(size: size);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: selected ? scheme.primary : scheme.outlineVariant.withValues(alpha: 0.42),
+                  width: selected ? 2 : 1,
+                ),
+                color: selected ? scheme.primary.withValues(alpha: 0.08) : Colors.transparent,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => fallback,
+                    loadingBuilder: (_, child, progress) => progress == null ? child : fallback,
+                  ),
+                ),
+              ),
+            ),
+            if (selected)
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(color: scheme.primary, shape: BoxShape.circle),
+                  child: Icon(Icons.check_rounded, size: 14, color: scheme.onPrimary),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarOptionFallback extends StatelessWidget {
+  const _AvatarOptionFallback({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: size,
+      height: size,
+      color: scheme.secondaryContainer.withValues(alpha: 0.62),
+      child: Icon(
+        Icons.account_circle_rounded,
+        color: scheme.onSecondaryContainer.withValues(alpha: 0.82),
+        size: size * 0.46,
+      ),
+    );
+  }
+}
+
+Future<void> _showAccountAvatarPreview(BuildContext context, AccountProfile account) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    barrierColor: Colors.black.withValues(alpha: 0.58),
+    transitionDuration: const Duration(milliseconds: 240),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: _AccountAvatarImage(account: account, size: 260, radius: 52),
+        ),
+      );
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutBack);
+      return FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.78, end: 1).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+String? _effectiveAvatarUrl(AccountProfile account) {
+  final stored = account.avatarUrl?.trim();
+  if (stored != null && stored.isNotEmpty) {
+    return stored;
+  }
+  if (account.provider == AccountProvider.kiro) {
+    return _diceBearAvatarUrl(account.id);
+  }
+  return null;
+}
+
+String _diceBearAvatarUrl(String seed) {
+  return Uri.https('api.dicebear.com', '/9.x/identicon/png', {
+    'seed': seed.trim().isEmpty ? 'kick' : seed.trim(),
+    'radius': '28',
+    'backgroundType': 'solid',
+  }).toString();
+}
+
+List<String> _avatarSeedOptions(AccountProfile account) {
+  final base = account.id.trim().isEmpty ? account.label : account.id;
+  return [
+    base,
+    '$base-orbit',
+    '$base-nova',
+    '$base-quartz',
+    account.label.trim().isEmpty ? '$base-label' : account.label.trim(),
+    account.email.trim().isEmpty ? '$base-identity' : account.email.trim(),
+  ];
+}
+
+bool _isFileAvatarUrl(String value) {
+  return value.startsWith('file://');
+}
+
+String? _accountInitial(AccountProfile account) {
+  final text = (account.label.trim().isNotEmpty ? account.label : account.displayIdentity).trim();
+  if (text.isEmpty) {
+    return null;
+  }
+  return String.fromCharCode(text.runes.first).toUpperCase();
 }
 
 Future<void> _connectGoogleAccount(
@@ -714,7 +1477,7 @@ Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfil
             const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2.4),
+              child: KickLoadingIndicator(size: 24, contained: false),
             ),
             const SizedBox(width: 16),
             Expanded(child: Text(l10n.accountProjectCheckInProgressMessage)),
@@ -829,7 +1592,7 @@ String _formatAccountRuntimeNoticeMessage(KickLocalizations l10n, String snapsho
 IconData _accountRuntimeNoticeIcon(AccountRuntimeNotice? runtimeNotice) {
   return switch (runtimeNotice?.kind) {
     AccountRuntimeNoticeKind.banCheckPending => Icons.manage_search_rounded,
-    AccountRuntimeNoticeKind.termsOfServiceViolation => Icons.report_gmailerrorred_rounded,
+    AccountRuntimeNoticeKind.termsOfServiceViolation => KickIcons.report,
     null => Icons.query_stats_rounded,
   };
 }
@@ -923,7 +1686,7 @@ class _KiroLinkAuthDialogState extends State<_KiroLinkAuthDialog> {
                     const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2.2),
+                      child: KickLoadingIndicator(size: 18, contained: false),
                     ),
                     const SizedBox(width: 12),
                     Expanded(child: Text(l10n.kiroLinkAuthWaitingMessage)),
@@ -1051,20 +1814,7 @@ class _AccountActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        foregroundColor: scheme.onSurface,
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.72)),
-        visualDensity: VisualDensity.compact,
-      ),
-      icon: Icon(icon, size: 18),
-      label: Text(label),
-    );
+    return KickSecondaryAction(onPressed: onPressed, icon: icon, label: label);
   }
 }
 
@@ -1123,7 +1873,7 @@ class _AccountMoreActionsButton extends StatelessWidget {
         ),
       ],
       builder: (context, controller, child) {
-        return OutlinedButton.icon(
+        return KickSecondaryAction(
           onPressed: () {
             if (controller.isOpen) {
               controller.close();
@@ -1131,15 +1881,8 @@ class _AccountMoreActionsButton extends StatelessWidget {
               controller.open();
             }
           },
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            foregroundColor: scheme.onSurface,
-            side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.72)),
-            visualDensity: VisualDensity.compact,
-          ),
-          icon: const Icon(Icons.more_horiz_rounded, size: 18),
-          label: Text(label),
+          icon: KickIcons.more,
+          label: label,
         );
       },
     );

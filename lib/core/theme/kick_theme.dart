@@ -2,6 +2,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:m3e_collection/m3e_collection.dart';
 
 class KickThemeBootstrapData {
   const KickThemeBootstrapData({
@@ -133,8 +134,8 @@ class KickThemeTokens extends ThemeExtension<KickThemeTokens> {
   static const fallback = KickThemeTokens(
     pageGutter: 24,
     sectionGap: 20,
-    panelRadius: 28,
-    heroRadius: 36,
+    panelRadius: 24,
+    heroRadius: 32,
     pillRadius: 18,
     shortDuration: Duration(milliseconds: 220),
     mediumDuration: Duration(milliseconds: 380),
@@ -212,46 +213,46 @@ class KickThemeData {
     final textTheme = base.textTheme.copyWith(
       displayLarge: base.textTheme.displayLarge?.copyWith(
         fontWeight: FontWeight.w700,
-        letterSpacing: -1.2,
+        letterSpacing: 0,
         height: 0.98,
       ),
       displayMedium: base.textTheme.displayMedium?.copyWith(
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.9,
+        letterSpacing: 0,
         height: 1,
       ),
       displaySmall: base.textTheme.displaySmall?.copyWith(
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.6,
+        letterSpacing: 0,
         height: 1.02,
       ),
       headlineLarge: base.textTheme.headlineLarge?.copyWith(
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.4,
+        letterSpacing: 0,
         height: 1.06,
       ),
       headlineMedium: base.textTheme.headlineMedium?.copyWith(
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.2,
+        letterSpacing: 0,
         height: 1.08,
       ),
       titleLarge: base.textTheme.titleLarge?.copyWith(
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.1,
+        letterSpacing: 0,
       ),
       titleMedium: base.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w500,
-        letterSpacing: -0.1,
+        letterSpacing: 0,
       ),
       bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.45),
       bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.4),
       labelLarge: base.textTheme.labelLarge?.copyWith(
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.24,
+        letterSpacing: 0,
       ),
       labelMedium: base.textTheme.labelMedium?.copyWith(
         fontWeight: FontWeight.w500,
-        letterSpacing: 0.16,
+        letterSpacing: 0,
       ),
     );
 
@@ -262,7 +263,7 @@ class KickThemeData {
       borderRadius: BorderRadius.circular(tokens.heroRadius),
     );
 
-    return base.copyWith(
+    final theme = base.copyWith(
       extensions: const [tokens],
       textTheme: textTheme,
       scaffoldBackgroundColor: scheme.surface,
@@ -463,6 +464,10 @@ class KickThemeData {
           return scheme.outlineVariant.withValues(alpha: 0.55);
         }),
       ),
+    );
+    final expressiveTheme = withM3ETheme(theme, override: M3ETheme.defaults(scheme));
+    return expressiveTheme.copyWith(
+      extensions: <ThemeExtension<dynamic>>[tokens, M3ETheme.defaults(scheme)],
     );
   }
 

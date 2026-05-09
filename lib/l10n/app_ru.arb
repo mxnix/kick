@@ -79,7 +79,7 @@
             }
         }
     },
-    "projectIdChip": "PROJECT_ID: {projectId}",
+    "projectIdChip": "ID проекта: {projectId}",
     "@projectIdChip": {
         "placeholders": {
             "projectId": {
@@ -87,7 +87,7 @@
             }
         }
     },
-    "projectIdAutoChip": "PROJECT_ID: auto",
+    "projectIdAutoChip": "ID проекта: auto",
     "priorityChip": "Приоритет: {priorityLabel}",
     "@priorityChip": {
         "placeholders": {
@@ -247,6 +247,7 @@
     "settingsSubtitle": "Сеть, оформление, API-ключ и работа прокси",
     "themeLabel": "Тема",
     "themeModeSystem": "Системная",
+    "themeModeSystemShort": "Авто",
     "themeModeLight": "Светлая",
     "themeModeDark": "Тёмная",
     "fontLabel": "Шрифт",
@@ -442,10 +443,58 @@
     "aboutRetryUpdateCheckButton": "Проверить еще раз",
     "aboutAnalyticsTitle": "Аналитика",
     "aboutAnalyticsSubtitle": "Анонимная статистика использования помогает улучшать KiCk.",
+    "aboutLicenseTitle": "Лицензия",
+    "aboutLicenseMessage": "KiCk распространяется как проект с открытым исходным кодом",
+    "aboutOpenLicenseButton": "Открыть лицензию",
+    "aboutPrivacyTitle": "Приватность",
+    "aboutPrivacyMessage": "KiCk хранит аккаунты, токены и настройки локально",
+    "aboutOpenPrivacyButton": "Открыть заметку о приватности",
+    "aboutDisclaimerTitle": "Отказ от ответственности",
+    "aboutDisclaimerMessage": "KiCk не связан с Google, AWS, Kiro или SillyTavern",
+    "aboutCreditsTitle": "Благодарности",
+    "aboutCreditsMessage": "Собрано на Flutter. DiceBear Identicon CC0 1.0.",
+    "aboutOpenLinkFailedMessage": "Не удалось открыть ссылку.",
     "copyProxyEndpointTooltip": "Скопировать адрес прокси",
     "proxyEndpointCopiedMessage": "Адрес прокси скопирован",
     "copyApiKeyTooltip": "Скопировать API-ключ",
     "apiKeyCopiedMessage": "API-ключ скопирован",
+    "pushSillyTavernButton": "В SillyTavern",
+    "pushSillyTavernDialogTitle": "Отправить в запущенный SillyTavern",
+    "pushSillyTavernDialogMessage": "KiCk добавит профиль и выберет его в настройках подключений",
+    "pushSillyTavernUrlLabel": "URL SillyTavern",
+    "pushSillyTavernProfileNameLabel": "Имя профиля",
+    "pushSillyTavernModelLabel": "Модель",
+    "pushSillyTavernConfirmButton": "Добавить профиль",
+    "pushSillyTavernSuccessMessage": "Профиль \"{profileName}\" добавлен в SillyTavern.",
+    "@pushSillyTavernSuccessMessage": {
+        "placeholders": {
+            "profileName": {
+                "type": "String"
+            }
+        }
+    },
+    "pushSillyTavernFailedMessage": "Не удалось отправить профиль в SillyTavern: {error}",
+    "@pushSillyTavernFailedMessage": {
+        "placeholders": {
+            "error": {
+                "type": "String"
+            }
+        }
+    },
+    "pushSillyTavernErrorInvalidUrl": "Укажите полный URL SillyTavern, например http://127.0.0.1:8000",
+    "pushSillyTavernErrorMissingCsrf": "SillyTavern не вернул CSRF-токен.",
+    "pushSillyTavernErrorHttp": "SillyTavern вернул HTTP {statusCode} для {path}.",
+    "@pushSillyTavernErrorHttp": {
+        "placeholders": {
+            "statusCode": {
+                "type": "int"
+            },
+            "path": {
+                "type": "String"
+            }
+        }
+    },
+    "pushSillyTavernErrorInvalidJson": "SillyTavern вернул некорректный JSON-ответ.",
     "homeOnboardingTitle": "С чего начать",
     "homeOnboardingSubtitle": "Небольшая подсказка для первого запуска",
     "homeOnboardingAccountsTitle": "Подключите аккаунт",
@@ -523,6 +572,32 @@
             }
         }
     },
+    "logsRequestGroupTitle": "Запрос {requestLabel}",
+    "@logsRequestGroupTitle": {
+        "placeholders": {
+            "requestLabel": {
+                "type": "String"
+            }
+        }
+    },
+    "logsRequestStatusCount": "Статусов: {count}",
+    "@logsRequestStatusCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "logsRequestRetryCount": "Повторов: {count}",
+    "@logsRequestRetryCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "logsRequestDetailsShowButton": "Показать статусы",
+    "logsRequestDetailsHideButton": "Скрыть статусы",
     "logsLoadedCount": "Загружено: {count}",
     "@logsLoadedCount": {
         "placeholders": {
@@ -568,7 +643,7 @@
     "accountDialogAdvancedTitle": "Расширенные настройки",
     "accountDialogAdvancedSubtitle": "Приоритет и ограничения по моделям",
     "accountDialogAdvancedHint": "Если не хочется настраивать вручную, этот блок можно оставить как есть.",
-    "projectIdLabel": "PROJECT_ID",
+    "projectIdLabel": "ID проекта",
     "projectIdHint": "my-google-cloud-project",
     "projectIdConsoleLinkLabel": "Где посмотреть ID проекта",
     "projectIdRequiredError": "Укажите ID проекта",
@@ -808,6 +883,15 @@
     },
     "accountsFilteredEmptyTitle": "Нет релевантных аккаунтов",
     "accountsFilteredEmptyMessage": "Попробуйте другое имя, почту или ID проекта.",
+    "accountAvatarOpenTooltip": "Открыть аватарку",
+    "accountAvatarDialogTitle": "Аватарка аккаунта",
+    "accountAvatarDiceBearTitle": "DiceBear Identicon",
+    "accountAvatarStandardAvatarsTitle": "Стандартные аватарки",
+    "accountAvatarApplyButton": "Применить",
+    "accountAvatarDiceBearLicense": "Identicon от DiceBear CC0 1.0",
+    "accountAvatarChooseFileButton": "Свой файл",
+    "accountAvatarResetButton": "Сбросить",
+    "accountAvatarResetToDiceBearButton": "Сбросить к DiceBear",
     "aboutDownloadUpdateButton": "Скачать обновление",
     "aboutInstallOnRestartButton": "Установить на перезапуске",
     "aboutInstallUpdateButton": "Установить обновление",

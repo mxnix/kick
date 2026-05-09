@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,10 +6,17 @@ import 'package:intl/intl.dart';
 
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../core/logging/log_sanitizer.dart';
+import '../../core/theme/kick_icons.dart';
+import '../../core/theme/kick_theme.dart';
 import '../../data/models/app_log_entry.dart';
 import '../../l10n/kick_localizations.dart';
+import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
+import '../shared/kick_actions.dart';
+import '../shared/kick_haptics.dart';
+import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
+import 'log_display_items.dart';
 import 'log_export_service.dart';
 import 'log_message_localizer.dart';
 
@@ -24,6 +30,7 @@ class LogsPage extends ConsumerStatefulWidget {
 class _LogsPageState extends ConsumerState<LogsPage> {
   bool _isExporting = false;
   bool _isSharing = false;
+  final Set<String> _expandedRequestEntries = <String>{};
   final Set<String> _expandedPayloadEntries = <String>{};
   final TextEditingController _searchController = TextEditingController();
 
@@ -47,7 +54,8 @@ class _LogsPageState extends ConsumerState<LogsPage> {
           );
         }
         final entries = logs.entries;
-        return CustomScrollView(
+        final displayItems = logs.displayItems;
+        return KickSmoothCustomScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
             SliverToBoxAdapter(
@@ -58,30 +66,25 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    IconButton(
+                    KickIconAction(
                       onPressed: logs.filteredCount == 0 || _isExporting || _isSharing
                           ? null
                           : _exportLogs,
                       tooltip: l10n.logsExportTooltip,
-                      icon: const Icon(Icons.download_rounded),
+                      icon: KickIcons.download,
                     ),
-                    IconButton(
+                    KickIconAction(
                       onPressed: logs.filteredCount == 0 || _isExporting || _isSharing
                           ? null
                           : _shareLogs,
                       tooltip: l10n.logsShareTooltip,
-                      icon: const Icon(Icons.share_rounded),
+                      icon: KickIcons.share,
                     ),
-                    IconButton(
+                    KickIconAction(
                       onPressed: logs.totalCount == 0 ? null : _confirmClearLogs,
                       tooltip: l10n.logsClearButton,
-                      style: IconButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.32),
-                        ),
-                      ),
-                      icon: const Icon(Icons.delete_sweep_rounded),
+                      icon: KickIcons.deleteSweep,
+                      dangerous: true,
                     ),
                   ],
                 ),
@@ -98,8 +101,20 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                     TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search_rounded),
+                        prefixIcon: const Icon(KickIcons.search),
                         hintText: l10n.logsSearchHint,
+                        suffixIcon: logs.query.trim().isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  unawaited(
+                                    ref.read(logsControllerProvider.notifier).updateQuery(''),
+                                  );
+                                },
+                                tooltip: MaterialLocalizations.of(context).clearButtonTooltip,
+                                icon: const Icon(KickIcons.clear),
+                              ),
                       ),
                       onChanged: (value) {
                         unawaited(ref.read(logsControllerProvider.notifier).updateQuery(value));
@@ -112,17 +127,30 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                       children: [
                         KickBadge(
                           label: l10n.logsTotalCount(logs.totalCount),
-                          leading: const Icon(Icons.article_rounded),
+                          leading: const Icon(KickIcons.logs),
                         ),
-                        KickBadge(
-                          label: l10n.logsFilteredCount(logs.filteredCount),
-                          leading: const Icon(Icons.filter_alt_rounded),
-                          emphasis: logs.hasActiveFilters,
+                        AnimatedSwitcher(
+                          duration:
+                              Theme.of(context).extension<KickThemeTokens>()?.shortDuration ??
+                              const Duration(milliseconds: 220),
+                          transitionBuilder: (child, animation) => SizeTransition(
+                            sizeFactor: animation,
+                            axis: Axis.horizontal,
+                            child: FadeTransition(opacity: animation, child: child),
+                          ),
+                          child: logs.hasActiveFilters
+                              ? KickBadge(
+                                  key: const ValueKey('logs-filtered-count'),
+                                  label: l10n.logsFilteredCount(logs.filteredCount),
+                                  leading: const Icon(KickIcons.filter),
+                                  emphasis: true,
+                                )
+                              : const SizedBox.shrink(key: ValueKey('logs-filtered-count-empty')),
                         ),
                         if (logs.filteredCount != entries.length)
                           KickBadge(
                             label: l10n.logsLoadedCount(entries.length),
-                            leading: const Icon(Icons.unfold_more_rounded),
+                            leading: const Icon(KickIcons.expandMore),
                             emphasis: true,
                           ),
                       ],
@@ -220,7 +248,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                 child: SizedBox(
                   width: double.infinity,
                   child: EmptyStateCard(
-                    icon: Icons.article_rounded,
+                    icon: KickIcons.logs,
                     title: logs.totalCount == 0 ? l10n.logsEmptyTitle : l10n.logsFilteredEmptyTitle,
                     message: logs.totalCount == 0 ? null : l10n.logsFilteredEmptyMessage,
                   ),
@@ -229,52 +257,61 @@ class _LogsPageState extends ConsumerState<LogsPage> {
             else
               SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
-                  final entry = entries[index];
+                  final item = displayItems[index];
                   return _LogCardReveal(
-                    key: ValueKey('log-card-${entry.id}'),
-                    animate: logs.appearingEntryIds.contains(entry.id),
+                    key: ValueKey('log-card-${item.key}'),
+                    animate: item.entries.any((entry) => logs.appearingEntryIds.contains(entry.id)),
                     child: Padding(
-                      padding: EdgeInsets.only(bottom: index == entries.length - 1 ? 0 : 12),
-                      child: _LogCard(
-                        entry: entry,
-                        expandedPayload: _expandedPayloadEntries.contains(entry.id),
-                        onCopy: () => _copyLogEntry(entry),
-                        onTogglePayload: () => _togglePayload(entry.id),
-                      ),
+                      padding: EdgeInsets.only(bottom: index == displayItems.length - 1 ? 0 : 12),
+                      child: switch (item) {
+                        SingleLogDisplayItem(:final entry) => _LogCard(
+                          entry: entry,
+                          expandedPayload: _expandedPayloadEntries.contains(entry.id),
+                          onCopy: () => _copyLogEntry(entry),
+                          onTogglePayload: () => _togglePayload(entry.id),
+                        ),
+                        RequestLogDisplayItem() => _LogRequestGroupCard(
+                          group: item,
+                          expanded: _expandedRequestEntries.contains(item.requestId),
+                          expandedPayloadEntryIds: _expandedPayloadEntries,
+                          onToggleExpanded: () => _toggleRequestEntries(item.requestId),
+                          onCopyEntry: _copyLogEntry,
+                          onTogglePayload: _togglePayload,
+                        ),
+                        _ => const SizedBox.shrink(),
+                      },
                     ),
                   );
-                }, childCount: entries.length),
+                }, childCount: displayItems.length),
               ),
             if (logs.hasMore)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(0, 20, 0, 8),
                   child: Center(
-                    child: OutlinedButton.icon(
+                    child: KickSecondaryAction(
                       onPressed: logs.isLoadingMore
                           ? null
                           : () => ref.read(logsControllerProvider.notifier).loadMore(),
-                      icon: logs.isLoadingMore
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.expand_more_rounded),
-                      label: Text(l10n.logsLoadMoreButton),
+                      busy: logs.isLoadingMore,
+                      icon: KickIcons.expandMore,
+                      label: l10n.logsLoadMoreButton,
                     ),
                   ),
                 ),
               ),
+            SliverToBoxAdapter(
+              child: SizedBox(height: AppShell.floatingNavigationClearanceOf(context)),
+            ),
           ],
         );
       },
       error: (error, stackTrace) => EmptyStateCard(
-        icon: Icons.error_rounded,
+        icon: KickIcons.error,
         title: l10n.logsLoadErrorTitle,
         message: formatUserFacingError(l10n, error),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: KickLoadingIndicator()),
     );
   }
 
@@ -341,7 +378,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          icon: const Icon(Icons.delete_sweep_rounded),
+          icon: const Icon(KickIcons.deleteSweep),
           title: Text(l10n.logsClearDialogTitle),
           content: Text(l10n.logsClearDialogMessage),
           actions: [
@@ -367,6 +404,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
     }
 
     _expandedPayloadEntries.clear();
+    _expandedRequestEntries.clear();
     await ref.read(logsControllerProvider.notifier).clear();
   }
 
@@ -384,6 +422,16 @@ class _LogsPageState extends ConsumerState<LogsPage> {
         _expandedPayloadEntries.remove(entryId);
       } else {
         _expandedPayloadEntries.add(entryId);
+      }
+    });
+  }
+
+  void _toggleRequestEntries(String requestId) {
+    setState(() {
+      if (_expandedRequestEntries.contains(requestId)) {
+        _expandedRequestEntries.remove(requestId);
+      } else {
+        _expandedRequestEntries.add(requestId);
       }
     });
   }
@@ -498,7 +546,323 @@ class _LogsFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(label: Text(label), selected: selected, onSelected: (_) => onSelected());
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) {
+        KickHaptics.selection();
+        onSelected();
+      },
+    );
+  }
+}
+
+class _LogRequestGroupCard extends StatelessWidget {
+  const _LogRequestGroupCard({
+    required this.group,
+    required this.expanded,
+    required this.expandedPayloadEntryIds,
+    required this.onToggleExpanded,
+    required this.onCopyEntry,
+    required this.onTogglePayload,
+  });
+
+  final RequestLogDisplayItem group;
+  final bool expanded;
+  final Set<String> expandedPayloadEntryIds;
+  final VoidCallback onToggleExpanded;
+  final ValueChanged<AppLogEntry> onCopyEntry;
+  final ValueChanged<String> onTogglePayload;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final formatter = DateFormat('dd.MM.yyyy HH:mm:ss', l10n.localeName);
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final tokens = context.kickTokens;
+    final primaryEntry = group.primaryEntry;
+    final level = group.effectiveLevel;
+    final levelColor = switch (level) {
+      AppLogLevel.warning => scheme.tertiary,
+      AppLogLevel.error => scheme.error,
+      AppLogLevel.info => scheme.primary,
+    };
+    final model = group.model;
+    final requestLabel = '#${group.requestNumber}';
+
+    return KickPanel(
+      tone: level == AppLogLevel.info ? KickPanelTone.soft : KickPanelTone.muted,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      radius: 24,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 6,
+                height: 92,
+                decoration: BoxDecoration(
+                  color: levelColor,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        KickBadge(
+                          label: l10n.logsRequestGroupTitle(requestLabel),
+                          leading: const Icon(KickIcons.data),
+                          emphasis: true,
+                          tint: levelColor,
+                        ),
+                        KickBadge(
+                          label: _logLevelLabel(l10n, level),
+                          leading: Icon(_logLevelIcon(level), size: 16),
+                          tint: levelColor,
+                        ),
+                        KickBadge(
+                          label: primaryEntry.category,
+                          leading: const Icon(KickIcons.label),
+                        ),
+                        Text(
+                          formatter.format(primaryEntry.timestamp),
+                          style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      localizeLogMessage(l10n, LogSanitizer.sanitizeText(primaryEntry.message)),
+                      style: textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        KickBadge(
+                          label: l10n.logsRequestStatusCount(group.entries.length),
+                          leading: const Icon(KickIcons.logs),
+                        ),
+                        if (group.retryCount > 0)
+                          KickBadge(
+                            label: l10n.logsRequestRetryCount(group.retryCount),
+                            leading: const Icon(KickIcons.restart),
+                            emphasis: true,
+                            tint: scheme.tertiary,
+                          ),
+                        KickBadge(
+                          label: _shortRequestId(group.requestId),
+                          leading: const Icon(KickIcons.badge),
+                        ),
+                        if (model != null)
+                          KickBadge(label: model, leading: const Icon(KickIcons.hub)),
+                      ],
+                    ),
+                    if (primaryEntry.route?.trim().isNotEmpty == true) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        primaryEntry.route!,
+                        style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    KickSecondaryAction(
+                      onPressed: onToggleExpanded,
+                      icon: expanded ? KickIcons.unfoldLess : KickIcons.expandMore,
+                      label: expanded
+                          ? l10n.logsRequestDetailsHideButton
+                          : l10n.logsRequestDetailsShowButton,
+                      variant: KickSecondaryActionVariant.text,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          AnimatedSwitcher(
+            duration: tokens.mediumDuration,
+            switchInCurve: tokens.emphasizedCurve,
+            switchOutCurve: tokens.standardCurve,
+            child: expanded
+                ? Padding(
+                    key: ValueKey('request-details-${group.requestId}'),
+                    padding: const EdgeInsets.only(top: 14),
+                    child: _LogRequestTimeline(
+                      entries: group.entries.reversed.toList(growable: false),
+                      expandedPayloadEntryIds: expandedPayloadEntryIds,
+                      onCopyEntry: onCopyEntry,
+                      onTogglePayload: onTogglePayload,
+                    ),
+                  )
+                : const SizedBox.shrink(key: ValueKey('request-details-empty')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LogRequestTimeline extends StatelessWidget {
+  const _LogRequestTimeline({
+    required this.entries,
+    required this.expandedPayloadEntryIds,
+    required this.onCopyEntry,
+    required this.onTogglePayload,
+  });
+
+  final List<AppLogEntry> entries;
+  final Set<String> expandedPayloadEntryIds;
+  final ValueChanged<AppLogEntry> onCopyEntry;
+  final ValueChanged<String> onTogglePayload;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow.withValues(alpha: 0.76),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final indexed in entries.indexed) ...[
+            _LogRequestTimelineEntry(
+              index: indexed.$1 + 1,
+              entry: indexed.$2,
+              expandedPayload: expandedPayloadEntryIds.contains(indexed.$2.id),
+              onCopy: () => onCopyEntry(indexed.$2),
+              onTogglePayload: () => onTogglePayload(indexed.$2.id),
+            ),
+            if (indexed.$1 != entries.length - 1) const SizedBox(height: 12),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LogRequestTimelineEntry extends StatelessWidget {
+  const _LogRequestTimelineEntry({
+    required this.index,
+    required this.entry,
+    required this.expandedPayload,
+    required this.onCopy,
+    required this.onTogglePayload,
+  });
+
+  final int index;
+  final AppLogEntry entry;
+  final bool expandedPayload;
+  final VoidCallback onCopy;
+  final VoidCallback onTogglePayload;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final formatter = DateFormat('HH:mm:ss', l10n.localeName);
+    final sanitizedMessage = localizeLogMessage(l10n, LogSanitizer.sanitizeText(entry.message));
+    final sanitizedPayload = LogSanitizer.formatPayloadForDisplay(entry.maskedPayload);
+    final levelColor = switch (entry.level) {
+      AppLogLevel.warning => scheme.tertiary,
+      AppLogLevel.error => scheme.error,
+      AppLogLevel.info => scheme.primary,
+    };
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: Color.alphaBlend(
+              levelColor.withValues(alpha: 0.14),
+              scheme.surfaceContainerHigh,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(
+            child: Text('$index', style: textTheme.labelMedium?.copyWith(color: levelColor)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  KickBadge(
+                    label: _logLevelLabel(l10n, entry.level),
+                    leading: Icon(_logLevelIcon(entry.level), size: 16),
+                    tint: levelColor,
+                  ),
+                  Text(
+                    formatter.format(entry.timestamp),
+                    style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(sanitizedMessage, style: textTheme.bodyMedium),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  KickSecondaryAction(
+                    onPressed: onCopy,
+                    icon: KickIcons.copyAll,
+                    label: l10n.logsCopyEntryButton,
+                    variant: KickSecondaryActionVariant.text,
+                  ),
+                  if (sanitizedPayload?.isNotEmpty == true)
+                    KickSecondaryAction(
+                      onPressed: onTogglePayload,
+                      icon: expandedPayload ? KickIcons.unfoldLess : KickIcons.data,
+                      label: expandedPayload
+                          ? l10n.logsPayloadHideButton
+                          : l10n.logsPayloadShowButton,
+                      variant: KickSecondaryActionVariant.text,
+                    ),
+                ],
+              ),
+              if (expandedPayload && sanitizedPayload?.isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                SelectableText(
+                  sanitizedPayload!,
+                  style: textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -534,12 +898,12 @@ class _LogCard extends StatelessWidget {
     return KickPanel(
       tone: entry.level == AppLogLevel.info ? KickPanelTone.soft : KickPanelTone.muted,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      radius: 30,
+      radius: 24,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 10,
+            width: 6,
             height: 112,
             decoration: BoxDecoration(color: levelColor, borderRadius: BorderRadius.circular(999)),
           ),
@@ -559,7 +923,7 @@ class _LogCard extends StatelessWidget {
                       emphasis: true,
                       tint: levelColor,
                     ),
-                    KickBadge(label: entry.category, leading: const Icon(Icons.label_rounded)),
+                    KickBadge(label: entry.category, leading: const Icon(KickIcons.label)),
                     Text(
                       formatter.format(entry.timestamp),
                       style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
@@ -580,23 +944,20 @@ class _LogCard extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    TextButton.icon(
+                    KickSecondaryAction(
                       onPressed: onCopy,
-                      icon: const Icon(Icons.copy_all_rounded, size: 18),
-                      label: Text(context.l10n.logsCopyEntryButton),
+                      icon: KickIcons.copyAll,
+                      label: context.l10n.logsCopyEntryButton,
+                      variant: KickSecondaryActionVariant.text,
                     ),
                     if (sanitizedPayload?.isNotEmpty == true)
-                      TextButton.icon(
+                      KickSecondaryAction(
                         onPressed: onTogglePayload,
-                        icon: Icon(
-                          expandedPayload ? Icons.unfold_less_rounded : Icons.data_object_rounded,
-                          size: 18,
-                        ),
-                        label: Text(
-                          expandedPayload
-                              ? context.l10n.logsPayloadHideButton
-                              : context.l10n.logsPayloadShowButton,
-                        ),
+                        icon: expandedPayload ? KickIcons.unfoldLess : KickIcons.data,
+                        label: expandedPayload
+                            ? context.l10n.logsPayloadHideButton
+                            : context.l10n.logsPayloadShowButton,
+                        variant: KickSecondaryActionVariant.text,
                       ),
                   ],
                 ),
@@ -627,11 +988,19 @@ String _logLevelLabel(KickLocalizations l10n, AppLogLevel level) {
   };
 }
 
+String _shortRequestId(String requestId) {
+  final trimmed = requestId.trim();
+  if (trimmed.length <= 12) {
+    return trimmed;
+  }
+  return '${trimmed.substring(0, 8)}...';
+}
+
 IconData _logLevelIcon(AppLogLevel level) {
   return switch (level) {
-    AppLogLevel.info => Icons.info_rounded,
-    AppLogLevel.warning => Icons.warning_amber_rounded,
-    AppLogLevel.error => Icons.error_rounded,
+    AppLogLevel.info => KickIcons.info,
+    AppLogLevel.warning => KickIcons.warning,
+    AppLogLevel.error => KickIcons.error,
   };
 }
 

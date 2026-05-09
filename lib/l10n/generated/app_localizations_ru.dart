@@ -148,6 +148,33 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountsFilteredEmptyMessage => 'Попробуйте другое имя, почту или ID проекта.';
 
   @override
+  String get accountAvatarOpenTooltip => 'Открыть аватарку';
+
+  @override
+  String get accountAvatarDialogTitle => 'Аватарка аккаунта';
+
+  @override
+  String get accountAvatarDiceBearTitle => 'DiceBear Identicon';
+
+  @override
+  String get accountAvatarStandardAvatarsTitle => 'Стандартные аватарки';
+
+  @override
+  String get accountAvatarApplyButton => 'Применить';
+
+  @override
+  String get accountAvatarDiceBearLicense => 'Identicon от DiceBear CC0 1.0';
+
+  @override
+  String get accountAvatarChooseFileButton => 'Свой файл';
+
+  @override
+  String get accountAvatarResetButton => 'Сбросить';
+
+  @override
+  String get accountAvatarResetToDiceBearButton => 'Сбросить к DiceBear';
+
+  @override
   String get accountProviderLabel => 'Тип аккаунта';
 
   @override
@@ -178,11 +205,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String projectIdChip(String projectId) {
-    return 'PROJECT_ID: $projectId';
+    return 'ID проекта: $projectId';
   }
 
   @override
-  String get projectIdAutoChip => 'PROJECT_ID: auto';
+  String get projectIdAutoChip => 'ID проекта: auto';
 
   @override
   String priorityChip(String priorityLabel) {
@@ -427,6 +454,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get themeModeSystem => 'Системная';
+
+  @override
+  String get themeModeSystemShort => 'Авто';
 
   @override
   String get themeModeLight => 'Светлая';
@@ -859,6 +889,39 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutAnalyticsSubtitle => 'Анонимная статистика использования помогает улучшать KiCk.';
 
   @override
+  String get aboutLicenseTitle => 'Лицензия';
+
+  @override
+  String get aboutLicenseMessage => 'KiCk распространяется как проект с открытым исходным кодом';
+
+  @override
+  String get aboutOpenLicenseButton => 'Открыть лицензию';
+
+  @override
+  String get aboutPrivacyTitle => 'Приватность';
+
+  @override
+  String get aboutPrivacyMessage => 'KiCk хранит аккаунты, токены и настройки локально';
+
+  @override
+  String get aboutOpenPrivacyButton => 'Открыть заметку о приватности';
+
+  @override
+  String get aboutDisclaimerTitle => 'Отказ от ответственности';
+
+  @override
+  String get aboutDisclaimerMessage => 'KiCk не связан с Google, AWS, Kiro или SillyTavern';
+
+  @override
+  String get aboutCreditsTitle => 'Благодарности';
+
+  @override
+  String get aboutCreditsMessage => 'Собрано на Flutter. DiceBear Identicon CC0 1.0.';
+
+  @override
+  String get aboutOpenLinkFailedMessage => 'Не удалось открыть ссылку.';
+
+  @override
   String get copyProxyEndpointTooltip => 'Скопировать адрес прокси';
 
   @override
@@ -869,6 +932,53 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get apiKeyCopiedMessage => 'API-ключ скопирован';
+
+  @override
+  String get pushSillyTavernButton => 'В SillyTavern';
+
+  @override
+  String get pushSillyTavernDialogTitle => 'Отправить в запущенный SillyTavern';
+
+  @override
+  String get pushSillyTavernDialogMessage =>
+      'KiCk добавит профиль и выберет его в настройках подключений';
+
+  @override
+  String get pushSillyTavernUrlLabel => 'URL SillyTavern';
+
+  @override
+  String get pushSillyTavernProfileNameLabel => 'Имя профиля';
+
+  @override
+  String get pushSillyTavernModelLabel => 'Модель';
+
+  @override
+  String get pushSillyTavernConfirmButton => 'Добавить профиль';
+
+  @override
+  String pushSillyTavernSuccessMessage(String profileName) {
+    return 'Профиль \"$profileName\" добавлен в SillyTavern.';
+  }
+
+  @override
+  String pushSillyTavernFailedMessage(String error) {
+    return 'Не удалось отправить профиль в SillyTavern: $error';
+  }
+
+  @override
+  String get pushSillyTavernErrorInvalidUrl =>
+      'Укажите полный URL SillyTavern, например http://127.0.0.1:8000';
+
+  @override
+  String get pushSillyTavernErrorMissingCsrf => 'SillyTavern не вернул CSRF-токен.';
+
+  @override
+  String pushSillyTavernErrorHttp(int statusCode, String path) {
+    return 'SillyTavern вернул HTTP $statusCode для $path.';
+  }
+
+  @override
+  String get pushSillyTavernErrorInvalidJson => 'SillyTavern вернул некорректный JSON-ответ.';
 
   @override
   String get homeOnboardingTitle => 'С чего начать';
@@ -1054,6 +1164,27 @@ class AppLocalizationsRu extends AppLocalizations {
   String logsFilteredCount(int count) {
     return 'После фильтра: $count';
   }
+
+  @override
+  String logsRequestGroupTitle(String requestLabel) {
+    return 'Запрос $requestLabel';
+  }
+
+  @override
+  String logsRequestStatusCount(int count) {
+    return 'Статусов: $count';
+  }
+
+  @override
+  String logsRequestRetryCount(int count) {
+    return 'Повторов: $count';
+  }
+
+  @override
+  String get logsRequestDetailsShowButton => 'Показать статусы';
+
+  @override
+  String get logsRequestDetailsHideButton => 'Скрыть статусы';
 
   @override
   String logsLoadedCount(int count) {
@@ -1265,7 +1396,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Если не хочется настраивать вручную, этот блок можно оставить как есть.';
 
   @override
-  String get projectIdLabel => 'PROJECT_ID';
+  String get projectIdLabel => 'ID проекта';
 
   @override
   String get projectIdHint => 'my-google-cloud-project';

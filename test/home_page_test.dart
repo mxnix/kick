@@ -1,9 +1,12 @@
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kick/analytics/kick_analytics.dart';
 import 'package:kick/app/bootstrap.dart';
+import 'package:kick/core/theme/kick_icons.dart';
+import 'package:kick/core/theme/kick_theme.dart';
 import 'package:kick/data/app_database.dart';
 import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/app_settings.dart';
@@ -15,6 +18,8 @@ import 'package:kick/features/app_state/providers.dart';
 import 'package:kick/features/home/home_page.dart';
 import 'package:kick/features/settings/app_update_checker.dart';
 import 'package:kick/features/shared/app_update_banner.dart';
+import 'package:kick/features/shared/kick_actions.dart';
+import 'package:kick/features/shared/kick_surfaces.dart';
 import 'package:kick/l10n/kick_localizations.dart';
 import 'package:kick/proxy/engine/proxy_controller.dart';
 import 'package:kick/proxy/gemini/gemini_oauth_service.dart';
@@ -128,6 +133,35 @@ void main() {
     expect(find.textContaining('127.0.0.1', findRichText: true), findsNothing);
   });
 
+  testWidgets('hides API key copy action when API key is disabled', (tester) async {
+    final bootstrap = await _createBootstrap(
+      initialSettings: AppSettings.defaults(
+        apiKey: 'test-api-key',
+      ).copyWith(apiKeyRequired: false, androidBackgroundRuntime: false),
+    );
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap.dispose();
+    });
+
+    await tester.pumpWidget(
+      _TestApp(
+        bootstrap: bootstrap,
+        updateInfo: const AppUpdateInfo(
+          currentVersion: '1.0.2',
+          latestVersion: '1.0.2',
+          releaseUrl: 'https://example.com/releases/tag/v1.0.2',
+          hasUpdate: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text(enL10n.apiKeyDisabledValue), findsOneWidget);
+    expect(find.byTooltip(enL10n.copyApiKeyTooltip), findsNothing);
+  });
+
   testWidgets('disables the start button while proxy startup is pending', (tester) async {
     final bootstrap = await _createBootstrap();
     addTearDown(() async {
@@ -152,7 +186,7 @@ void main() {
 
     final button = tester.widget<FilledButton>(find.byType(FilledButton));
     expect(button.onPressed, isNull);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(KickLoadingIndicator), findsOneWidget);
   });
 
   testWidgets('builds the home page with the Russian locale enabled', (tester) async {
@@ -179,6 +213,102 @@ void main() {
 
     expect(find.text(ruL10n.homeTitle), findsOneWidget);
     expect(find.text(ruL10n.homeOnboardingTitle), findsOneWidget);
+  });
+
+  testWidgets('stretches inline proxy status on phone layouts', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+
+    AppBootstrap? bootstrap;
+    try {
+      bootstrap = await _createBootstrap();
+
+      await tester.pumpWidget(
+        _TestApp(
+          bootstrap: bootstrap,
+          locale: const Locale('ru'),
+          updateInfo: const AppUpdateInfo(
+            currentVersion: '1.0.2',
+            latestVersion: '1.0.2',
+            releaseUrl: 'https://example.com/releases/tag/v1.0.2',
+            hasUpdate: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final heroRect = tester.getRect(find.byType(KickPanel).first);
+      final statusRect = tester.getRect(find.text(ruL10n.proxyStoppedStatus));
+      expect((statusRect.center.dx - heroRect.center.dx).abs(), lessThan(24));
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap?.dispose();
+    }
+  });
+
+  testWidgets('keeps inline proxy status right aligned on wide layouts', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1;
+
+    AppBootstrap? bootstrap;
+    try {
+      bootstrap = await _createBootstrap();
+
+      await tester.pumpWidget(
+        _TestApp(
+          bootstrap: bootstrap,
+          locale: const Locale('ru'),
+          updateInfo: const AppUpdateInfo(
+            currentVersion: '1.0.2',
+            latestVersion: '1.0.2',
+            releaseUrl: 'https://example.com/releases/tag/v1.0.2',
+            hasUpdate: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final heroRect = tester.getRect(find.byType(KickPanel).first);
+      final statusRect = tester.getRect(find.text(ruL10n.proxyStoppedStatus));
+      expect(statusRect.center.dx, greaterThan(heroRect.center.dx + 80));
+      expect(heroRect.right - statusRect.right, lessThan(48));
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap?.dispose();
+    }
+  });
+
+  testWidgets('primary action elides long labels in narrow layouts', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: KickThemeData.build(KickSchemes.light),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 220,
+              child: KickPrimaryAction(
+                label: 'Очень длинное действие, которое должно поместиться',
+                icon: KickIcons.play,
+                fullWidth: true,
+                onPressed: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
   });
 }
 
@@ -214,7 +344,7 @@ class _TestApp extends StatelessWidget {
   }
 }
 
-Future<AppBootstrap> _createBootstrap() async {
+Future<AppBootstrap> _createBootstrap({AppSettings? initialSettings}) async {
   final database = AppDatabase(NativeDatabase.memory());
   await database.ensureSchema();
   final secretStore = SecretStore(backend: _MemorySecretStoreBackend());
@@ -231,9 +361,9 @@ Future<AppBootstrap> _createBootstrap() async {
     logsRepository: logsRepository,
     secretStore: secretStore,
   );
-  final initialSettings = AppSettings.defaults(
-    apiKey: 'test-api-key',
-  ).copyWith(androidBackgroundRuntime: false);
+  final resolvedInitialSettings =
+      initialSettings ??
+      AppSettings.defaults(apiKey: 'test-api-key').copyWith(androidBackgroundRuntime: false);
 
   return AppBootstrap(
     database: database,
@@ -244,7 +374,7 @@ Future<AppBootstrap> _createBootstrap() async {
     oauthService: GeminiOAuthService(secretStore: secretStore),
     analytics: analytics,
     proxyController: proxyController,
-    initialSettings: initialSettings,
+    initialSettings: resolvedInitialSettings,
     initialAccounts: const <AccountProfile>[],
   );
 }

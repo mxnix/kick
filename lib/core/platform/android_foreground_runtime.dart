@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -210,6 +211,7 @@ class AndroidForegroundRuntime {
 
 @pragma('vm:entry-point')
 void startForegroundRuntimeCallback() {
+  DartPluginRegistrant.ensureInitialized();
   FlutterForegroundTask.setTaskHandler(KickForegroundTaskHandler());
 }
 
@@ -236,7 +238,9 @@ class KickForegroundTaskHandler extends TaskHandler {
       _notificationModeOAuth => (authNotificationTitle, l10n.runtimeNotificationReturn),
       _ => (l10n.runtimeNotificationTitle, l10n.runtimeNotificationActive),
     };
-    unawaited(FlutterForegroundTask.updateService(notificationTitle: title, notificationText: text));
+    unawaited(
+      FlutterForegroundTask.updateService(notificationTitle: title, notificationText: text),
+    );
   }
 
   @override

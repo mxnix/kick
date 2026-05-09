@@ -38,6 +38,8 @@ dependencies:
   tray_manager: ^0.5.2
   launch_at_startup: ^0.5.1
   local_notifier: ^0.1.6
+  m3e_collection: ^0.3.7
+  material_symbols_icons: ^4.2928.1
   sentry_flutter: ^9.16.0
   cryptography: ^2.9.0
   flutter_svg: ^2.2.4
@@ -87,3 +89,4 @@ flutter:
     - windows/runner/resources/app_icon.ico
     - static/github/logo/logo.png
     - static/github/logo/linux.png
+    - assets/st/logo.png

@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/theme/kick_icons.dart';
 import '../../core/theme/kick_theme.dart';
 import '../../data/models/app_settings.dart';
 import '../../l10n/kick_localizations.dart';
+import '../shared/kick_actions.dart';
+import '../shared/kick_haptics.dart';
 import '../shared/kick_surfaces.dart';
 import 'settings_draft_controller.dart';
 
@@ -34,8 +37,8 @@ class SettingsAppearanceSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.languageLabel, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
+          _SettingsSubsectionHeader(label: l10n.languageLabel),
+          const SizedBox(height: 10),
           DropdownButtonFormField<Locale?>(
             key: ValueKey(controller.appLocale?.languageCode ?? 'system'),
             initialValue: controller.appLocale,
@@ -53,15 +56,15 @@ class SettingsAppearanceSection extends StatelessWidget {
             onChanged: controller.setAppLocale,
           ),
           const SizedBox(height: 18),
-          Text(l10n.themeLabel, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
+          _SettingsSubsectionHeader(label: l10n.themeLabel),
+          const SizedBox(height: 10),
           SegmentedButton<ThemeMode>(
             expandedInsets: EdgeInsets.zero,
             showSelectedIcon: false,
             segments: [
               ButtonSegment(
                 value: ThemeMode.system,
-                label: Text(l10n.themeModeSystem),
+                label: Text(l10n.themeModeSystemShort),
                 icon: const Icon(Icons.brightness_auto_rounded),
               ),
               ButtonSegment(
@@ -79,8 +82,8 @@ class SettingsAppearanceSection extends StatelessWidget {
             onSelectionChanged: (value) => controller.setThemeMode(value.first),
           ),
           const SizedBox(height: 18),
-          Text(l10n.fontLabel, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
+          _SettingsSubsectionHeader(label: l10n.fontLabel),
+          const SizedBox(height: 10),
           SegmentedButton<bool>(
             expandedInsets: EdgeInsets.zero,
             showSelectedIcon: false,
@@ -107,8 +110,8 @@ class SettingsAppearanceSection extends StatelessWidget {
             onChanged: controller.setUseDynamicColor,
           ),
           const SizedBox(height: 18),
-          Text(l10n.loggingLabel, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
+          _SettingsSubsectionHeader(label: l10n.loggingLabel),
+          const SizedBox(height: 10),
           SegmentedButton<KickLogVerbosity>(
             expandedInsets: EdgeInsets.zero,
             showSelectedIcon: false,
@@ -120,7 +123,7 @@ class SettingsAppearanceSection extends StatelessWidget {
             selected: {controller.verbosity},
             onSelectionChanged: (value) => controller.setVerbosity(value.first),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           TextField(
             controller: controller.logRetentionController,
             keyboardType: TextInputType.number,
@@ -130,7 +133,7 @@ class SettingsAppearanceSection extends StatelessWidget {
               errorText: controller.logRetentionValidationError(l10n),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           SettingToggleCard(
             title: l10n.unsafeRawLoggingTitle,
             subtitle: l10n.unsafeRawLoggingSubtitle,
@@ -145,7 +148,7 @@ class SettingsAppearanceSection extends StatelessWidget {
               title: l10n.windowsTrayTitle,
               subtitle: l10n.windowsTraySubtitle,
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
             SettingToggleCard(
               title: l10n.windowsLaunchAtStartupTitle,
               subtitle: l10n.windowsLaunchAtStartupSubtitle,
@@ -165,6 +168,23 @@ String _settingsLanguageLabel(KickLocalizations l10n, Locale locale) {
     'en' => l10n.languageOptionEnglish,
     _ => locale.toLanguageTag(),
   };
+}
+
+class _SettingsSubsectionHeader extends StatelessWidget {
+  const _SettingsSubsectionHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Text(
+      label,
+      style: Theme.of(
+        context,
+      ).textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 0.4),
+    );
+  }
 }
 
 class SettingsNetworkSection extends StatelessWidget {
@@ -325,12 +345,13 @@ class SettingsAccessSection extends StatelessWidget {
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: KickSecondaryAction(
               onPressed: () {
                 unawaited(onRegenerateApiKey());
               },
-              icon: const Icon(Icons.key_rounded),
-              label: Text(l10n.regenerateApiKeyAction),
+              icon: KickIcons.apiKey,
+              label: l10n.regenerateApiKeyAction,
+              fullWidth: true,
             ),
           ),
           if (isAndroidPlatform) ...[
@@ -459,7 +480,7 @@ class SettingsBackupSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SettingInfoCard(
-            icon: Icons.security_rounded,
+            icon: KickIcons.security,
             title: l10n.settingsBackupInfoTitle,
             subtitle: l10n.settingsBackupInfoSubtitle,
           ),
@@ -470,7 +491,7 @@ class SettingsBackupSection extends StatelessWidget {
               _SettingsActionButton(
                 variant: _SettingsActionButtonVariant.outlined,
                 busy: busy,
-                icon: Icons.download_rounded,
+                icon: KickIcons.download,
                 label: l10n.settingsBackupExportButton,
                 onPressed: () {
                   unawaited(onExport());
@@ -480,7 +501,7 @@ class SettingsBackupSection extends StatelessWidget {
               _SettingsActionButton(
                 variant: _SettingsActionButtonVariant.filled,
                 busy: busy,
-                icon: Icons.settings_backup_restore_rounded,
+                icon: KickIcons.backup,
                 label: l10n.settingsBackupImportButton,
                 onPressed: () {
                   unawaited(onImport());
@@ -513,60 +534,22 @@ class _SettingsActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final child = _SettingsActionButtonContent(icon: icon, label: label);
-    final style = switch (variant) {
-      _SettingsActionButtonVariant.outlined => OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(56),
+    return switch (variant) {
+      _SettingsActionButtonVariant.outlined => KickSecondaryAction(
+        onPressed: onPressed,
+        busy: busy,
+        icon: icon,
+        label: label,
+        fullWidth: true,
       ),
-      _SettingsActionButtonVariant.filled => FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(56),
+      _SettingsActionButtonVariant.filled => KickPrimaryAction(
+        onPressed: onPressed,
+        busy: busy,
+        icon: icon,
+        label: label,
+        fullWidth: true,
       ),
     };
-
-    return SizedBox(
-      width: double.infinity,
-      child: switch (variant) {
-        _SettingsActionButtonVariant.outlined => OutlinedButton(
-          onPressed: busy ? null : onPressed,
-          style: style,
-          child: child,
-        ),
-        _SettingsActionButtonVariant.filled => FilledButton(
-          onPressed: busy ? null : onPressed,
-          style: style,
-          child: child,
-        ),
-      },
-    );
-  }
-}
-
-class _SettingsActionButtonContent extends StatelessWidget {
-  const _SettingsActionButtonContent({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 22,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(alignment: Alignment.centerLeft, child: Icon(icon, size: 18)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -600,41 +583,45 @@ class SettingsExpandableSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InkWell(
-                onTap: onToggle,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title, style: textTheme.titleLarge),
-                            if (subtitle != null) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                subtitle!,
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: scheme.onSurfaceVariant,
+              Semantics(
+                button: true,
+                expanded: expanded,
+                child: InkWell(
+                  onTap: onToggle,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title, style: textTheme.titleLarge),
+                              if (subtitle != null) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  subtitle!,
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      AnimatedRotation(
-                        turns: expanded ? 0.5 : 0,
-                        duration: context.kickTokens.shortDuration,
-                        curve: context.kickTokens.standardCurve,
-                        child: Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: scheme.onSurfaceVariant,
+                        const SizedBox(width: 12),
+                        AnimatedRotation(
+                          turns: expanded ? 0.5 : 0,
+                          duration: context.kickTokens.shortDuration,
+                          curve: context.kickTokens.standardCurve,
+                          child: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -644,17 +631,23 @@ class SettingsExpandableSection extends StatelessWidget {
                   curve: context.kickTokens.emphasizedCurve,
                   alignment: Alignment.topCenter,
                   heightFactor: expanded ? 1 : 0,
-                  child: IgnorePointer(
-                    ignoring: !expanded,
-                    child: AnimatedOpacity(
-                      duration: context.kickTokens.shortDuration,
-                      curve: context.kickTokens.standardCurve,
-                      opacity: expanded ? 1 : 0,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [const Divider(), const SizedBox(height: 18), child],
+                  child: ExcludeFocus(
+                    excluding: !expanded,
+                    child: ExcludeSemantics(
+                      excluding: !expanded,
+                      child: IgnorePointer(
+                        ignoring: !expanded,
+                        child: AnimatedOpacity(
+                          duration: context.kickTokens.shortDuration,
+                          curve: context.kickTokens.standardCurve,
+                          opacity: expanded ? 1 : 0,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [const Divider(), const SizedBox(height: 18), child],
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -846,7 +839,13 @@ class SettingToggleCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Switch(value: value, onChanged: onChanged),
+          Switch(
+            value: value,
+            onChanged: (nextValue) {
+              KickHaptics.selection();
+              onChanged(nextValue);
+            },
+          ),
         ],
       ),
     );

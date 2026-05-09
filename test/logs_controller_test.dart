@@ -13,6 +13,7 @@ import 'package:kick/data/repositories/logs_repository.dart';
 import 'package:kick/data/repositories/secret_store.dart';
 import 'package:kick/data/repositories/settings_repository.dart';
 import 'package:kick/features/app_state/providers.dart';
+import 'package:kick/features/logs/log_display_items.dart';
 import 'package:kick/proxy/engine/proxy_controller.dart';
 import 'package:kick/proxy/gemini/gemini_oauth_service.dart';
 
@@ -102,6 +103,82 @@ void main() {
 
     final exported = await container.read(logsControllerProvider.notifier).readAllMatchingEntries();
     expect(exported.map((entry) => entry.id), ['visible-log']);
+  });
+
+  test('computes grouped log display items in controller state', () async {
+    final bootstrap = await _createBootstrap();
+    final baseTime = DateTime.utc(2026, 4, 4, 11);
+    await bootstrap.logsRepository.insert(
+      AppLogEntry(
+        id: 'req-start',
+        timestamp: baseTime,
+        level: AppLogLevel.warning,
+        category: 'proxy',
+        route: '/v1/chat/completions',
+        message: 'Retry scheduled after request failure',
+        maskedPayload: '{"request_id":"req-1","retry_count":2}',
+      ),
+    );
+    await bootstrap.logsRepository.insert(
+      AppLogEntry(
+        id: 'req-success',
+        timestamp: baseTime.add(const Duration(seconds: 1)),
+        level: AppLogLevel.info,
+        category: 'proxy',
+        route: '/v1/chat/completions',
+        message: 'Response completed',
+        maskedPayload: '{"request_id":"req-1","model":"google/gemini-2.5-pro"}',
+      ),
+    );
+    await bootstrap.logsRepository.insert(
+      AppLogEntry(
+        id: 'single-log',
+        timestamp: baseTime.add(const Duration(seconds: 2)),
+        level: AppLogLevel.info,
+        category: 'proxy',
+        route: '/v1/models',
+        message: 'Single entry',
+        maskedPayload: '{"index":1}',
+      ),
+    );
+    await bootstrap.logsRepository.insert(
+      AppLogEntry(
+        id: 'raw-request',
+        timestamp: baseTime.add(const Duration(seconds: 3)),
+        level: AppLogLevel.info,
+        category: 'proxy',
+        route: '/v1/chat/completions',
+        message: 'Raw fallback request',
+        maskedPayload: '{"model":"raw-model"}',
+        rawPayload: '{"request_id":"req-raw"}',
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [appBootstrapProvider.overrideWithValue(bootstrap)],
+    );
+
+    addTearDown(() async {
+      container.dispose();
+      await bootstrap.dispose();
+    });
+
+    final state = await container.read(logsControllerProvider.future);
+
+    expect(state.displayItems, hasLength(3));
+    final rawGroup = state.displayItems[0] as RequestLogDisplayItem;
+    expect(rawGroup.requestId, 'req-raw');
+    expect(rawGroup.model, 'raw-model');
+
+    final single = state.displayItems[1] as SingleLogDisplayItem;
+    expect(single.entry.id, 'single-log');
+
+    final requestGroup = state.displayItems[2] as RequestLogDisplayItem;
+    expect(requestGroup.entries.map((entry) => entry.id), ['req-success', 'req-start']);
+    expect(requestGroup.primaryEntry.id, 'req-success');
+    expect(requestGroup.effectiveLevel, AppLogLevel.warning);
+    expect(requestGroup.retryCount, 2);
+    expect(requestGroup.model, 'google/gemini-2.5-pro');
   });
 
   test('marks newly visible entries after refreshing log state', () async {

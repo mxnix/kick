@@ -1,11 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:m3e_collection/m3e_collection.dart' as m3e;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/theme/kick_icons.dart';
 import '../../l10n/kick_localizations.dart';
 import '../settings/app_update_checker.dart';
 import '../settings/app_update_installer.dart';
+import 'kick_actions.dart';
 import 'kick_surfaces.dart';
 
 class AppUpdateBanner extends ConsumerWidget {
@@ -74,58 +77,63 @@ class AppUpdateBanner extends ConsumerWidget {
           if (hasNativeInstaller &&
               (isBusy || effectiveState.phase == AppUpdatePhase.readyToInstall)) ...[
             const SizedBox(height: 12),
-            LinearProgressIndicator(
+            m3e.LinearProgressIndicatorM3E(
               value: effectiveState.phase == AppUpdatePhase.downloading
                   ? effectiveState.progress
                   : null,
-              minHeight: 6,
-              borderRadius: BorderRadius.circular(999),
+              size: m3e.LinearProgressM3ESize.s,
             ),
           ],
           const SizedBox(height: 14),
           if (hasNativeInstaller) ...[
             SizedBox(
               width: double.infinity,
-              child: FilledButton.icon(
+              child: KickPrimaryAction(
                 onPressed: isBusy ? null : () => primaryAction?.call(),
-                icon: Icon(_primaryButtonIcon(effectiveState)),
-                label: Text(primaryButtonLabel),
+                busy: isBusy,
+                icon: _primaryButtonIcon(effectiveState),
+                label: primaryButtonLabel,
+                fullWidth: true,
               ),
             ),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.center,
-              child: TextButton.icon(
+              child: KickSecondaryAction(
                 onPressed: () => _openExternalUrl(updateInfo.releaseUrl),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: Text(l10n.aboutOpenReleaseButton),
+                icon: KickIcons.openInNew,
+                label: l10n.aboutOpenReleaseButton,
+                variant: KickSecondaryActionVariant.text,
               ),
             ),
           ] else if (hasInstallerUrl) ...[
             SizedBox(
               width: double.infinity,
-              child: FilledButton.icon(
+              child: KickPrimaryAction(
                 onPressed: () => _openExternalUrl(installerUrl!),
-                icon: const Icon(Icons.download_rounded),
-                label: Text(l10n.aboutDownloadAndInstallButton),
+                icon: KickIcons.download,
+                label: l10n.aboutDownloadAndInstallButton,
+                fullWidth: true,
               ),
             ),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.center,
-              child: TextButton.icon(
+              child: KickSecondaryAction(
                 onPressed: () => _openExternalUrl(updateInfo.releaseUrl),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: Text(l10n.aboutOpenReleaseButton),
+                icon: KickIcons.openInNew,
+                label: l10n.aboutOpenReleaseButton,
+                variant: KickSecondaryActionVariant.text,
               ),
             ),
           ] else
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton.icon(
+              child: KickSecondaryAction(
                 onPressed: () => _openExternalUrl(updateInfo.releaseUrl),
-                icon: const Icon(Icons.open_in_new_rounded),
-                label: Text(l10n.aboutOpenReleaseButton),
+                icon: KickIcons.openInNew,
+                label: l10n.aboutOpenReleaseButton,
+                fullWidth: true,
               ),
             ),
         ],
@@ -146,8 +154,8 @@ class AppUpdateBanner extends ConsumerWidget {
     return switch (state.phase) {
       AppUpdatePhase.readyToInstall => _installIconForPlatform(),
       AppUpdatePhase.awaitingPermission => Icons.security_update_warning_rounded,
-      AppUpdatePhase.downloading || AppUpdatePhase.verifying => Icons.downloading_rounded,
-      AppUpdatePhase.error || AppUpdatePhase.idle => Icons.download_rounded,
+      AppUpdatePhase.downloading || AppUpdatePhase.verifying => KickIcons.download,
+      AppUpdatePhase.error || AppUpdatePhase.idle => KickIcons.download,
     };
   }
 
@@ -179,7 +187,7 @@ class AppUpdateBanner extends ConsumerWidget {
 
   IconData _installIconForPlatform() {
     if (defaultTargetPlatform == TargetPlatform.windows) {
-      return Icons.restart_alt_rounded;
+      return KickIcons.restart;
     }
     return Icons.system_update_alt_rounded;
   }

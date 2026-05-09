@@ -87,6 +87,15 @@
   },
   "accountsFilteredEmptyTitle": "No accounts matched the search",
   "accountsFilteredEmptyMessage": "Try another name, email, or project ID.",
+  "accountAvatarOpenTooltip": "Open avatar",
+  "accountAvatarDialogTitle": "Account avatar",
+  "accountAvatarDiceBearTitle": "DiceBear Identicon",
+  "accountAvatarStandardAvatarsTitle": "Standard avatars",
+  "accountAvatarApplyButton": "Apply",
+  "accountAvatarDiceBearLicense": "DiceBear Identicon CC0 1.0.",
+  "accountAvatarChooseFileButton": "Custom file",
+  "accountAvatarResetButton": "Reset",
+  "accountAvatarResetToDiceBearButton": "Reset to DiceBear",
   "accountProviderLabel": "Account type",
   "accountProviderGemini": "Gemini CLI",
   "accountProviderGeminiCli": "Gemini CLI",
@@ -103,7 +112,7 @@
       }
     }
   },
-  "projectIdChip": "PROJECT_ID: {projectId}",
+  "projectIdChip": "Project ID: {projectId}",
   "@projectIdChip": {
     "placeholders": {
       "projectId": {
@@ -111,7 +120,7 @@
       }
     }
   },
-  "projectIdAutoChip": "PROJECT_ID: auto",
+  "projectIdAutoChip": "Project ID: auto",
   "priorityChip": "Priority: {priorityLabel}",
   "@priorityChip": {
     "placeholders": {
@@ -276,6 +285,7 @@
   "languageOptionRussian": "Russian",
   "themeLabel": "Theme",
   "themeModeSystem": "System",
+  "themeModeSystemShort": "Auto",
   "themeModeLight": "Light",
   "themeModeDark": "Dark",
   "fontLabel": "Font",
@@ -497,10 +507,58 @@
   "aboutRetryUpdateCheckButton": "Check again",
   "aboutAnalyticsTitle": "Analytics",
   "aboutAnalyticsSubtitle": "Anonymous usage statistics help improve KiCk.",
+  "aboutLicenseTitle": "License",
+  "aboutLicenseMessage": "KiCk is distributed as an open project",
+  "aboutOpenLicenseButton": "Open license",
+  "aboutPrivacyTitle": "Privacy",
+  "aboutPrivacyMessage": "KiCk stores accounts, tokens, and settings locally",
+  "aboutOpenPrivacyButton": "Open privacy notes",
+  "aboutDisclaimerTitle": "Disclaimer",
+  "aboutDisclaimerMessage": "KiCk is not affiliated with Google, AWS, Kiro, or SillyTavern",
+  "aboutCreditsTitle": "Credits",
+  "aboutCreditsMessage": "Built with Flutter and Material Symbols. DiceBear Identicon CC0 1.0.",
+  "aboutOpenLinkFailedMessage": "Failed to open the link.",
   "copyProxyEndpointTooltip": "Copy proxy address",
   "proxyEndpointCopiedMessage": "Proxy address copied",
   "copyApiKeyTooltip": "Copy API key",
   "apiKeyCopiedMessage": "API key copied",
+  "pushSillyTavernButton": "Push to ST",
+  "pushSillyTavernDialogTitle": "Push to running SillyTavern",
+  "pushSillyTavernDialogMessage": "KiCk will add a profile and select it in Connection Manager.",
+  "pushSillyTavernUrlLabel": "SillyTavern URL",
+  "pushSillyTavernProfileNameLabel": "Profile name",
+  "pushSillyTavernModelLabel": "Model",
+  "pushSillyTavernConfirmButton": "Add profile",
+  "pushSillyTavernSuccessMessage": "Profile \"{profileName}\" was added to SillyTavern.",
+  "@pushSillyTavernSuccessMessage": {
+    "placeholders": {
+      "profileName": {
+        "type": "String"
+      }
+    }
+  },
+  "pushSillyTavernFailedMessage": "Failed to push the profile to SillyTavern: {error}",
+  "@pushSillyTavernFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pushSillyTavernErrorInvalidUrl": "Enter a full SillyTavern URL, for example http://127.0.0.1:8000.",
+  "pushSillyTavernErrorMissingCsrf": "SillyTavern did not return a CSRF token.",
+  "pushSillyTavernErrorHttp": "SillyTavern returned HTTP {statusCode} for {path}.",
+  "@pushSillyTavernErrorHttp": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "pushSillyTavernErrorInvalidJson": "SillyTavern returned an invalid JSON response.",
   "homeOnboardingTitle": "Getting started",
   "homeOnboardingSubtitle": "A quick guide for the first launch",
   "homeOnboardingAccountsTitle": "Connect an account",
@@ -578,6 +636,32 @@
       }
     }
   },
+  "logsRequestGroupTitle": "Request {requestLabel}",
+  "@logsRequestGroupTitle": {
+    "placeholders": {
+      "requestLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "logsRequestStatusCount": "Statuses: {count}",
+  "@logsRequestStatusCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsRequestRetryCount": "Retries: {count}",
+  "@logsRequestRetryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsRequestDetailsShowButton": "Show statuses",
+  "logsRequestDetailsHideButton": "Hide statuses",
   "logsLoadedCount": "Loaded: {count}",
   "@logsLoadedCount": {
     "placeholders": {
@@ -687,7 +771,7 @@
   "accountDialogAdvancedTitle": "Advanced settings",
   "accountDialogAdvancedSubtitle": "Priority and model restrictions",
   "accountDialogAdvancedHint": "If you don't want to configure it manually, you can leave this section as is.",
-  "projectIdLabel": "PROJECT_ID",
+  "projectIdLabel": "Project ID",
   "projectIdHint": "my-google-cloud-project",
   "projectIdConsoleLinkLabel": "Where to find the project ID",
   "projectIdRequiredError": "Enter a project ID",
