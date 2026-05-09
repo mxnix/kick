@@ -255,7 +255,7 @@ class _CookieJar {
     if (rawHeader == null || rawHeader.trim().isEmpty) {
       return;
     }
-    for (final rawCookie in rawHeader.split(RegExp(r', (?=[^ ;]+=)'))) {
+    for (final rawCookie in rawHeader.split(RegExp(r',\s*(?=[^ ;]+=)'))) {
       final pair = rawCookie.split(';').first.trim();
       final separator = pair.indexOf('=');
       if (separator <= 0) {
