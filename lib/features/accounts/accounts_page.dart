@@ -599,6 +599,29 @@ class _AccountAvatar extends StatefulWidget {
 class _AccountAvatarState extends State<_AccountAvatar> {
   bool _pressed = false;
 
+  bool get _supportsCustomAvatar => widget.account.provider != AccountProvider.gemini;
+
+  void _showPreview() {
+    setState(() => _pressed = true);
+    KickHaptics.light();
+    unawaited(
+      _showAccountAvatarPreview(context, widget.account).whenComplete(() {
+        if (mounted) {
+          setState(() => _pressed = false);
+        }
+      }),
+    );
+  }
+
+  Future<void> _openAvatarPicker() async {
+    KickHaptics.selection();
+    final nextAvatar = await _showAvatarPickerDialog(context, widget.account);
+    if (!mounted || nextAvatar == _avatarPickerCancelled) {
+      return;
+    }
+    widget.onAvatarChanged(nextAvatar?.trim().isEmpty == true ? null : nextAvatar);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -606,29 +629,20 @@ class _AccountAvatarState extends State<_AccountAvatar> {
       label: context.l10n.accountAvatarOpenTooltip,
       child: GestureDetector(
         onTap: () async {
-          KickHaptics.selection();
-          final nextAvatar = await _showAvatarPickerDialog(context, widget.account);
-          if (!mounted || nextAvatar == _avatarPickerCancelled) {
-            return;
+          if (_supportsCustomAvatar) {
+            await _openAvatarPicker();
+          } else {
+            _showPreview();
           }
-          widget.onAvatarChanged(nextAvatar?.trim().isEmpty == true ? null : nextAvatar);
         },
-        onLongPressStart: (_) {
-          setState(() => _pressed = true);
-          KickHaptics.light();
-          unawaited(
-            _showAccountAvatarPreview(context, widget.account).whenComplete(() {
-              if (mounted) {
-                setState(() => _pressed = false);
+        onLongPressStart: _supportsCustomAvatar ? (_) => _showPreview() : null,
+        onLongPressEnd: _supportsCustomAvatar
+            ? (_) {
+                if (mounted) {
+                  setState(() => _pressed = false);
+                }
               }
-            }),
-          );
-        },
-        onLongPressEnd: (_) {
-          if (mounted) {
-            setState(() => _pressed = false);
-          }
-        },
+            : null,
         child: AnimatedScale(
           scale: _pressed ? 0.92 : 1,
           duration: const Duration(milliseconds: 140),
@@ -803,11 +817,7 @@ class _AvatarPickerDialogState extends State<_AvatarPickerDialog> {
         FilledButton.icon(
           onPressed: _pickingFile ? null : () => Navigator.of(context).pop(null),
           icon: const Icon(Icons.restart_alt_rounded),
-          label: Text(
-            widget.account.provider == AccountProvider.kiro
-                ? l10n.accountAvatarResetToDiceBearButton
-                : l10n.accountAvatarResetButton,
-          ),
+          label: Text(l10n.accountAvatarResetToDiceBearButton),
         ),
       ],
     );
