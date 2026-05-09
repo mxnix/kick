@@ -229,7 +229,7 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
     state = AsyncData(await bootstrap.accountsRepository.readAll());
   }
 
-  Future<void> connectGoogleAccount({
+  Future<AccountProfile?> connectGoogleAccount({
     required String projectId,
     String? label,
     int priority = defaultAccountPriority,
@@ -276,6 +276,7 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
           enabledAccounts: enabledAccounts,
         ),
       );
+      return profile;
     } catch (error) {
       unawaited(
         bootstrap.analytics.trackAccountConnectFailed(

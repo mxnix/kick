@@ -785,6 +785,7 @@
   "accountDialogAdvancedHint": "If you don't want to configure it manually, you can leave this section as is.",
   "projectIdLabel": "Project ID",
   "projectIdHint": "my-google-cloud-project",
+  "projectIdOptionalHelperText": "Optional. If left blank, KiCk will try to discover it automatically.",
   "projectIdConsoleLinkLabel": "Where to find the project ID",
   "projectIdRequiredError": "Enter a project ID",
   "projectIdLookupFailedMessage": "Failed to open Google Cloud Console.",

@@ -2613,6 +2613,12 @@ abstract class AppLocalizations {
   /// **'my-google-cloud-project'**
   String get projectIdHint;
 
+  /// No description provided for @projectIdOptionalHelperText.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. If left blank, KiCk will try to discover it automatically.'**
+  String get projectIdOptionalHelperText;
+
   /// No description provided for @projectIdConsoleLinkLabel.
   ///
   /// In en, this message translates to:

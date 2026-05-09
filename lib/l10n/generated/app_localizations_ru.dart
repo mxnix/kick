@@ -1411,6 +1411,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get projectIdHint => 'my-google-cloud-project';
 
   @override
+  String get projectIdOptionalHelperText =>
+      'Необязательно. Если оставить пустым, KiCk попробует определить его автоматически.';
+
+  @override
   String get projectIdConsoleLinkLabel => 'Где посмотреть ID проекта';
 
   @override

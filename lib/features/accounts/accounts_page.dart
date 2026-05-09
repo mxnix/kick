@@ -210,6 +210,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       label: draft.label,
       priority: draft.priority,
       notSupportedModels: draft.notSupportedModels,
+      autoDiagnoseWhenProjectIdMissing: true,
     );
   }
 }
@@ -1289,7 +1290,7 @@ List<String> _avatarSeedOptions(AccountProfile account) {
 
 bool _isFileAvatarUrl(String value) => isFileAccountAvatarUrl(value);
 
-Future<void> _connectGoogleAccount(
+Future<AccountProfile?> _connectGoogleAccount(
   BuildContext context,
   WidgetRef ref, {
   required String projectId,
@@ -1297,9 +1298,11 @@ Future<void> _connectGoogleAccount(
   required int priority,
   required List<String> notSupportedModels,
   AccountProfile? existing,
+  bool autoDiagnoseWhenProjectIdMissing = false,
 }) async {
+  AccountProfile? saved;
   try {
-    await ref
+    saved = await ref
         .read(accountsControllerProvider.notifier)
         .connectGoogleAccount(
           existing: existing,
@@ -1310,13 +1313,23 @@ Future<void> _connectGoogleAccount(
         );
   } catch (error) {
     if (!context.mounted) {
-      return;
+      return null;
     }
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(content: Text(formatUserFacingError(context.l10n, error))));
+    return null;
   }
+
+  if (autoDiagnoseWhenProjectIdMissing &&
+      saved != null &&
+      saved.projectId.trim().isEmpty &&
+      context.mounted) {
+    await _diagnoseProject(context, ref, saved);
+  }
+
+  return saved;
 }
 
 Future<void> _connectKiroAccount(

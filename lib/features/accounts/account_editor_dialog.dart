@@ -211,6 +211,8 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
                     decoration: InputDecoration(
                       labelText: l10n.projectIdLabel,
                       hintText: l10n.projectIdHint,
+                      helperText: l10n.projectIdOptionalHelperText,
+                      helperMaxLines: 3,
                     ),
                   ),
                   const SizedBox(height: 6),

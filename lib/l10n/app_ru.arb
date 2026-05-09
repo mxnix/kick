@@ -657,6 +657,7 @@
     "accountDialogAdvancedHint": "Если не хочется настраивать вручную, этот блок можно оставить как есть.",
     "projectIdLabel": "ID проекта",
     "projectIdHint": "my-google-cloud-project",
+    "projectIdOptionalHelperText": "Необязательно. Если оставить пустым, KiCk попробует определить его автоматически.",
     "projectIdConsoleLinkLabel": "Где посмотреть ID проекта",
     "projectIdRequiredError": "Укажите ID проекта",
     "projectIdLookupFailedMessage": "Не удалось открыть Google Cloud Console.",
