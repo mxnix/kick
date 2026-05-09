@@ -52,6 +52,10 @@ class KiroCodeAssistClient {
     _retryPolicy = retryPolicy.normalized();
   }
 
+  void dispose() {
+    _http.close();
+  }
+
   Future<List<String>> listModels({required ProxyRuntimeAccount account}) async {
     await _ensureFreshTokensForRequest(account);
     final discoveredModels = <String>{};
@@ -101,6 +105,32 @@ class KiroCodeAssistClient {
 
     final models = discoveredModels.toList()..sort();
     return models;
+  }
+
+  Future<Map<String, Object?>> getUsageLimits({required ProxyRuntimeAccount account}) async {
+    await _ensureFreshTokensForRequest(account);
+    final response = await _executeWithRetry(
+      () => _sendRetryable(
+        method: 'GET',
+        uri: _usageLimitsUri(account),
+        headers: _usageHeaders(accessToken: account.tokens.accessToken),
+        timeoutLabel: 'Kiro usage limits request',
+      ),
+    );
+    final body = await response.stream.bytesToString();
+    final decoded = _tryDecodeJsonMap(body);
+    if (decoded.isNotEmpty || body.trim().isEmpty) {
+      return decoded;
+    }
+
+    throw GeminiGatewayException(
+      provider: AccountProvider.kiro,
+      kind: GeminiGatewayFailureKind.unknown,
+      message: 'Unexpected Kiro usage limits response shape.',
+      statusCode: 502,
+      source: GeminiGatewayFailureSource.transport,
+      rawResponseBody: body,
+    );
   }
 
   Future<Map<String, Object?>> generateContent({
@@ -338,6 +368,14 @@ class KiroCodeAssistClient {
     };
   }
 
+  Map<String, String> _usageHeaders({required String accessToken}) {
+    return {
+      ..._headers(accessToken: accessToken),
+      'amz-sdk-request': 'attempt=1; max=1',
+      HttpHeaders.connectionHeader: 'close',
+    };
+  }
+
   Uri _generateUri(ProxyRuntimeAccount account) {
     final region = (account.providerRegion ?? defaultKiroRegion).trim();
     return Uri.parse('https://q.$region.amazonaws.com/generateAssistantResponse');
@@ -350,6 +388,19 @@ class KiroCodeAssistClient {
       if (nextToken?.trim().isNotEmpty == true) 'nextToken': nextToken!.trim(),
       if (account.providerProfileArn?.trim().isNotEmpty == true)
         'profileArn': account.providerProfileArn!.trim(),
+    });
+  }
+
+  Uri _usageLimitsUri(ProxyRuntimeAccount account) {
+    final region = (account.providerRegion ?? defaultKiroRegion).trim();
+    final profileArn = account.providerProfileArn?.trim();
+    return Uri.https('q.$region.amazonaws.com', '/getUsageLimits', {
+      'isEmailRequired': 'true',
+      'origin': 'AI_EDITOR',
+      'resourceType': 'AGENTIC_REQUEST',
+      if (profileArn?.isNotEmpty == true &&
+          account.credentialSourceType != builderIdKiroCredentialSourceType)
+        'profileArn': profileArn!,
     });
   }
 
@@ -848,6 +899,21 @@ GeminiGatewayException decodeKiroGatewayError(int statusCode, String body) {
       : 'Kiro request failed.';
 
   final lower = message.toLowerCase();
+  final retryAfter = _retryAfterFromMessage(message);
+  final looksLikeQuota = _looksLikeKiroQuotaError(lower);
+  if (statusCode == 402 || statusCode == 429 || (statusCode == 403 && looksLikeQuota)) {
+    return GeminiGatewayException(
+      provider: AccountProvider.kiro,
+      kind: GeminiGatewayFailureKind.quota,
+      message: message,
+      statusCode: statusCode,
+      quotaSnapshot: message,
+      detail: statusCode == 402 || looksLikeQuota
+          ? GeminiGatewayFailureDetail.quotaExhausted
+          : GeminiGatewayFailureDetail.rateLimited,
+      retryAfter: retryAfter ?? (statusCode == 402 ? _durationUntilFirstDayOfNextMonth() : null),
+    );
+  }
   if (statusCode == 404 ||
       lower.contains('unsupported model') ||
       lower.contains('model not found') ||
@@ -879,15 +945,6 @@ GeminiGatewayException decodeKiroGatewayError(int statusCode, String body) {
       statusCode: statusCode,
     );
   }
-  if (statusCode == 429) {
-    return GeminiGatewayException(
-      provider: AccountProvider.kiro,
-      kind: GeminiGatewayFailureKind.quota,
-      message: message,
-      statusCode: statusCode,
-      retryAfter: _retryAfterFromMessage(message),
-    );
-  }
   if (statusCode == 400) {
     return GeminiGatewayException(
       provider: AccountProvider.kiro,
@@ -902,7 +959,7 @@ GeminiGatewayException decodeKiroGatewayError(int statusCode, String body) {
       kind: GeminiGatewayFailureKind.serviceUnavailable,
       message: message,
       statusCode: statusCode,
-      retryAfter: _retryAfterFromMessage(message),
+      retryAfter: retryAfter,
     );
   }
   return GeminiGatewayException(
@@ -1340,6 +1397,20 @@ Duration? _retryAfterFromMessage(String message) {
     return Duration(minutes: value);
   }
   return Duration(seconds: value);
+}
+
+bool _looksLikeKiroQuotaError(String lower) {
+  return lower.contains('quota') ||
+      lower.contains('limit exceeded') ||
+      lower.contains('usage limit') ||
+      lower.contains('payment required');
+}
+
+Duration _durationUntilFirstDayOfNextMonth() {
+  final now = DateTime.now();
+  final nextMonth = DateTime(now.year, now.month + 1);
+  final difference = nextMonth.difference(now);
+  return difference <= Duration.zero ? const Duration(days: 30) : difference;
 }
 
 String _buildMachineFingerprint() {

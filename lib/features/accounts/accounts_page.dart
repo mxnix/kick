@@ -22,6 +22,7 @@ import '../shared/kick_haptics.dart';
 import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import '../shared/provider_icon.dart';
+import 'account_avatar.dart';
 import 'account_editor_dialog.dart';
 import 'account_priority_presentation.dart';
 import 'account_provider_picker_dialog.dart';
@@ -894,25 +895,7 @@ class _AccountAvatarImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarUrl = _effectiveAvatarUrl(account);
-    final fallback = _AccountAvatarFallback(account: account, size: size, radius: radius);
-
-    if (avatarUrl == null || avatarUrl.isEmpty) {
-      return fallback;
-    }
-
-    final image = _isFileAvatarUrl(avatarUrl)
-        ? Image.file(
-            File.fromUri(Uri.parse(avatarUrl)),
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => fallback,
-          )
-        : Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: SizedBox(width: size, height: size, child: image),
-    );
+    return AccountAvatarImage(account: account, size: size, radius: radius);
   }
 }
 
@@ -925,32 +908,7 @@ class _AccountAvatarFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final initial = _accountInitial(account);
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: scheme.secondaryContainer.withValues(alpha: 0.84),
-        borderRadius: BorderRadius.circular(radius),
-      ),
-      child: Center(
-        child: initial == null
-            ? Icon(
-                Icons.account_circle_rounded,
-                color: scheme.onSecondaryContainer,
-                size: size * 0.58,
-              )
-            : Text(
-                initial,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: scheme.onSecondaryContainer,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-      ),
-    );
+    return AccountAvatarFallback(account: account, size: size, radius: radius);
   }
 }
 
@@ -1315,24 +1273,7 @@ Future<void> _showAccountAvatarPreview(BuildContext context, AccountProfile acco
   );
 }
 
-String? _effectiveAvatarUrl(AccountProfile account) {
-  final stored = account.avatarUrl?.trim();
-  if (stored != null && stored.isNotEmpty) {
-    return stored;
-  }
-  if (account.provider == AccountProvider.kiro) {
-    return _diceBearAvatarUrl(account.id);
-  }
-  return null;
-}
-
-String _diceBearAvatarUrl(String seed) {
-  return Uri.https('api.dicebear.com', '/9.x/identicon/png', {
-    'seed': seed.trim().isEmpty ? 'kick' : seed.trim(),
-    'radius': '28',
-    'backgroundType': 'solid',
-  }).toString();
-}
+String _diceBearAvatarUrl(String seed) => diceBearAccountAvatarUrl(seed);
 
 List<String> _avatarSeedOptions(AccountProfile account) {
   final base = account.id.trim().isEmpty ? account.label : account.id;
@@ -1346,17 +1287,7 @@ List<String> _avatarSeedOptions(AccountProfile account) {
   ];
 }
 
-bool _isFileAvatarUrl(String value) {
-  return value.startsWith('file://');
-}
-
-String? _accountInitial(AccountProfile account) {
-  final text = (account.label.trim().isNotEmpty ? account.label : account.displayIdentity).trim();
-  if (text.isEmpty) {
-    return null;
-  }
-  return String.fromCharCode(text.runes.first).toUpperCase();
-}
+bool _isFileAvatarUrl(String value) => isFileAccountAvatarUrl(value);
 
 Future<void> _connectGoogleAccount(
   BuildContext context,

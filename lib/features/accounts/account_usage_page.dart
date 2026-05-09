@@ -15,11 +15,14 @@ import '../../core/theme/kick_theme.dart';
 import '../../data/models/account_profile.dart';
 import '../../l10n/kick_localizations.dart';
 import '../../proxy/gemini/gemini_usage_models.dart';
+import '../../proxy/kiro/kiro_auth_source.dart';
 import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
 import '../shared/kick_actions.dart';
 import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
+import '../shared/provider_icon.dart';
+import 'account_avatar.dart';
 import 'account_priority_presentation.dart';
 
 class AccountUsagePage extends ConsumerWidget {
@@ -83,7 +86,7 @@ class AccountUsagePage extends ConsumerWidget {
                 _UsageAccountCard(account: resolvedAccount, usage: usageSnapshot),
                 const SizedBox(height: 16),
                 usageValue.when(
-                  data: (usage) => _UsageContent(usage: usage),
+                  data: (usage) => _UsageContent(account: resolvedAccount, usage: usage),
                   error: (error, stackTrace) => _UsageErrorCard(
                     message: formatUserFacingError(l10n, error),
                     onRetry: () =>
@@ -273,12 +276,18 @@ class _UsageAccountCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              KickBadge(
-                label: account.projectId.trim().isEmpty
-                    ? l10n.projectIdAutoChip
-                    : l10n.projectIdChip(account.projectId),
-                leading: const Icon(KickIcons.badge),
-              ),
+              if (account.provider == AccountProvider.gemini)
+                KickBadge(
+                  label: account.projectId.trim().isEmpty
+                      ? l10n.projectIdAutoChip
+                      : l10n.projectIdChip(account.projectId),
+                  leading: const Icon(KickIcons.badge),
+                )
+              else
+                KickBadge(
+                  label: '${l10n.kiroRegionLabel}: ${_kiroRegionValue(account.providerRegion)}',
+                  leading: const Icon(KickIcons.badge),
+                ),
               KickBadge(
                 label: l10n.priorityChip(accountPriorityLabel(l10n, account.priority)),
                 leading: const Icon(KickIcons.lowPriority),
@@ -305,10 +314,21 @@ class _UsageAccountCard extends StatelessWidget {
           ],
           if (usage != null) ...[
             const SizedBox(height: 16),
-            KickBadge(
-              label: l10n.accountUsageLastUpdated(_formatDateTime(l10n, usage!.fetchedAt)),
-              leading: const Icon(KickIcons.update),
-              emphasis: true,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (usage!.subscriptionTitle.trim().isNotEmpty)
+                  KickBadge(
+                    label: usage!.subscriptionTitle,
+                    leading: ProviderIcon(provider: account.provider, size: 16),
+                  ),
+                KickBadge(
+                  label: l10n.accountUsageLastUpdated(_formatDateTime(l10n, usage!.fetchedAt)),
+                  leading: const Icon(KickIcons.update),
+                  emphasis: true,
+                ),
+              ],
             ),
           ],
         ],
@@ -324,36 +344,14 @@ class _UsageAccountAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final avatarUrl = account.avatarUrl;
-    final fallback = Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        color: scheme.secondaryContainer.withValues(alpha: 0.84),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Icon(Icons.account_circle_rounded, color: scheme.onSecondaryContainer, size: 32),
-    );
-
-    if (avatarUrl == null || avatarUrl.isEmpty) {
-      return fallback;
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: SizedBox(
-        width: 56,
-        height: 56,
-        child: Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
-      ),
-    );
+    return AccountAvatarImage(account: account, size: 56, radius: 18);
   }
 }
 
 class _UsageContent extends StatelessWidget {
-  const _UsageContent({required this.usage});
+  const _UsageContent({required this.account, required this.usage});
 
+  final AccountProfile account;
   final GeminiUsageSnapshot usage;
 
   @override
@@ -384,7 +382,7 @@ class _UsageContent extends StatelessWidget {
                   .map(
                     (bucket) => SizedBox(
                       width: cardWidth,
-                      child: _UsageBucketCard(bucket: bucket),
+                      child: _UsageBucketCard(account: account, bucket: bucket),
                     ),
                   )
                   .toList(growable: false),
@@ -397,8 +395,9 @@ class _UsageContent extends StatelessWidget {
 }
 
 class _UsageBucketCard extends StatelessWidget {
-  const _UsageBucketCard({required this.bucket});
+  const _UsageBucketCard({required this.account, required this.bucket});
 
+  final AccountProfile account;
   final GeminiUsageBucket bucket;
 
   @override
@@ -408,6 +407,9 @@ class _UsageBucketCard extends StatelessWidget {
     final remaining = bucket.remainingPercent;
     final health = bucket.health;
     final tint = _usageHealthTint(context, health);
+    final title = account.provider == AccountProvider.kiro
+        ? l10n.accountUsageKiroAllModelsLimit
+        : bucket.modelId;
 
     return KickPanel(
       tone: KickPanelTone.soft,
@@ -418,7 +420,7 @@ class _UsageBucketCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text(bucket.modelId, style: Theme.of(context).textTheme.titleMedium)),
+              Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
             ],
           ),
           const SizedBox(height: 12),
@@ -436,6 +438,14 @@ class _UsageBucketCard extends StatelessWidget {
                 KickBadge(
                   label: l10n.accountUsageTokenType(bucket.tokenType),
                   leading: const Icon(KickIcons.speed, size: 16),
+                ),
+              if (bucket.hasAbsoluteUsage)
+                KickBadge(
+                  label: l10n.accountUsageUsedOfLimit(
+                    _formatUsageQuantity(bucket.currentUsage!),
+                    _formatUsageQuantity(bucket.usageLimit!),
+                  ),
+                  leading: const Icon(KickIcons.queryStats, size: 16),
                 ),
             ],
           ),
@@ -643,6 +653,19 @@ String _formatUsageValue(double value) {
     return rounded.toStringAsFixed(0);
   }
   return value.toStringAsFixed(1);
+}
+
+String _formatUsageQuantity(double value) {
+  final rounded = value.roundToDouble();
+  if ((value - rounded).abs() < 0.001) {
+    return rounded.toStringAsFixed(0);
+  }
+  return value.toStringAsFixed(2);
+}
+
+String _kiroRegionValue(String? region) {
+  final trimmed = region?.trim();
+  return trimmed == null || trimmed.isEmpty ? defaultKiroRegion : trimmed;
 }
 
 String _formatDateTime(KickLocalizations l10n, DateTime value) {

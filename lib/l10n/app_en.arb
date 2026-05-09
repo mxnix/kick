@@ -202,9 +202,9 @@
   "accountUsageVerificationOpenFailedMessage": "Failed to open the verification page in Google",
   "accountErrorActionOpenFailedMessage": "Failed to open the Google page",
   "accountUsageEmptyTitle": "Quota data unavailable",
-  "accountUsageEmptyMessage": "Google did not provide quota data for this account",
+  "accountUsageEmptyMessage": "The provider did not provide quota data for this account",
   "accountUsageUnavailableTitle": "Quotas are unavailable for this account",
-  "accountUsageUnavailableMessage": "The quotas page currently works only for Gemini CLI accounts.",
+  "accountUsageUnavailableMessage": "The quotas page currently works only for Gemini CLI and Kiro accounts.",
   "accountUsageMissingTitle": "Account not found",
   "accountUsageMissingSubtitle": "Quota information",
   "accountUsageMissingMessage": "The account may already have been deleted, or the list has not refreshed yet",
@@ -273,9 +273,21 @@
       }
     }
   },
+  "accountUsageUsedOfLimit": "Used {used} of {limit}",
+  "@accountUsageUsedOfLimit": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
   "accountUsageBucketHealthy": "Enough",
   "accountUsageBucketLow": "Running low",
   "accountUsageBucketCritical": "Nearly exhausted",
+  "accountUsageKiroAllModelsLimit": "Limit across all models",
   "settingsTitle": "Settings",
   "settingsSubtitle": "Network, appearance, API key, and proxy behavior",
   "languageLabel": "Language",

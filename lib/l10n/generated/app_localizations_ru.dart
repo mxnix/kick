@@ -357,14 +357,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountUsageEmptyTitle => 'Данные по лимитам недоступны';
 
   @override
-  String get accountUsageEmptyMessage => 'Google не прислал данные по лимитам для этого аккаунта';
+  String get accountUsageEmptyMessage =>
+      'Провайдер не прислал данные по лимитам для этого аккаунта';
 
   @override
   String get accountUsageUnavailableTitle => 'Лимиты для этого аккаунта недоступны';
 
   @override
   String get accountUsageUnavailableMessage =>
-      'Страница лимитов пока работает только для аккаунтов Gemini CLI.';
+      'Страница лимитов работает для аккаунтов Gemini CLI и Kiro.';
 
   @override
   String get accountUsageMissingTitle => 'Аккаунт не найден';
@@ -420,6 +421,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String accountUsageUsedOfLimit(String used, String limit) {
+    return 'Израсходовано $used из $limit';
+  }
+
+  @override
   String get accountUsageBucketHealthy => 'Достаточно';
 
   @override
@@ -427,6 +433,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accountUsageBucketCritical => 'Почти исчерпано';
+
+  @override
+  String get accountUsageKiroAllModelsLimit => 'Лимит на все модели';
 
   @override
   String get settingsTitle => 'Настройки';

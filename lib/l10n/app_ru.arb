@@ -169,9 +169,9 @@
     "accountUsageVerificationOpenFailedMessage": "Не удалось открыть страницу подтверждения в Google",
     "accountErrorActionOpenFailedMessage": "Не удалось открыть страницу Google",
     "accountUsageEmptyTitle": "Данные по лимитам недоступны",
-    "accountUsageEmptyMessage": "Google не прислал данные по лимитам для этого аккаунта",
+    "accountUsageEmptyMessage": "Провайдер не прислал данные по лимитам для этого аккаунта",
     "accountUsageUnavailableTitle": "Лимиты для этого аккаунта недоступны",
-    "accountUsageUnavailableMessage": "Страница лимитов пока работает только для аккаунтов Gemini CLI.",
+    "accountUsageUnavailableMessage": "Страница лимитов работает для аккаунтов Gemini CLI и Kiro.",
     "accountUsageMissingTitle": "Аккаунт не найден",
     "accountUsageMissingSubtitle": "Информация по лимитам",
     "accountUsageMissingMessage": "Возможно, аккаунт уже удален или список еще не успел обновиться",
@@ -234,15 +234,27 @@
     },
     "accountUsageUsedPercent": "Израсходовано {value}%",
     "@accountUsageUsedPercent": {
-        "placeholders": {
-            "value": {
-                "type": "String"
-            }
+      "placeholders": {
+        "value": {
+          "type": "String"
         }
+      }
+    },
+    "accountUsageUsedOfLimit": "Израсходовано {used} из {limit}",
+    "@accountUsageUsedOfLimit": {
+      "placeholders": {
+        "used": {
+          "type": "String"
+        },
+        "limit": {
+          "type": "String"
+        }
+      }
     },
     "accountUsageBucketHealthy": "Достаточно",
     "accountUsageBucketLow": "Заканчивается",
     "accountUsageBucketCritical": "Почти исчерпано",
+    "accountUsageKiroAllModelsLimit": "Лимит на все модели",
     "settingsTitle": "Настройки",
     "settingsSubtitle": "Сеть, оформление, API-ключ и работа прокси",
     "themeLabel": "Тема",

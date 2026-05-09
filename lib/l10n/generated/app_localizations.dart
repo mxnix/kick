@@ -738,7 +738,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageEmptyMessage.
   ///
   /// In en, this message translates to:
-  /// **'Google did not provide quota data for this account'**
+  /// **'The provider did not provide quota data for this account'**
   String get accountUsageEmptyMessage;
 
   /// No description provided for @accountUsageUnavailableTitle.
@@ -750,7 +750,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageUnavailableMessage.
   ///
   /// In en, this message translates to:
-  /// **'The quotas page currently works only for Gemini CLI accounts.'**
+  /// **'The quotas page currently works only for Gemini CLI and Kiro accounts.'**
   String get accountUsageUnavailableMessage;
 
   /// No description provided for @accountUsageMissingTitle.
@@ -825,6 +825,12 @@ abstract class AppLocalizations {
   /// **'Used {value}%'**
   String accountUsageUsedPercent(String value);
 
+  /// No description provided for @accountUsageUsedOfLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Used {used} of {limit}'**
+  String accountUsageUsedOfLimit(String used, String limit);
+
   /// No description provided for @accountUsageBucketHealthy.
   ///
   /// In en, this message translates to:
@@ -842,6 +848,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nearly exhausted'**
   String get accountUsageBucketCritical;
+
+  /// No description provided for @accountUsageKiroAllModelsLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Limit across all models'**
+  String get accountUsageKiroAllModelsLimit;
 
   /// No description provided for @settingsTitle.
   ///

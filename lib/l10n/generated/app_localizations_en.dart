@@ -358,14 +358,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountUsageEmptyTitle => 'Quota data unavailable';
 
   @override
-  String get accountUsageEmptyMessage => 'Google did not provide quota data for this account';
+  String get accountUsageEmptyMessage => 'The provider did not provide quota data for this account';
 
   @override
   String get accountUsageUnavailableTitle => 'Quotas are unavailable for this account';
 
   @override
   String get accountUsageUnavailableMessage =>
-      'The quotas page currently works only for Gemini CLI accounts.';
+      'The quotas page currently works only for Gemini CLI and Kiro accounts.';
 
   @override
   String get accountUsageMissingTitle => 'Account not found';
@@ -421,6 +421,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String accountUsageUsedOfLimit(String used, String limit) {
+    return 'Used $used of $limit';
+  }
+
+  @override
   String get accountUsageBucketHealthy => 'Enough';
 
   @override
@@ -428,6 +433,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountUsageBucketCritical => 'Nearly exhausted';
+
+  @override
+  String get accountUsageKiroAllModelsLimit => 'Limit across all models';
 
   @override
   String get settingsTitle => 'Settings';

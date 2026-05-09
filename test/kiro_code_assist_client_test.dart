@@ -660,6 +660,19 @@ void main() {
     expect(OpenAiResponseMapper.currentPromptTokenCount(response), 0);
     expect(OpenAiResponseMapper.currentTotalTokenCount(response), completionTokens);
   });
+
+  test('maps Kiro payment-required quota responses to quota failures', () {
+    final error = decodeKiroGatewayError(
+      402,
+      jsonEncode({'message': 'Usage limit exceeded for this account.'}),
+    );
+
+    expect(error.provider, AccountProvider.kiro);
+    expect(error.kind, GeminiGatewayFailureKind.quota);
+    expect(error.detail, GeminiGatewayFailureDetail.quotaExhausted);
+    expect(error.quotaSnapshot, 'Usage limit exceeded for this account.');
+    expect(error.retryAfter, isNotNull);
+  });
 }
 
 class QueueHttpClient extends http.BaseClient {

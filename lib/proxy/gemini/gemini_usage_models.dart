@@ -8,16 +8,24 @@ class GeminiUsageBucket {
     required this.remainingFraction,
     this.resetAt,
     this.tokenType = '',
+    this.currentUsage,
+    this.usageLimit,
+    this.unit = '',
   });
 
   final String modelId;
   final double remainingFraction;
   final DateTime? resetAt;
   final String tokenType;
+  final double? currentUsage;
+  final double? usageLimit;
+  final String unit;
 
   double get usedPercent => (1 - remainingFraction).clamp(0, 1) * 100;
 
   double get remainingPercent => remainingFraction * 100;
+
+  bool get hasAbsoluteUsage => currentUsage != null && usageLimit != null && usageLimit! > 0;
 
   GeminiUsageBucketHealth get health {
     if (remainingFraction <= 0.10) {
@@ -38,6 +46,36 @@ class GeminiUsageBucket {
     );
   }
 
+  static GeminiUsageBucket fromKiroUsageBreakdown(
+    Map<String, Object?> json, {
+    DateTime? defaultResetAt,
+  }) {
+    final currentUsage = _readNumber(
+      _firstPresent(json, const ['currentUsageWithPrecision', 'currentUsage']),
+    );
+    final usageLimit = _readNumber(
+      _firstPresent(json, const ['usageLimitWithPrecision', 'usageLimit']),
+    );
+    final unit = _readString(json['unit']);
+    final resourceType = _readString(json['resourceType']);
+    final displayName = _firstNonEmpty(
+      _readString(json['displayName']),
+      _readString(json['displayNamePlural']),
+      resourceType,
+      'Kiro usage',
+    );
+
+    return GeminiUsageBucket(
+      modelId: displayName,
+      remainingFraction: _remainingFractionFromUsage(currentUsage, usageLimit),
+      resetAt: _readUnixSeconds(json['nextDateReset']) ?? defaultResetAt,
+      tokenType: _firstNonEmpty(unit, resourceType).toUpperCase(),
+      currentUsage: currentUsage,
+      usageLimit: usageLimit,
+      unit: unit,
+    );
+  }
+
   static String _readString(Object? value) => value?.toString().trim() ?? '';
 
   static double _readFraction(Object? value) {
@@ -54,12 +92,58 @@ class GeminiUsageBucket {
     return numeric.clamp(0, 1);
   }
 
+  static double? _readNumber(Object? value) {
+    final numeric = switch (value) {
+      num number => number.toDouble(),
+      String text => double.tryParse(text.trim()),
+      _ => null,
+    };
+    if (numeric == null || !numeric.isFinite) {
+      return null;
+    }
+    return numeric;
+  }
+
   static DateTime? _readDateTime(Object? value) {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty) {
       return null;
     }
     return DateTime.tryParse(text)?.toLocal();
+  }
+
+  static DateTime? _readUnixSeconds(Object? value) {
+    final seconds = _readNumber(value);
+    if (seconds == null || seconds <= 0) {
+      return null;
+    }
+    return DateTime.fromMillisecondsSinceEpoch((seconds * 1000).round(), isUtc: true).toLocal();
+  }
+
+  static Object? _firstPresent(Map<String, Object?> json, List<String> keys) {
+    for (final key in keys) {
+      if (json.containsKey(key)) {
+        return json[key];
+      }
+    }
+    return null;
+  }
+
+  static String _firstNonEmpty(String first, [String? second, String? third, String? fallback]) {
+    for (final candidate in [first, second, third, fallback]) {
+      final trimmed = candidate?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        return trimmed;
+      }
+    }
+    return '';
+  }
+
+  static double _remainingFractionFromUsage(double? currentUsage, double? usageLimit) {
+    if (currentUsage == null || usageLimit == null || usageLimit <= 0) {
+      return 0;
+    }
+    return ((usageLimit - currentUsage) / usageLimit).clamp(0, 1);
   }
 }
 
@@ -131,6 +215,62 @@ class GeminiUsageSnapshot {
     return GeminiUsageSnapshot(
       fetchedAt: fetchedAt?.toLocal() ?? DateTime.now(),
       subscriptionTitle: 'Gemini CLI OAuth',
+      buckets: List.unmodifiable(buckets),
+    );
+  }
+
+  static GeminiUsageSnapshot fromKiroApi(Map<String, Object?> json, {DateTime? fetchedAt}) {
+    final subscriptionInfo = ((json['subscriptionInfo'] as Map?) ?? const <String, Object?>{})
+        .cast<String, Object?>();
+    final defaultResetAt = GeminiUsageBucket._readUnixSeconds(json['nextDateReset']);
+    final rawBreakdowns = (json['usageBreakdownList'] as List?) ?? const [];
+    final buckets = rawBreakdowns
+        .whereType<Map>()
+        .map(
+          (item) => GeminiUsageBucket.fromKiroUsageBreakdown(
+            item.cast<String, Object?>(),
+            defaultResetAt: defaultResetAt,
+          ),
+        )
+        .where((bucket) => bucket.modelId.isNotEmpty)
+        .toList();
+
+    if (buckets.isEmpty) {
+      final currentUsage = GeminiUsageBucket._readNumber(
+        GeminiUsageBucket._firstPresent(json, const ['usedCount', 'currentUsage']),
+      );
+      final usageLimit = GeminiUsageBucket._readNumber(
+        GeminiUsageBucket._firstPresent(json, const ['limitCount', 'usageLimit']),
+      );
+      if (currentUsage != null || usageLimit != null) {
+        buckets.add(
+          GeminiUsageBucket(
+            modelId: 'AGENTIC_REQUEST',
+            remainingFraction: GeminiUsageBucket._remainingFractionFromUsage(
+              currentUsage,
+              usageLimit,
+            ),
+            resetAt: defaultResetAt,
+            tokenType: 'REQUESTS',
+            currentUsage: currentUsage,
+            usageLimit: usageLimit,
+            unit: 'requests',
+          ),
+        );
+      }
+    }
+
+    buckets.sort(_compareBuckets);
+
+    final subscriptionTitle = GeminiUsageBucket._firstNonEmpty(
+      GeminiUsageBucket._readString(subscriptionInfo['subscriptionTitle']),
+      GeminiUsageBucket._readString(subscriptionInfo['type']),
+      'Kiro',
+    );
+
+    return GeminiUsageSnapshot(
+      fetchedAt: fetchedAt?.toLocal() ?? DateTime.now(),
+      subscriptionTitle: subscriptionTitle,
       buckets: List.unmodifiable(buckets),
     );
   }

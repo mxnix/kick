@@ -25,6 +25,7 @@ import '../../proxy/gemini/gemini_usage_models.dart';
 import '../../proxy/gemini/gemini_usage_service.dart';
 import '../../proxy/kiro/kiro_auth_source.dart';
 import '../../proxy/kiro/kiro_link_auth_service.dart';
+import '../../proxy/kiro/kiro_usage_service.dart';
 import '../home/silly_tavern_push_service.dart';
 import '../logs/log_display_items.dart';
 import '../logs/log_export_service.dart';
@@ -115,6 +116,12 @@ final kiroLinkAuthServiceProvider = Provider<KiroLinkAuthService>((ref) {
   return service;
 });
 
+final kiroUsageServiceProvider = Provider<KiroUsageService>((ref) {
+  final service = KiroUsageService();
+  ref.onDispose(service.dispose);
+  return service;
+});
+
 final accountUsageQueryProvider = FutureProvider.autoDispose.family<GeminiUsageSnapshot, String>((
   ref,
   accountId,
@@ -139,7 +146,10 @@ final accountUsageQueryProvider = FutureProvider.autoDispose.family<GeminiUsageS
       throw StateError('Usage details are not available for this provider.');
     }
 
-    return await ref.watch(geminiUsageServiceProvider).fetchUsage(account);
+    return switch (account.provider) {
+      AccountProvider.gemini => ref.watch(geminiUsageServiceProvider).fetchUsage(account),
+      AccountProvider.kiro => ref.watch(kiroUsageServiceProvider).fetchUsage(account),
+    };
   } finally {
     keepAliveLink.close();
   }

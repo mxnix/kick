@@ -61,7 +61,8 @@ class AccountProfile {
 
   bool get isCoolingDown => cooldownUntil != null && cooldownUntil!.isAfter(DateTime.now());
   bool get usesSecretStoreTokens => provider == AccountProvider.gemini;
-  bool get supportsUsageDiagnostics => provider == AccountProvider.gemini;
+  bool get supportsUsageDiagnostics =>
+      provider == AccountProvider.gemini || provider == AccountProvider.kiro;
   String get displayIdentity {
     if (provider == AccountProvider.kiro) {
       final path = credentialSourcePath?.trim();
