@@ -137,13 +137,10 @@ class SillyTavernPushService {
     required String proxyEndpoint,
     required String model,
   }) {
-    final candidates = <Map<String, Object?>>[
-      settings,
-      if (settings['oai_settings'] is Map)
-        (settings['oai_settings'] as Map).map((key, value) => MapEntry(key.toString(), value)),
-      if (settings['openai_settings'] is Map)
-        (settings['openai_settings'] as Map).map((key, value) => MapEntry(key.toString(), value)),
-    ];
+    final candidates = <Map<String, Object?>>[_ensureObject(settings, 'oai_settings')];
+    if (settings['openai_settings'] is Map) {
+      candidates.add(_ensureObject(settings, 'openai_settings'));
+    }
 
     for (final target in candidates) {
       target['chat_completion_source'] = 'custom';
@@ -151,13 +148,6 @@ class SillyTavernPushService {
       target['custom_model'] = model;
       target['bypass_status_check'] = true;
       target['custom_prompt_post_processing'] ??= 'merge';
-    }
-
-    if (settings['oai_settings'] is Map) {
-      settings['oai_settings'] = candidates[1];
-    }
-    if (settings['openai_settings'] is Map) {
-      settings['openai_settings'] = candidates.last;
     }
   }
 

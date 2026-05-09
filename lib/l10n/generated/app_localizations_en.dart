@@ -925,6 +925,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Built with Flutter and Material Symbols. DiceBear Identicon CC0 1.0.';
 
   @override
+  String get aboutOpenLinkFailedMessage => 'Failed to open the link.';
+
+  @override
   String get copyProxyEndpointTooltip => 'Copy proxy address';
 
   @override

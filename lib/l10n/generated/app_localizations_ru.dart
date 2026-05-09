@@ -919,6 +919,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutCreditsMessage => 'Собрано на Flutter. DiceBear Identicon CC0 1.0.';
 
   @override
+  String get aboutOpenLinkFailedMessage => 'Не удалось открыть ссылку.';
+
+  @override
   String get copyProxyEndpointTooltip => 'Скопировать адрес прокси';
 
   @override

@@ -1157,6 +1157,7 @@ class _AvatarPickerPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final fallback = _AccountAvatarFallback(account: account, size: size, radius: radius);
     Widget image;
     if (selectedUrl == null || selectedUrl!.isEmpty) {
       image = _AccountAvatarImage(account: account, size: size, radius: radius);
@@ -1166,7 +1167,11 @@ class _AvatarPickerPreview extends StatelessWidget {
         child: SizedBox(
           width: size,
           height: size,
-          child: Image.file(File.fromUri(Uri.parse(selectedUrl!)), fit: BoxFit.cover),
+          child: Image.file(
+            File.fromUri(Uri.parse(selectedUrl!)),
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallback,
+          ),
         ),
       );
     } else {
@@ -1175,7 +1180,12 @@ class _AvatarPickerPreview extends StatelessWidget {
         child: SizedBox(
           width: size,
           height: size,
-          child: Image.network(selectedUrl!, fit: BoxFit.cover),
+          child: Image.network(
+            selectedUrl!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallback,
+            loadingBuilder: (_, child, progress) => progress == null ? child : fallback,
+          ),
         ),
       );
     }
@@ -1207,6 +1217,7 @@ class _AvatarOptionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final fallback = _AvatarOptionFallback(size: size);
     return SizedBox(
       width: size,
       height: size,
@@ -1229,7 +1240,12 @@ class _AvatarOptionTile extends StatelessWidget {
                 padding: const EdgeInsets.all(6),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(url, fit: BoxFit.cover),
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => fallback,
+                    loadingBuilder: (_, child, progress) => progress == null ? child : fallback,
+                  ),
                 ),
               ),
             ),
@@ -1245,6 +1261,27 @@ class _AvatarOptionTile extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AvatarOptionFallback extends StatelessWidget {
+  const _AvatarOptionFallback({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: size,
+      height: size,
+      color: scheme.secondaryContainer.withValues(alpha: 0.62),
+      child: Icon(
+        Icons.account_circle_rounded,
+        color: scheme.onSecondaryContainer.withValues(alpha: 0.82),
+        size: size * 0.46,
       ),
     );
   }

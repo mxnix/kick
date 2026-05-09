@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +16,7 @@ import '../shared/kick_actions.dart';
 import '../shared/kick_haptics.dart';
 import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
+import 'log_display_items.dart';
 import 'log_export_service.dart';
 import 'log_message_localizer.dart';
 
@@ -55,7 +54,7 @@ class _LogsPageState extends ConsumerState<LogsPage> {
           );
         }
         final entries = logs.entries;
-        final displayItems = _buildLogDisplayItems(entries);
+        final displayItems = logs.displayItems;
         return KickSmoothCustomScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           slivers: [
@@ -265,13 +264,13 @@ class _LogsPageState extends ConsumerState<LogsPage> {
                     child: Padding(
                       padding: EdgeInsets.only(bottom: index == displayItems.length - 1 ? 0 : 12),
                       child: switch (item) {
-                        _SingleLogDisplayItem(:final entry) => _LogCard(
+                        SingleLogDisplayItem(:final entry) => _LogCard(
                           entry: entry,
                           expandedPayload: _expandedPayloadEntries.contains(entry.id),
                           onCopy: () => _copyLogEntry(entry),
                           onTogglePayload: () => _togglePayload(entry.id),
                         ),
-                        _RequestLogDisplayItem() => _LogRequestGroupCard(
+                        RequestLogDisplayItem() => _LogRequestGroupCard(
                           group: item,
                           expanded: _expandedRequestEntries.contains(item.requestId),
                           expandedPayloadEntryIds: _expandedPayloadEntries,
@@ -558,79 +557,6 @@ class _LogsFilterChip extends StatelessWidget {
   }
 }
 
-abstract class _LogDisplayItem {
-  String get key;
-  List<AppLogEntry> get entries;
-}
-
-class _SingleLogDisplayItem implements _LogDisplayItem {
-  const _SingleLogDisplayItem(this.entry);
-
-  final AppLogEntry entry;
-
-  @override
-  String get key => entry.id;
-
-  @override
-  List<AppLogEntry> get entries => [entry];
-}
-
-class _RequestLogDisplayItem implements _LogDisplayItem {
-  _RequestLogDisplayItem({required this.requestId, required this.requestNumber});
-
-  final String requestId;
-  final int requestNumber;
-  final List<AppLogEntry> _entries = <AppLogEntry>[];
-
-  @override
-  String get key => 'request-$requestId';
-
-  @override
-  List<AppLogEntry> get entries => _entries;
-
-  AppLogEntry get primaryEntry {
-    for (final entry in _entries) {
-      if (entry.level == AppLogLevel.error) {
-        return entry;
-      }
-    }
-    for (final entry in _entries) {
-      if (entry.message == 'Response completed' ||
-          entry.message == 'Request succeeded after retries' ||
-          entry.message == 'Request failed after retries') {
-        return entry;
-      }
-    }
-    return _entries.first;
-  }
-
-  AppLogLevel get effectiveLevel {
-    if (_entries.any((entry) => entry.level == AppLogLevel.error)) {
-      return AppLogLevel.error;
-    }
-    if (_entries.any((entry) => entry.level == AppLogLevel.warning)) {
-      return AppLogLevel.warning;
-    }
-    return AppLogLevel.info;
-  }
-
-  int get retryCount {
-    var maxRetryCount = 0;
-    for (final entry in _entries) {
-      final payload = _decodeLogPayload(entry.maskedPayload);
-      final value = payload['retry_count'];
-      if (value is num && value > maxRetryCount) {
-        maxRetryCount = value.round();
-      }
-      if (entry.message == 'Retry scheduled after request failure' ||
-          entry.message == 'Retrying with another account after request failure') {
-        maxRetryCount = maxRetryCount == 0 ? 1 : maxRetryCount;
-      }
-    }
-    return maxRetryCount;
-  }
-}
-
 class _LogRequestGroupCard extends StatelessWidget {
   const _LogRequestGroupCard({
     required this.group,
@@ -641,7 +567,7 @@ class _LogRequestGroupCard extends StatelessWidget {
     required this.onTogglePayload,
   });
 
-  final _RequestLogDisplayItem group;
+  final RequestLogDisplayItem group;
   final bool expanded;
   final Set<String> expandedPayloadEntryIds;
   final VoidCallback onToggleExpanded;
@@ -662,8 +588,7 @@ class _LogRequestGroupCard extends StatelessWidget {
       AppLogLevel.error => scheme.error,
       AppLogLevel.info => scheme.primary,
     };
-    final primaryPayload = _decodeLogPayload(primaryEntry.maskedPayload);
-    final model = _payloadString(primaryPayload, 'model');
+    final model = group.model;
     final requestLabel = '#${group.requestNumber}';
 
     return KickPanel(
@@ -1061,69 +986,6 @@ String _logLevelLabel(KickLocalizations l10n, AppLogLevel level) {
     AppLogLevel.warning => l10n.logsEntryLevelWarning,
     AppLogLevel.error => l10n.logsEntryLevelError,
   };
-}
-
-List<_LogDisplayItem> _buildLogDisplayItems(List<AppLogEntry> entries) {
-  final items = <_LogDisplayItem>[];
-  final requestGroups = <String, _RequestLogDisplayItem>{};
-  var requestNumber = 0;
-
-  for (final entry in entries) {
-    final requestId = _requestIdForEntry(entry);
-    if (requestId == null) {
-      items.add(_SingleLogDisplayItem(entry));
-      continue;
-    }
-
-    var group = requestGroups[requestId];
-    if (group == null) {
-      requestNumber += 1;
-      group = _RequestLogDisplayItem(requestId: requestId, requestNumber: requestNumber);
-      requestGroups[requestId] = group;
-      items.add(group);
-    }
-    group._entries.add(entry);
-  }
-
-  return items;
-}
-
-String? _requestIdForEntry(AppLogEntry entry) {
-  final payloadRequestId = _payloadString(_decodeLogPayload(entry.maskedPayload), 'request_id');
-  if (payloadRequestId?.isNotEmpty == true) {
-    return payloadRequestId;
-  }
-  final rawRequestId = _payloadString(_decodeLogPayload(entry.rawPayload), 'request_id');
-  if (rawRequestId?.isNotEmpty == true) {
-    return rawRequestId;
-  }
-  return null;
-}
-
-Map<String, Object?> _decodeLogPayload(String? payload) {
-  final trimmed = payload?.trim();
-  if (trimmed == null || trimmed.isEmpty) {
-    return const <String, Object?>{};
-  }
-
-  try {
-    final decoded = jsonDecode(trimmed);
-    if (decoded is Map) {
-      return decoded.map((key, value) => MapEntry(key.toString(), value));
-    }
-  } catch (_) {
-    return const <String, Object?>{};
-  }
-  return const <String, Object?>{};
-}
-
-String? _payloadString(Map<String, Object?> payload, String key) {
-  final value = payload[key];
-  if (value == null) {
-    return null;
-  }
-  final text = value.toString().trim();
-  return text.isEmpty ? null : text;
 }
 
 String _shortRequestId(String requestId) {

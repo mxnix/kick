@@ -517,6 +517,7 @@
   "aboutDisclaimerMessage": "KiCk is not affiliated with Google, AWS, Kiro, or SillyTavern",
   "aboutCreditsTitle": "Credits",
   "aboutCreditsMessage": "Built with Flutter and Material Symbols. DiceBear Identicon CC0 1.0.",
+  "aboutOpenLinkFailedMessage": "Failed to open the link.",
   "copyProxyEndpointTooltip": "Copy proxy address",
   "proxyEndpointCopiedMessage": "Proxy address copied",
   "copyApiKeyTooltip": "Copy API key",

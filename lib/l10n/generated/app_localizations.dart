@@ -1731,6 +1731,12 @@ abstract class AppLocalizations {
   /// **'Built with Flutter and Material Symbols. DiceBear Identicon CC0 1.0.'**
   String get aboutCreditsMessage;
 
+  /// No description provided for @aboutOpenLinkFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to open the link.'**
+  String get aboutOpenLinkFailedMessage;
+
   /// No description provided for @copyProxyEndpointTooltip.
   ///
   /// In en, this message translates to:

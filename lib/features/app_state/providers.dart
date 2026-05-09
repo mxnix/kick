@@ -26,6 +26,7 @@ import '../../proxy/gemini/gemini_usage_service.dart';
 import '../../proxy/kiro/kiro_auth_source.dart';
 import '../../proxy/kiro/kiro_link_auth_service.dart';
 import '../home/silly_tavern_push_service.dart';
+import '../logs/log_display_items.dart';
 import '../logs/log_export_service.dart';
 import '../settings/app_update_checker.dart';
 import '../settings/configuration_backup_service.dart';
@@ -398,6 +399,7 @@ final logsControllerProvider = AsyncNotifierProvider<LogsController, LogsViewSta
 class LogsViewState {
   const LogsViewState({
     required this.entries,
+    required this.displayItems,
     required this.categories,
     required this.totalCount,
     required this.filteredCount,
@@ -409,6 +411,7 @@ class LogsViewState {
   });
 
   final List<AppLogEntry> entries;
+  final List<LogDisplayItem> displayItems;
   final List<String> categories;
   final int totalCount;
   final int filteredCount;
@@ -425,6 +428,7 @@ class LogsViewState {
 
   LogsViewState copyWith({
     List<AppLogEntry>? entries,
+    List<LogDisplayItem>? displayItems,
     List<String>? categories,
     int? totalCount,
     int? filteredCount,
@@ -434,8 +438,11 @@ class LogsViewState {
     Set<String>? appearingEntryIds,
     bool? isLoadingMore,
   }) {
+    final nextEntries = entries ?? this.entries;
     return LogsViewState(
-      entries: entries ?? this.entries,
+      entries: nextEntries,
+      displayItems:
+          displayItems ?? (entries == null ? this.displayItems : buildLogDisplayItems(nextEntries)),
       categories: categories ?? this.categories,
       totalCount: totalCount ?? this.totalCount,
       filteredCount: filteredCount ?? this.filteredCount,
@@ -574,9 +581,11 @@ class LogsController extends AsyncNotifier<LogsViewState> {
       if (revision != _loadRevision) {
         return;
       }
+      final entries = [...current.entries, ...nextEntries];
       state = AsyncData(
         current.copyWith(
-          entries: [...current.entries, ...nextEntries],
+          entries: entries,
+          displayItems: buildLogDisplayItems(entries),
           filteredCount: nextEntries.isEmpty ? current.entries.length : current.filteredCount,
           appearingEntryIds: const <String>{},
           isLoadingMore: false,
@@ -672,6 +681,7 @@ class LogsController extends AsyncNotifier<LogsViewState> {
 
     return LogsViewState(
       entries: entries,
+      displayItems: buildLogDisplayItems(entries),
       categories: categories,
       totalCount: totalCount,
       filteredCount: filteredCount,

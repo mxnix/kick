@@ -56,6 +56,14 @@ void main() {
     );
     expect(savedSettings, isNotNull);
     expect(savedSettings!['main_api'], 'openai');
+    expect(savedSettings!['chat_completion_source'], isNull);
+
+    final oaiSettings = (savedSettings!['oai_settings'] as Map).cast<String, Object?>();
+    expect(oaiSettings['chat_completion_source'], 'custom');
+    expect(oaiSettings['custom_url'], 'http://localhost:3000/v1');
+    expect(oaiSettings['custom_model'], 'google/gemini-2.5-pro');
+    expect(oaiSettings['bypass_status_check'], isTrue);
+    expect(oaiSettings['custom_prompt_post_processing'], 'merge');
 
     final extensionSettings = (savedSettings!['extension_settings'] as Map).cast<String, Object?>();
     final manager = (extensionSettings['connectionManager'] as Map).cast<String, Object?>();

@@ -545,13 +545,24 @@ class _SillyTavernPushDialogState extends State<_SillyTavernPushDialog> {
   late final TextEditingController _urlController;
   late final TextEditingController _profileNameController;
   late final TextEditingController _modelController;
+  bool _profileNameInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _urlController = TextEditingController(text: 'http://127.0.0.1:8000');
-    _profileNameController = TextEditingController(text: 'KiCk');
+    _profileNameController = TextEditingController();
     _modelController = TextEditingController(text: _defaultSillyTavernModel(widget.settings));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_profileNameInitialized) {
+      return;
+    }
+    _profileNameInitialized = true;
+    _profileNameController.text = context.l10n.appTitle;
   }
 
   @override

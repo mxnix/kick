@@ -453,6 +453,7 @@
     "aboutDisclaimerMessage": "KiCk не связан с Google, AWS, Kiro или SillyTavern",
     "aboutCreditsTitle": "Благодарности",
     "aboutCreditsMessage": "Собрано на Flutter. DiceBear Identicon CC0 1.0.",
+    "aboutOpenLinkFailedMessage": "Не удалось открыть ссылку.",
     "copyProxyEndpointTooltip": "Скопировать адрес прокси",
     "proxyEndpointCopiedMessage": "Адрес прокси скопирован",
     "copyApiKeyTooltip": "Скопировать API-ключ",

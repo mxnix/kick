@@ -216,7 +216,7 @@ class _AboutInfoRow extends StatelessWidget {
             Tooltip(
               message: data.actionLabel!,
               child: IconButton(
-                onPressed: () => unawaited(_openAboutLink(data.url!)),
+                onPressed: () => unawaited(_openAboutLink(context, data.url!)),
                 icon: const Icon(KickIcons.openInNew),
                 color: scheme.onSurfaceVariant,
                 visualDensity: VisualDensity.compact,
@@ -421,10 +421,30 @@ class _AboutHeroCard extends StatelessWidget {
   }
 }
 
-Future<void> _openAboutLink(String url) async {
+Future<void> _openAboutLink(BuildContext context, String url) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final failureMessage = context.l10n.aboutOpenLinkFailedMessage;
   final uri = Uri.tryParse(url);
   if (uri == null) {
+    _showAboutLinkOpenFailedMessage(messenger, failureMessage);
     return;
   }
-  await launchUrl(uri, mode: LaunchMode.externalApplication);
+  try {
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      _showAboutLinkOpenFailedMessage(messenger, failureMessage);
+    }
+  } catch (_) {
+    if (context.mounted) {
+      _showAboutLinkOpenFailedMessage(messenger, failureMessage);
+    }
+  }
+}
+
+void _showAboutLinkOpenFailedMessage(ScaffoldMessengerState? messenger, String failureMessage) {
+  if (messenger == null) {
+    return;
+  }
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(SnackBar(content: Text(failureMessage)));
 }
