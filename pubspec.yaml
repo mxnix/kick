@@ -89,3 +89,4 @@ flutter:
     - windows/runner/resources/app_icon.ico
     - static/github/logo/logo.png
     - static/github/logo/linux.png
+    - assets/st/logo.png

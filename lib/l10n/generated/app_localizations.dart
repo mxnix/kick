@@ -369,6 +369,18 @@ abstract class AppLocalizations {
   /// **'DiceBear Identicon'**
   String get accountAvatarDiceBearTitle;
 
+  /// No description provided for @accountAvatarStandardAvatarsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard avatars'**
+  String get accountAvatarStandardAvatarsTitle;
+
+  /// No description provided for @accountAvatarApplyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get accountAvatarApplyButton;
+
   /// No description provided for @accountAvatarDiceBearLicense.
   ///
   /// In en, this message translates to:
@@ -884,6 +896,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'System'**
   String get themeModeSystem;
+
+  /// No description provided for @themeModeSystemShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get themeModeSystemShort;
 
   /// No description provided for @themeModeLight.
   ///

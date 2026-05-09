@@ -91,94 +91,21 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     buildAddButton(fullWidth: true),
                   ],
                   if (accounts.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    KickPanel(
-                      tone: KickPanelTone.soft,
-                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                      child: LayoutBuilder(
-                        builder: (context, panelConstraints) {
-                          final useHorizontalControls = panelConstraints.maxWidth >= 760;
-                          final searchField = TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(KickIcons.search),
-                              hintText: l10n.accountsSearchHint,
-                              suffixIcon: hasSearch
-                                  ? IconButton(
-                                      onPressed: _clearSearch,
-                                      tooltip: MaterialLocalizations.of(context).clearButtonTooltip,
-                                      icon: const Icon(KickIcons.clear),
-                                    )
-                                  : null,
-                            ),
-                            onChanged: (value) {
-                              setState(() => _query = value);
-                            },
-                          );
-                          final sortField = DropdownButtonFormField<_AccountSortOption>(
-                            initialValue: _sortOption,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              labelText: l10n.accountsSortLabel,
-                              prefixIcon: const Icon(KickIcons.sort),
-                            ),
-                            items: _AccountSortOption.values
-                                .map(
-                                  (option) => DropdownMenuItem<_AccountSortOption>(
-                                    value: option,
-                                    child: Text(_accountSortOptionLabel(l10n, option)),
-                                  ),
-                                )
-                                .toList(growable: false),
-                            onChanged: (value) {
-                              if (value == null) {
-                                return;
-                              }
-                              setState(() => _sortOption = value);
-                            },
-                          );
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (useHorizontalControls)
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(child: searchField),
-                                    const SizedBox(width: 12),
-                                    SizedBox(width: 260, child: sortField),
-                                  ],
-                                )
-                              else ...[
-                                searchField,
-                                const SizedBox(height: 12),
-                                sortField,
-                              ],
-                              const SizedBox(height: 14),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  KickBadge(
-                                    label: l10n.accountsTotalCount(accounts.length),
-                                    leading: const Icon(KickIcons.manageAccounts),
-                                  ),
-                                  KickBadge(
-                                    label: l10n.activeAccounts(filteredEnabledCount),
-                                    leading: const Icon(KickIcons.check),
-                                  ),
-                                  KickBadge(
-                                    label: l10n.accountsFilteredCount(filteredAccounts.length),
-                                    leading: const Icon(KickIcons.filter),
-                                    emphasis: hasSearch,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                    const SizedBox(height: 20),
+                    _AccountsControlsBar(
+                      searchController: _searchController,
+                      hasSearch: hasSearch,
+                      onSearchChanged: (value) => setState(() => _query = value),
+                      onClearSearch: _clearSearch,
+                      sortOption: _sortOption,
+                      onSortChanged: (value) => setState(() => _sortOption = value),
+                    ),
+                    const SizedBox(height: 14),
+                    _AccountsMetricsBar(
+                      totalCount: accounts.length,
+                      activeCount: filteredEnabledCount,
+                      filteredCount: filteredAccounts.length,
+                      highlightFiltered: hasSearch,
                     ),
                   ],
                   const SizedBox(height: 24),
@@ -286,6 +213,288 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   }
 }
 
+class _AccountsControlsBar extends StatelessWidget {
+  const _AccountsControlsBar({
+    required this.searchController,
+    required this.hasSearch,
+    required this.onSearchChanged,
+    required this.onClearSearch,
+    required this.sortOption,
+    required this.onSortChanged,
+  });
+
+  final TextEditingController searchController;
+  final bool hasSearch;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onClearSearch;
+  final _AccountSortOption sortOption;
+  final ValueChanged<_AccountSortOption> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final materialLocalizations = MaterialLocalizations.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(KickIcons.search),
+                hintText: l10n.accountsSearchHint,
+                border: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                filled: false,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
+                suffixIcon: hasSearch
+                    ? IconButton(
+                        onPressed: onClearSearch,
+                        tooltip: materialLocalizations.clearButtonTooltip,
+                        icon: const Icon(KickIcons.clear),
+                      )
+                    : null,
+              ),
+              onChanged: onSearchChanged,
+            ),
+          ),
+          const SizedBox(width: 4),
+          _AccountsSortMenu(sortOption: sortOption, onSortChanged: onSortChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountsSortMenu extends StatelessWidget {
+  const _AccountsSortMenu({required this.sortOption, required this.onSortChanged});
+
+  final _AccountSortOption sortOption;
+  final ValueChanged<_AccountSortOption> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+
+    return MenuAnchor(
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(scheme.surfaceContainerHigh),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        side: WidgetStatePropertyAll(
+          BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.42)),
+        ),
+      ),
+      menuChildren: [
+        for (final option in _AccountSortOption.values)
+          MenuItemButton(
+            leadingIcon: Icon(
+              option == sortOption ? Icons.check_rounded : null,
+              size: 18,
+              color: option == sortOption ? scheme.primary : null,
+            ),
+            onPressed: () => onSortChanged(option),
+            child: Text(_accountSortOptionLabel(l10n, option)),
+          ),
+      ],
+      builder: (context, controller, child) {
+        return Tooltip(
+          message: l10n.accountsSortLabel,
+          child: IconButton(
+            onPressed: () {
+              if (controller.isOpen) {
+                controller.close();
+              } else {
+                controller.open();
+              }
+            },
+            icon: const Icon(KickIcons.sort),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AccountsMetricsBar extends StatelessWidget {
+  const _AccountsMetricsBar({
+    required this.totalCount,
+    required this.activeCount,
+    required this.filteredCount,
+    required this.highlightFiltered,
+  });
+
+  final int totalCount;
+  final int activeCount;
+  final int filteredCount;
+  final bool highlightFiltered;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    Widget buildSegment({
+      required IconData icon,
+      required String label,
+      required String value,
+      bool emphasized = false,
+    }) {
+      final labelColor = emphasized ? scheme.primary : scheme.onSurfaceVariant;
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 15, color: labelColor),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.labelSmall?.copyWith(color: labelColor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: textTheme.titleMedium?.copyWith(
+                  color: emphasized ? scheme.primary : scheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget buildDivider() {
+      return Container(width: 1, height: 34, color: scheme.outlineVariant.withValues(alpha: 0.38));
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.28)),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            buildSegment(
+              icon: KickIcons.manageAccounts,
+              label: _accountsMetricLabel(l10n.accountsTotalCount(totalCount)),
+              value: '$totalCount',
+            ),
+            buildDivider(),
+            buildSegment(
+              icon: KickIcons.check,
+              label: _accountsMetricLabel(l10n.activeAccounts(activeCount)),
+              value: '$activeCount',
+            ),
+            buildDivider(),
+            buildSegment(
+              icon: KickIcons.filter,
+              label: _accountsMetricLabel(l10n.accountsFilteredCount(filteredCount)),
+              value: '$filteredCount',
+              emphasized: highlightFiltered,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _accountsMetricLabel(String combined) {
+    final colon = combined.lastIndexOf(':');
+    if (colon <= 0) {
+      return combined;
+    }
+    return combined.substring(0, colon).trim();
+  }
+}
+
+class _AccountStatusDot extends StatelessWidget {
+  const _AccountStatusDot({required this.color, required this.tooltip});
+
+  final Color color;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+    );
+  }
+}
+
+class _AccountProviderInlineBadge extends StatelessWidget {
+  const _AccountProviderInlineBadge({required this.provider});
+
+  final AccountProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final label = provider == AccountProvider.kiro
+        ? l10n.accountProviderKiro
+        : l10n.accountProviderGemini;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.36)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconTheme(
+            data: IconThemeData(size: 14, color: scheme.onSurfaceVariant),
+            child: ProviderIcon(provider: provider),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AccountCard extends ConsumerWidget {
   const _AccountCard({required this.account});
 
@@ -367,15 +576,49 @@ class _AccountCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(account.label, style: textTheme.titleLarge),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _AccountStatusDot(color: statusTint, tooltip: statusLabel),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            account.label,
+                            style: textTheme.titleLarge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _AccountProviderInlineBadge(provider: account.provider),
+                      ],
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       account.displayIdentity,
                       style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    if (account.provider != AccountProvider.kiro) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        account.projectId.trim().isEmpty
+                            ? l10n.projectIdAutoChip
+                            : l10n.projectIdChip(account.projectId),
+                        style: textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
               Switch(
                 value: account.enabled,
                 onChanged: (value) {
@@ -395,28 +638,16 @@ class _AccountCard extends ConsumerWidget {
             runSpacing: 8,
             children: [
               KickBadge(
-                label: account.provider == AccountProvider.kiro
-                    ? l10n.accountProviderKiro
-                    : l10n.accountProviderGemini,
-                leading: ProviderIcon(provider: account.provider),
-              ),
-              if (account.provider != AccountProvider.kiro)
-                KickBadge(
-                  label: account.projectId.trim().isEmpty
-                      ? l10n.projectIdAutoChip
-                      : l10n.projectIdChip(account.projectId),
-                  leading: const Icon(KickIcons.badge),
-                ),
-              KickBadge(
                 label: l10n.priorityChip(priorityLabel),
                 leading: const Icon(KickIcons.lowPriority),
               ),
-              KickBadge(
-                label: statusLabel,
-                leading: Icon(statusIcon, size: 16),
-                emphasis: statusEmphasis,
-                tint: statusTint,
-              ),
+              if (!statusEmphasis || !account.enabled)
+                KickBadge(
+                  label: statusLabel,
+                  leading: Icon(statusIcon, size: 16),
+                  emphasis: statusEmphasis,
+                  tint: statusTint,
+                ),
               if (showRuntimeNoticeBadge)
                 KickBadge(
                   label: _accountRuntimeNoticeStatusLabel(l10n, account.lastQuotaSnapshot!),
@@ -743,57 +974,125 @@ class _AvatarPickerDialog extends StatefulWidget {
 
 class _AvatarPickerDialogState extends State<_AvatarPickerDialog> {
   bool _pickingFile = false;
+  String? _selectedSeed;
+  String? _customFileUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final seeds = _avatarSeedOptions(widget.account);
+    final currentAvatar = widget.account.avatarUrl?.trim();
+    if (currentAvatar != null && currentAvatar.isNotEmpty) {
+      if (_isFileAvatarUrl(currentAvatar)) {
+        _customFileUrl = currentAvatar;
+      } else {
+        for (final seed in seeds) {
+          if (_diceBearAvatarUrl(seed) == currentAvatar) {
+            _selectedSeed = seed;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  bool get _hasSelection => _selectedSeed != null || _customFileUrl != null;
+
+  String? _selectedUrl() {
+    if (_customFileUrl != null) {
+      return _customFileUrl;
+    }
+    if (_selectedSeed != null) {
+      return _diceBearAvatarUrl(_selectedSeed!);
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     final seeds = _avatarSeedOptions(widget.account);
+    final previewUrl = _selectedUrl();
+    const contentPadding = EdgeInsets.fromLTRB(24, 16, 24, 16);
+    const maxContentWidth = 380.0;
+    const minDialogWidth = 280.0;
+    const dialogHorizontalInset = 40.0 * 2;
+    const avatarColumns = 3;
+    const avatarGap = 10.0;
+    final contentWidth =
+        (MediaQuery.sizeOf(context).width - dialogHorizontalInset - contentPadding.horizontal)
+            .clamp(minDialogWidth - contentPadding.horizontal, maxContentWidth)
+            .toDouble();
+    final avatarTileSize = ((contentWidth - (avatarGap * (avatarColumns - 1))) / avatarColumns)
+        .clamp(72.0, 120.0)
+        .toDouble();
 
     return AlertDialog(
       icon: const Icon(Icons.account_circle_rounded),
       title: Text(l10n.accountAvatarDialogTitle),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
+      contentPadding: contentPadding,
+      content: SizedBox(
+        width: contentWidth,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: _AccountAvatarImage(account: widget.account, size: 132, radius: 34)),
+              Center(
+                child: _AvatarPickerPreview(
+                  account: widget.account,
+                  selectedUrl: previewUrl,
+                  size: 104,
+                  radius: 28,
+                ),
+              ),
               const SizedBox(height: 18),
-              Text(l10n.accountAvatarDiceBearTitle, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 10),
+              Text(
+                l10n.accountAvatarStandardAvatarsTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
               Wrap(
-                spacing: 10,
-                runSpacing: 10,
+                spacing: avatarGap,
+                runSpacing: avatarGap,
                 children: [
                   for (final seed in seeds)
-                    InkWell(
-                      borderRadius: BorderRadius.circular(22),
+                    _AvatarOptionTile(
+                      url: _diceBearAvatarUrl(seed),
+                      size: avatarTileSize,
+                      selected: _selectedSeed == seed && _customFileUrl == null,
                       onTap: () {
                         KickHaptics.selection();
-                        Navigator.of(context).pop(_diceBearAvatarUrl(seed));
+                        setState(() {
+                          _selectedSeed = seed;
+                          _customFileUrl = null;
+                        });
                       },
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.42)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: _NetworkAvatarPreview(url: _diceBearAvatarUrl(seed)),
-                        ),
-                      ),
                     ),
                 ],
               ),
               const SizedBox(height: 16),
-              Text(
-                l10n.accountAvatarDiceBearLicense,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: _pickingFile ? null : _pickFileAvatar,
+                    icon: _pickingFile
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: KickLoadingIndicator(size: 18, contained: false),
+                          )
+                        : const Icon(Icons.image_rounded, size: 18),
+                    label: Text(l10n.accountAvatarChooseFileButton),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _pickingFile ? null : () => Navigator.of(context).pop(null),
+                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                    label: Text(l10n.accountAvatarResetButton),
+                    style: TextButton.styleFrom(foregroundColor: scheme.onSurfaceVariant),
+                  ),
+                ],
               ),
             ],
           ),
@@ -804,20 +1103,11 @@ class _AvatarPickerDialogState extends State<_AvatarPickerDialog> {
           onPressed: _pickingFile ? null : () => Navigator.of(context).pop(_avatarPickerCancelled),
           child: Text(l10n.cancelButton),
         ),
-        TextButton.icon(
-          onPressed: _pickingFile ? null : _pickFileAvatar,
-          icon: _pickingFile
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: KickLoadingIndicator(size: 18, contained: false),
-                )
-              : const Icon(Icons.image_rounded),
-          label: Text(l10n.accountAvatarChooseFileButton),
-        ),
-        FilledButton.icon(
-          onPressed: _pickingFile ? null : () => Navigator.of(context).pop(null),
-          icon: const Icon(Icons.restart_alt_rounded),
-          label: Text(l10n.accountAvatarResetToDiceBearButton),
+        FilledButton(
+          onPressed: _pickingFile || !_hasSelection
+              ? null
+              : () => Navigator.of(context).pop(_selectedUrl()),
+          child: Text(l10n.accountAvatarApplyButton),
         ),
       ],
     );
@@ -838,25 +1128,124 @@ class _AvatarPickerDialogState extends State<_AvatarPickerDialog> {
         setState(() => _pickingFile = false);
         return;
       }
-      Navigator.of(context).pop(Uri.file(path).toString());
+      setState(() {
+        _customFileUrl = Uri.file(path).toString();
+        _selectedSeed = null;
+        _pickingFile = false;
+      });
     } finally {
-      if (mounted) {
+      if (mounted && _pickingFile) {
         setState(() => _pickingFile = false);
       }
     }
   }
 }
 
-class _NetworkAvatarPreview extends StatelessWidget {
-  const _NetworkAvatarPreview({required this.url});
+class _AvatarPickerPreview extends StatelessWidget {
+  const _AvatarPickerPreview({
+    required this.account,
+    required this.selectedUrl,
+    required this.size,
+    required this.radius,
+  });
 
-  final String url;
+  final AccountProfile account;
+  final String? selectedUrl;
+  final double size;
+  final double radius;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(width: 58, height: 58, child: Image.network(url, fit: BoxFit.cover)),
+    final scheme = Theme.of(context).colorScheme;
+    Widget image;
+    if (selectedUrl == null || selectedUrl!.isEmpty) {
+      image = _AccountAvatarImage(account: account, size: size, radius: radius);
+    } else if (_isFileAvatarUrl(selectedUrl!)) {
+      image = ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Image.file(File.fromUri(Uri.parse(selectedUrl!)), fit: BoxFit.cover),
+        ),
+      );
+    } else {
+      image = ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Image.network(selectedUrl!, fit: BoxFit.cover),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius + 4),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.32), width: 1.5),
+      ),
+      child: image,
+    );
+  }
+}
+
+class _AvatarOptionTile extends StatelessWidget {
+  const _AvatarOptionTile({
+    required this.url,
+    required this.size,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String url;
+  final double size;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: selected ? scheme.primary : scheme.outlineVariant.withValues(alpha: 0.42),
+                  width: selected ? 2 : 1,
+                ),
+                color: selected ? scheme.primary.withValues(alpha: 0.08) : Colors.transparent,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(url, fit: BoxFit.cover),
+                ),
+              ),
+            ),
+            if (selected)
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(color: scheme.primary, shape: BoxShape.circle),
+                  child: Icon(Icons.check_rounded, size: 14, color: scheme.onPrimary),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

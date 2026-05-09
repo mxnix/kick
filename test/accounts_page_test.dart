@@ -382,7 +382,8 @@ void main() {
 
     expect(find.text('Primary'), findsOneWidget);
     expect(find.text('Reserve'), findsNothing);
-    expect(find.text(enL10n.accountsFilteredCount(1)), findsOneWidget);
+    // The metrics bar shows just the count as a number (filter segment).
+    expect(find.descendant(of: find.byType(AccountsPage), matching: find.text('1')), findsWidgets);
   });
 
   testWidgets('sorts accounts by recent activity', (tester) async {
@@ -435,7 +436,8 @@ void main() {
 
     expect(tester.getTopLeft(alpha).dy, lessThan(tester.getTopLeft(beta).dy));
 
-    await tester.tap(find.text(enL10n.accountsSortPriority));
+    // Open sort menu via the sort icon button.
+    await tester.tap(find.byTooltip(enL10n.accountsSortLabel));
     await tester.pumpAndSettle();
     await tester.tap(find.text(enL10n.accountsSortRecentActivity).last);
     await tester.pumpAndSettle();

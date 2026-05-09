@@ -275,7 +275,6 @@ class _ProxyStatusHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final scheme = Theme.of(context).colorScheme;
 
     return KickPanel(
       tone: KickPanelTone.soft,
@@ -284,17 +283,12 @@ class _ProxyStatusHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              KickBadge(
-                label: l10n.embeddedProxyTitle,
-                leading: const Icon(KickIcons.hub),
-                emphasis: running,
-              ),
-              if (showInlineStatus) ...[const Spacer(), _StatusPill(running: running)],
-            ],
-          ),
-          const SizedBox(height: 18),
+          if (showInlineStatus)
+            Align(
+              alignment: Alignment.centerRight,
+              child: _StatusPill(running: running),
+            ),
+          if (showInlineStatus) const SizedBox(height: 14),
           _QuickAccessTile(
             title: l10n.proxyEndpointTitle,
             value: proxyEndpoint,
@@ -322,54 +316,31 @@ class _ProxyStatusHero extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              KickBadge(label: activeAccountsText, leading: const Icon(KickIcons.accounts)),
-              KickBadge(
-                label: '${l10n.uptimeTitle}: $uptimeText',
-                leading: const Icon(KickIcons.schedule),
-                tint: scheme.secondary,
-              ),
-            ],
+          _HomeMetricsGrid(
+            activeAccountsText: activeAccountsText,
+            uptimeText: uptimeText,
+            uptimeTitle: l10n.uptimeTitle,
           ),
           const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final horizontal = constraints.maxWidth >= 560;
-              final startButton = KickPrimaryAction(
-                label: primaryActionLabel,
-                icon: primaryActionIcon,
-                fullWidth: true,
-                busy: startPending,
-                onPressed: onPrimaryAction,
-              );
-              final sillyTavernButton = _SillyTavernActionButton(
-                label: l10n.pushSillyTavernButton,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _SillyTavernActionButton(
+                tooltip: l10n.pushSillyTavernButton,
                 busy: pushSillyTavernBusy,
                 onPressed: onPushSillyTavern,
-              );
-
-              if (!horizontal) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [startButton, const SizedBox(height: 10), sillyTavernButton],
-                );
-              }
-
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: startButton),
-                  const SizedBox(width: 10),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 220),
-                    child: sillyTavernButton,
-                  ),
-                ],
-              );
-            },
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: KickPrimaryAction(
+                  label: primaryActionLabel,
+                  icon: primaryActionIcon,
+                  fullWidth: true,
+                  busy: startPending,
+                  onPressed: onPrimaryAction,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -377,42 +348,156 @@ class _ProxyStatusHero extends StatelessWidget {
   }
 }
 
-const _sillyTavernLogoUrl = 'https://sillytavern.app/img/logo.png';
+const _sillyTavernLogoAssetPath = 'assets/st/logo.png';
 
 class _SillyTavernActionButton extends StatelessWidget {
   const _SillyTavernActionButton({
-    required this.label,
+    required this.tooltip,
     required this.busy,
     required this.onPressed,
   });
 
-  final String label;
+  final String tooltip;
   final bool busy;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return OutlinedButton.icon(
-      onPressed: busy ? null : onPressed,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 54),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.72)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    final button = Material(
+      color: scheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: InkWell(
+        onTap: busy ? null : onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: busy
+                ? const KickLoadingIndicator(size: 18, contained: false)
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Image.asset(
+                      _sillyTavernLogoAssetPath,
+                      width: 20,
+                      height: 20,
+                      filterQuality: FilterQuality.high,
+                      errorBuilder: (_, _, _) => const Icon(KickIcons.link, size: 20),
+                    ),
+                  ),
+          ),
+        ),
       ),
-      icon: busy
-          ? const KickLoadingIndicator(size: 22, contained: false)
-          : ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.network(
-                _sillyTavernLogoUrl,
-                width: 22,
-                height: 22,
-                errorBuilder: (_, _, _) => const Icon(KickIcons.link, size: 22),
-              ),
+    );
+
+    return Tooltip(message: tooltip, child: button);
+  }
+}
+
+class _HomeMetricsGrid extends StatelessWidget {
+  const _HomeMetricsGrid({
+    required this.activeAccountsText,
+    required this.uptimeText,
+    required this.uptimeTitle,
+  });
+
+  final String activeAccountsText;
+  final String uptimeText;
+  final String uptimeTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final activeLabel = _splitLabelValue(activeAccountsText, fallbackLabel: l10n.navAccounts);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _HomeMetricInline(
+              icon: KickIcons.accounts,
+              label: activeLabel.$1,
+              value: activeLabel.$2,
             ),
-      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          Container(
+            width: 1,
+            height: 24,
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            color: scheme.outlineVariant.withValues(alpha: 0.32),
+          ),
+          Expanded(
+            child: _HomeMetricInline(
+              icon: KickIcons.schedule,
+              label: uptimeTitle,
+              value: uptimeText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  (String, String) _splitLabelValue(String combined, {required String fallbackLabel}) {
+    final colon = combined.lastIndexOf(':');
+    if (colon <= 0 || colon == combined.length - 1) {
+      return (fallbackLabel, combined.trim());
+    }
+    final label = combined.substring(0, colon).trim();
+    final value = combined.substring(colon + 1).trim();
+    return (label.isEmpty ? fallbackLabel : label, value);
+  }
+}
+
+class _HomeMetricInline extends StatelessWidget {
+  const _HomeMetricInline({required this.icon, required this.label, required this.value});
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: scheme.onSurfaceVariant),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -477,10 +562,11 @@ class _SillyTavernPushDialogState extends State<_SillyTavernPushDialog> {
     return AlertDialog(
       icon: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          _sillyTavernLogoUrl,
+        child: Image.asset(
+          _sillyTavernLogoAssetPath,
           width: 34,
           height: 34,
+          filterQuality: FilterQuality.high,
           errorBuilder: (_, _, _) => const Icon(KickIcons.link),
         ),
       ),

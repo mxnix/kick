@@ -37,8 +37,8 @@ class SettingsAppearanceSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.languageLabel, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
+          _SettingsSubsectionHeader(label: l10n.languageLabel),
+          const SizedBox(height: 10),
           DropdownButtonFormField<Locale?>(
             key: ValueKey(controller.appLocale?.languageCode ?? 'system'),
             initialValue: controller.appLocale,
@@ -56,15 +56,15 @@ class SettingsAppearanceSection extends StatelessWidget {
             onChanged: controller.setAppLocale,
           ),
           const SizedBox(height: 18),
-          Text(l10n.themeLabel, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
+          _SettingsSubsectionHeader(label: l10n.themeLabel),
+          const SizedBox(height: 10),
           SegmentedButton<ThemeMode>(
             expandedInsets: EdgeInsets.zero,
             showSelectedIcon: false,
             segments: [
               ButtonSegment(
                 value: ThemeMode.system,
-                label: Text(l10n.themeModeSystem),
+                label: Text(l10n.themeModeSystemShort),
                 icon: const Icon(Icons.brightness_auto_rounded),
               ),
               ButtonSegment(
@@ -82,8 +82,8 @@ class SettingsAppearanceSection extends StatelessWidget {
             onSelectionChanged: (value) => controller.setThemeMode(value.first),
           ),
           const SizedBox(height: 18),
-          Text(l10n.fontLabel, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
+          _SettingsSubsectionHeader(label: l10n.fontLabel),
+          const SizedBox(height: 10),
           SegmentedButton<bool>(
             expandedInsets: EdgeInsets.zero,
             showSelectedIcon: false,
@@ -110,8 +110,8 @@ class SettingsAppearanceSection extends StatelessWidget {
             onChanged: controller.setUseDynamicColor,
           ),
           const SizedBox(height: 18),
-          Text(l10n.loggingLabel, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
+          _SettingsSubsectionHeader(label: l10n.loggingLabel),
+          const SizedBox(height: 10),
           SegmentedButton<KickLogVerbosity>(
             expandedInsets: EdgeInsets.zero,
             showSelectedIcon: false,
@@ -123,7 +123,7 @@ class SettingsAppearanceSection extends StatelessWidget {
             selected: {controller.verbosity},
             onSelectionChanged: (value) => controller.setVerbosity(value.first),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           TextField(
             controller: controller.logRetentionController,
             keyboardType: TextInputType.number,
@@ -133,7 +133,7 @@ class SettingsAppearanceSection extends StatelessWidget {
               errorText: controller.logRetentionValidationError(l10n),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           SettingToggleCard(
             title: l10n.unsafeRawLoggingTitle,
             subtitle: l10n.unsafeRawLoggingSubtitle,
@@ -148,7 +148,7 @@ class SettingsAppearanceSection extends StatelessWidget {
               title: l10n.windowsTrayTitle,
               subtitle: l10n.windowsTraySubtitle,
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
             SettingToggleCard(
               title: l10n.windowsLaunchAtStartupTitle,
               subtitle: l10n.windowsLaunchAtStartupSubtitle,
@@ -168,6 +168,23 @@ String _settingsLanguageLabel(KickLocalizations l10n, Locale locale) {
     'en' => l10n.languageOptionEnglish,
     _ => locale.toLanguageTag(),
   };
+}
+
+class _SettingsSubsectionHeader extends StatelessWidget {
+  const _SettingsSubsectionHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Text(
+      label,
+      style: Theme.of(
+        context,
+      ).textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 0.4),
+    );
+  }
 }
 
 class SettingsNetworkSection extends StatelessWidget {

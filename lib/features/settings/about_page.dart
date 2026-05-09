@@ -9,13 +9,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/app_metadata.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../core/theme/kick_icons.dart';
-import '../../core/theme/kick_theme.dart';
 import '../../l10n/kick_localizations.dart';
 import '../app_shell/app_shell.dart';
 import '../app_state/providers.dart';
 import '../shared/app_update_banner.dart';
 import '../shared/kick_actions.dart';
-import '../shared/kick_haptics.dart';
 import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
 import 'app_update_checker.dart';
@@ -53,7 +51,7 @@ class AboutPage extends ConsumerWidget {
               onRetry: () => ref.invalidate(appUpdateQueryProvider),
             ),
             const SizedBox(height: 14),
-            _AboutSettingToggle(
+            _AboutAnalyticsCard(
               title: l10n.aboutAnalyticsTitle,
               subtitle: l10n.aboutAnalyticsSubtitle,
               value: settings.analyticsConsentEnabled,
@@ -64,7 +62,7 @@ class AboutPage extends ConsumerWidget {
               },
             ),
             const SizedBox(height: 14),
-            _AboutInfoGrid(
+            _AboutInfoList(
               cards: [
                 _AboutInfoCardData(
                   icon: KickIcons.verifiedUser,
@@ -105,41 +103,128 @@ class AboutPage extends ConsumerWidget {
   }
 }
 
-class _AboutInfoGrid extends StatelessWidget {
-  const _AboutInfoGrid({required this.cards});
+class _AboutAnalyticsCard extends StatelessWidget {
+  const _AboutAnalyticsCard({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return KickPanel(
+      tone: KickPanelTone.soft,
+      padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                if (subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Switch(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutInfoList extends StatelessWidget {
+  const _AboutInfoList({required this.cards});
 
   final List<_AboutInfoCardData> cards;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final useTwoColumns = constraints.maxWidth >= 760;
-        if (!useTwoColumns) {
-          return Column(
-            children: [
-              for (final entry in cards.indexed) ...[
-                if (entry.$1 > 0) const SizedBox(height: 14),
-                _AboutInfoCard(data: entry.$2),
-              ],
-            ],
-          );
-        }
-
-        final spacing = 14.0;
-        final width = (constraints.maxWidth - spacing) / 2;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final card in cards)
-              SizedBox(
-                width: width,
-                child: _AboutInfoCard(data: card),
+    final scheme = Theme.of(context).colorScheme;
+    return KickPanel(
+      tone: KickPanelTone.soft,
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final entry in cards.indexed) ...[
+            if (entry.$1 > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: scheme.outlineVariant.withValues(alpha: 0.32),
+                indent: 20,
+                endIndent: 20,
               ),
+            _AboutInfoRow(data: entry.$2),
           ],
-        );
-      },
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutInfoRow extends StatelessWidget {
+  const _AboutInfoRow({required this.data});
+
+  final _AboutInfoCardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(data.icon, color: scheme.onSurfaceVariant, size: 22),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(data.title, style: textTheme.titleSmall),
+                const SizedBox(height: 4),
+                Text(
+                  data.message,
+                  style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          if (data.url != null && data.actionLabel != null) ...[
+            const SizedBox(width: 8),
+            Tooltip(
+              message: data.actionLabel!,
+              child: IconButton(
+                onPressed: () => unawaited(_openAboutLink(data.url!)),
+                icon: const Icon(KickIcons.openInNew),
+                color: scheme.onSurfaceVariant,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -158,47 +243,6 @@ class _AboutInfoCardData {
   final String message;
   final String? actionLabel;
   final String? url;
-}
-
-class _AboutInfoCard extends StatelessWidget {
-  const _AboutInfoCard({required this.data});
-
-  final _AboutInfoCardData data;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return KickPanel(
-      tone: KickPanelTone.soft,
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(data.icon, color: scheme.onSurfaceVariant),
-              const SizedBox(width: 10),
-              Expanded(child: Text(data.title, style: Theme.of(context).textTheme.titleMedium)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            data.message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          if (data.url != null && data.actionLabel != null) ...[
-            const SizedBox(height: 14),
-            KickSecondaryAction(
-              onPressed: () => unawaited(_openAboutLink(data.url!)),
-              icon: KickIcons.openInNew,
-              label: data.actionLabel!,
-              variant: KickSecondaryActionVariant.text,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
 class _AboutUpdatesCard extends StatelessWidget {
@@ -264,7 +308,7 @@ class _AboutActionCard extends StatelessWidget {
 
     return KickPanel(
       tone: KickPanelTone.soft,
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -273,19 +317,18 @@ class _AboutActionCard extends StatelessWidget {
               Icon(icon, color: tint),
               const SizedBox(width: 10),
               Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
+              KickSecondaryAction(
+                onPressed: onPressed,
+                icon: onPressed == null ? KickIcons.hourglass : KickIcons.refresh,
+                label: actionLabel,
+                variant: KickSecondaryActionVariant.text,
+              ),
             ],
           ),
           const SizedBox(height: 10),
           Text(
             message,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 14),
-          KickSecondaryAction(
-            onPressed: onPressed,
-            icon: onPressed == null ? KickIcons.hourglass : KickIcons.refresh,
-            label: actionLabel,
-            fullWidth: true,
           ),
         ],
       ),
@@ -329,6 +372,7 @@ class _AboutHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return KickPanel(
       tone: KickPanelTone.accent,
@@ -337,94 +381,40 @@ class _AboutHeroCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 82,
-                height: 82,
+                width: 66,
+                height: 66,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(22),
                   color: scheme.surfaceContainerHigh,
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Image.asset(kickAppIconAssetPath, fit: BoxFit.cover),
               ),
-              const SizedBox(width: 18),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(appTitle, style: Theme.of(context).textTheme.headlineMedium),
-                    const SizedBox(height: 8),
-                    KickBadge(label: versionLabel, emphasis: true),
+                    Text(appTitle, style: textTheme.headlineMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      'v$versionLabel',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontFamily: 'monospace',
+                        letterSpacing: 0.2,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          Text(
-            description,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AboutSettingToggle extends StatelessWidget {
-  const _AboutSettingToggle({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(context.kickTokens.panelRadius),
-        color: scheme.surfaceContainerLowest.withValues(alpha: 0.84),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.38)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
-                if (subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Switch(
-            value: value,
-            onChanged: (nextValue) {
-              KickHaptics.selection();
-              onChanged(nextValue);
-            },
-          ),
+          const SizedBox(height: 16),
+          Text(description, style: textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant)),
         ],
       ),
     );

@@ -157,6 +157,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountAvatarDiceBearTitle => 'DiceBear Identicon';
 
   @override
+  String get accountAvatarStandardAvatarsTitle => 'Standard avatars';
+
+  @override
+  String get accountAvatarApplyButton => 'Apply';
+
+  @override
   String get accountAvatarDiceBearLicense => 'DiceBear Identicon CC0 1.0.';
 
   @override
@@ -449,6 +455,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeModeSystem => 'System';
+
+  @override
+  String get themeModeSystemShort => 'Auto';
 
   @override
   String get themeModeLight => 'Light';
