@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -186,7 +187,13 @@ class _AnimatedShellContent extends StatefulWidget {
   State<_AnimatedShellContent> createState() => _AnimatedShellContentState();
 }
 
-class _AnimatedShellContentState extends State<_AnimatedShellContent> {
+class _AnimatedShellContentState extends State<_AnimatedShellContent>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+    value: 1,
+  );
   int _direction = 1;
 
   @override
@@ -195,35 +202,29 @@ class _AnimatedShellContentState extends State<_AnimatedShellContent> {
     if (oldWidget.location != widget.location) {
       final indexDelta = widget.selectedIndex - oldWidget.selectedIndex;
       _direction = indexDelta == 0 ? 1 : indexDelta.sign;
+      _controller.stop();
+      unawaited(_controller.forward(from: 0));
     }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.kickTokens;
-    return AnimatedSwitcher(
-      duration: tokens.mediumDuration,
-      reverseDuration: const Duration(milliseconds: 240),
-      switchInCurve: tokens.emphasizedCurve,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final currentKey = ValueKey<String>(widget.location);
-        final entering = child.key == currentKey;
-        final curve = CurvedAnimation(
-          parent: animation,
-          curve: entering ? tokens.emphasizedCurve : Curves.easeInCubic,
-        );
-        final direction = _direction == 0 ? 1 : _direction;
-        final slide = Tween<Offset>(
-          begin: Offset(entering ? direction * 0.08 : -direction * 0.08, 0),
-          end: Offset.zero,
-        ).animate(curve);
-        return FadeTransition(
-          opacity: curve,
-          child: SlideTransition(position: slide, child: child),
-        );
-      },
-      child: KeyedSubtree(key: ValueKey<String>(widget.location), child: widget.child),
+    final curve = CurvedAnimation(parent: _controller, curve: tokens.emphasizedCurve);
+    final direction = _direction == 0 ? 1 : _direction;
+    final slide = Tween<Offset>(
+      begin: Offset(direction * 0.06, 0),
+      end: Offset.zero,
+    ).animate(curve);
+    return FadeTransition(
+      opacity: curve,
+      child: SlideTransition(position: slide, child: widget.child),
     );
   }
 }
