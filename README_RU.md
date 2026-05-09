@@ -1,15 +1,23 @@
 <div align="center">
 
-<img src="static/github/logo/logo.png" alt="Логотип KiCk" width="128" height="128">
+<img src="static/github/logo/logo.png" alt="Логотип KiCk" width="112" height="112">
 
 <h1>KiCk</h1>
 
-<p align="center">
+<p>
+  <strong>Нативный локальный OpenAI-совместимый прокси для Gemini CLI и Kiro.</strong>
+</p>
+
+<p>
+  Подключайте аккаунты, запускайте локальный <code>/v1</code> адрес и используйте Gemini CLI или Kiro из инструментов, которые уже умеют работать с OpenAI API.
+</p>
+
+<p>
   <a href="https://github.com/mxnix/kick/releases/latest">
     <img src="https://img.shields.io/github/v/release/mxnix/kick?style=flat-square&color=2b90d9" alt="Последний релиз">
   </a>
-  <a href="https://github.com/mxnix/kick/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/mxnix/kick/ci.yml?style=flat-square&label=ci" alt="Состояние сборки">
+  <a href="https://github.com/mxnix/kick/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/mxnix/kick/ci.yml?style=flat-square&label=ci" alt="Состояние CI">
   </a>
   <a href="https://github.com/mxnix/kick/releases">
     <img src="https://img.shields.io/github/downloads/mxnix/kick/total?style=flat-square" alt="Загрузки">
@@ -17,90 +25,68 @@
   <a href="https://flutter.dev/">
     <img src="https://img.shields.io/badge/Flutter-02569B?style=flat-square&logo=flutter&logoColor=white" alt="На Flutter">
   </a>
-  <a href="https://github.com/mxnix/kick/blob/main/LICENSE.md">
-    <img src="https://img.shields.io/github/license/mxnix/kick?style=flat-square" alt="Лицензия">
-  </a>
   <a href="https://aur.archlinux.org/packages/kick-bin">
     <img src="https://img.shields.io/aur/version/kick-bin?style=flat-square&color=1793D1&logo=arch-linux&logoColor=white" alt="Пакет AUR">
   </a>
-  <a href="https://deepwiki.com/mxnix/kick">
-    <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
+  <a href="https://github.com/mxnix/kick/blob/main/LICENSE.md">
+    <img src="https://img.shields.io/github/license/mxnix/kick?style=flat-square" alt="Лицензия">
   </a>
 </p>
 
-<p align="center">
-  <em>Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном Flutter-приложении.</em>
-</p>
-
-<p align="center">
-  <a href="https://github.com/mxnix/kick/releases/latest">Скачать</a> |
-  <a href="docs/CONTRIBUTING.md">Как вносить изменения</a> |
-  <a href="docs/PRIVACY.md">Политика конфиденциальности</a> |
-  <a href="docs/LOCALIZATION.md">Локализация</a>
-</p>
-
-<p align="center">
-  README на английском: <a href="README.md">README.md</a>
+<p>
+  <a href="https://github.com/mxnix/kick/releases/latest"><strong>Скачать</strong></a> ·
+  <a href="#быстрый-старт">Быстрый старт</a> ·
+  <a href="#скриншоты">Скриншоты</a> ·
+  <a href="docs/PRIVACY.md">Приватность</a> ·
+  <a href="docs/CONTRIBUTING.md">Как вносить изменения</a> ·
+  <a href="README.md">English README</a>
 </p>
 
 </div>
 
 ---
 
-## Поддерживаемые платформы
+## Скриншоты
 
 <p align="center">
-  <a href="https://github.com/mxnix/kick/releases/latest">
-    <img src="static/github/logo/windows.png" alt="Скачать для Windows" width="112" height="112">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/mxnix/kick/releases/latest">
-    <img src="static/github/logo/linux.png" alt="Скачать для Linux" width="112" height="112">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/mxnix/kick/releases/latest">
-    <img src="static/github/logo/android.png" alt="Скачать для Android" width="112" height="112">
-  </a>
+  <img src="static/github/screenshots/ru_home.png" alt="Главный экран KiCk с адресом прокси, API-ключом, активными аккаунтами и кнопкой запуска" width="180">
+  <img src="static/github/screenshots/ru_accounts.png" alt="Экран аккаунтов KiCk с поиском, счетчиками, бейджем провайдера и действиями аккаунта" width="180">
+  <img src="static/github/screenshots/ru_settings.png" alt="Экран настроек KiCk с разделами внешнего вида, сети, повторов, доступа, моделей и Google Поиска" width="180">
+  <img src="static/github/screenshots/ru_logs.png" alt="Экран журнала KiCk с поиском, выгрузкой, фильтрами уровней и пустым состоянием" width="180">
 </p>
 
-## Что такое KiCk
+## Что делает KiCk
 
-KiCk поднимает у вас на устройстве локальный адрес в формате OpenAI и пересылает запросы в Gemini CLI через подключенные Google-аккаунты, а в Kiro через сессию AWS Builder ID. Приложение нужно для тех, кто хочет работать с Gemini CLI или Kiro без терминала, ручной настройки входа и отдельного локального сервера.
+KiCk поднимает на вашем устройстве локальный OpenAI-совместимый сервер и пересылает запросы в Gemini CLI через подключенные Google-аккаунты, а в Kiro через сессию AWS Builder ID. Это нативная оболочка для локального AI-прокси: аккаунты, ключи, журнал, повторы, маршрутизация моделей и запуск одной кнопкой.
+
+| Область | Что есть |
+| --- | --- |
+| Локальный API | OpenAI-совместимый адрес `http://127.0.0.1:3000/v1` |
+| Провайдеры | Gemini CLI через вход Google, Kiro через AWS Builder ID |
+| Платформы | Windows, Linux и Android |
+| Аккаунты | Несколько аккаунтов с приоритетами и обработкой доступности |
+| Приватность | Токены, настройки, ключи и журнал остаются на устройстве |
 
 ## Быстрый старт
 
-1. Скачайте последнюю версию из [раздела выпусков](https://github.com/mxnix/kick/releases/latest) или подключите Linux-репозиторий ниже.
-2. Откройте экран аккаунтов и подключите аккаунт Gemini CLI или Kiro.
-3. Если выбрали Gemini CLI, укажите идентификатор проекта в `Google Cloud`. Для Kiro завершите авторизацию через AWS Builder ID.
-4. Вернитесь на главный экран и запустите прокси.
-5. Скопируйте локальный адрес и ключ доступа, если требуется.
-6. Используйте их в своем приложении, Gemini CLI или любом другом OpenAI-совместимом клиенте.
+1. Скачайте последнюю сборку из [Releases](https://github.com/mxnix/kick/releases/latest) или подключите Linux-репозиторий ниже.
+2. Откройте **Аккаунты** и подключите аккаунт Gemini CLI или Kiro.
+3. Для Gemini CLI укажите идентификатор проекта в `Google Cloud`. Для Kiro завершите авторизацию через AWS Builder ID.
+4. Вернитесь на **Главную**, запустите прокси и скопируйте локальный адрес вместе с API-ключом.
+5. Используйте их в Gemini CLI, SillyTavern, другом OpenAI-совместимом клиенте или своем приложении.
 
-По умолчанию используется адрес `http://127.0.0.1:3000/v1`. Его можно поменять в настройках.
+По умолчанию используется адрес `http://127.0.0.1:3000/v1`. Хост, порт, доступ из локальной сети и поведение API-ключа меняются в настройках.
 
 ## Возможности
 
-- Запускает локальный адрес с запросами в формате OpenAI.
-- Работает с несколькими аккаунтами Gemini CLI и Kiro с приоритетами.
-- Подключает Gemini CLI через вход Google и Kiro через AWS Builder ID.
-- Позволяет менять адрес, порт, ключ доступа, число повторов и список моделей.
-- Показывает состояние прокси, аккаунтов и журнал работы.
-- Поддерживает фон на Android и автозапуск в трее на desktop.
-
-## Скриншоты
-
-<details>
-<summary><strong>Интерфейс</strong></summary>
-
-<p align="center">
-  <img src="static/github/screenshots/desktop_ru.png" alt="KiCk на Windows: экран управления аккаунтами" width="100%">
-</p>
-
-<p align="center">
-  <img src="static/github/screenshots/mobile_ru.png" alt="KiCk на Android: быстрый запуск локального прокси" width="100%">
-</p>
-
-</details>
+- Локальный OpenAI-совместимый прокси с `/v1/chat/completions` и `/v1/responses`.
+- Пул аккаунтов Gemini CLI и Kiro с приоритетами, повторами, временными паузами и фильтрами моделей.
+- Нативные сценарии подключения через вход Google и AWS Builder ID.
+- Настройка адреса, порта, доступа из локальной сети, ключа доступа, повторов и собственных ID моделей.
+- Отправка профиля в запущенный SillyTavern в один клик.
+- Поиск по журналу, экспорт, контроль записи сырых запросов и маскирование чувствительных данных.
+- Фоновый режим Android, поддержка трея на настольных системах и автозапуск.
+- Английский и русский интерфейс, документация и метаданные релизов.
 
 ## Поддерживаемые адреса
 
@@ -123,19 +109,18 @@ curl http://127.0.0.1:3000/v1/chat/completions \
   }'
 ```
 
-Если вы отключили проверку ключа доступа, строку с `Authorization` можно убрать.
+Если проверка ключа отключена, уберите строку с `Authorization`.
 
-## Настройки
+## Установка
 
-- Сетевые параметры: адрес, порт и доступ из локальной сети.
-- Доступ: требование ключа, просмотр и перевыпуск ключа.
-- Надежность: число повторов, задержка после ошибки `429`, временный вывод аккаунта из очереди.
-- Модели: список дополнительных моделей и список недоступных моделей для конкретного аккаунта.
-- Google: веб-поиск по умолчанию и показ источников в ответе.
-- Приложение: тема, подробность журнала, работа в фоне на Android, автозапуск на desktop.
+| Платформа | Варианты |
+| --- | --- |
+| Windows | Установщик в [Releases](https://github.com/mxnix/kick/releases/latest). |
+| Linux | AppImage, `.deb`, `.rpm`, `.pkg.tar.zst`, `.tar.gz`, APT/RPM/Pacman-репозитории или [AUR](https://aur.archlinux.org/packages/kick-bin). |
+| Android | APK в [Releases](https://github.com/mxnix/kick/releases/latest). |
 
 <details>
-<summary><strong>Установка на Linux</strong></summary>
+<summary><strong>Linux-репозитории</strong></summary>
 
 Debian, Ubuntu и Linux Mint:
 
@@ -175,7 +160,7 @@ EOF
 sudo pacman -Sy kick
 ```
 
-Или установите из [AUR](https://aur.archlinux.org/packages/kick-bin) с помощью yay или paru:
+Или установите из AUR:
 
 ```bash
 yay -S kick-bin
@@ -185,77 +170,74 @@ yay -S kick-bin
 paru -S kick-bin
 ```
 
-Также можно скачать AppImage, `.deb`, `.rpm`, `.pkg.tar.zst` или `.tar.gz` из раздела выпусков. В GNOME для трея может понадобиться расширение AppIndicator.
+В GNOME для трея может понадобиться расширение AppIndicator.
 
 </details>
 
-<details>
-<summary><strong>Приватность и данные</strong></summary>
+## Приватность
 
 - Токены входа и локальный ключ доступа хранятся в защищенном хранилище устройства.
 - Настройки, список аккаунтов и журнал работы хранятся локально.
-- Запись полных сырых данных по умолчанию отключена.
-- При сохранении и выгрузке журнала чувствительные данные маскируются.
+- Запись полных сырых запросов по умолчанию отключена.
+- При сохранении и выгрузке журнала чувствительные значения маскируются.
 - Анонимная аналитика отключена по умолчанию.
 
-Подробности: [Политика конфиденциальности](docs/PRIVACY.md).
+Полная версия: [Политика конфиденциальности](docs/PRIVACY.md).
 
-</details>
+## Если что-то не работает
 
 <details>
-<summary><strong>Если что-то не работает</strong></summary>
+<summary><strong>Частые решения</strong></summary>
 
 - Порт занят: выберите другой порт в настройках.
 - Нет активных аккаунтов: подключите аккаунт Gemini CLI или Kiro либо включите уже добавленный.
 - Истек вход в Google: переподключите аккаунт Gemini CLI.
 - Истекла сессия Kiro: переподключите аккаунт Kiro.
 - Google просит подтвердить аккаунт: откройте страницу подтверждения и войдите тем же аккаунтом.
-- Неверно указан идентификатор проекта в `Google Cloud` или отключен нужный доступ: проверьте проект и его настройки.
-- Ошибка `429`: подождите сброса ограничения или включите временный вывод проблемного аккаунта из очереди.
+- Неверный `Google Cloud` project ID или отключен нужный доступ: проверьте проект и его настройки.
+- Ошибка `429`: подождите сброса ограничения или включите временный cooldown аккаунта.
 
 </details>
 
-<details>
-<summary><strong>Сборка из исходников</strong></summary>
+## Сборка из исходников
 
-1. Установите Flutter и нужные инструменты для нужной платформы: Android, Windows или Linux.
-2. Выполните:
+<details>
+<summary><strong>Настройка разработки</strong></summary>
+
+1. Установите Flutter и нужные инструменты для целевой платформы: Android, Windows или Linux.
+2. Установите зависимости и запустите тесты:
 
 ```powershell
 flutter pub get
 flutter test
 ```
 
-3. Для запуска во время разработки используйте:
+3. Запустите приложение:
 
 ```powershell
 flutter run -d windows
 ```
 
-или
-
 ```bash
 flutter run -d linux
 ```
-
-или
 
 ```powershell
 flutter run -d android
 ```
 
-4. Для локальной сборки установщика Windows нужен Inno Setup 6:
+4. Для локальной сборки Windows-установщика нужен Inno Setup 6:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows-installer.ps1
 ```
 
-5. Для локальной сборки Linux-пакетов установите `nfpm` и `appimagetool`, затем выполните:
+5. Для локальной сборки Linux-пакетов установите `nfpm` и `appimagetool`:
 
 ```bash
 scripts/build-linux-packages.sh
 ```
 
-Подробности по сборке и выпуску: [CONTRIBUTING.md](docs/CONTRIBUTING.md).
+Подробности по сборке и выпуску: [CONTRIBUTING.md](docs/CONTRIBUTING.md). Заметки по локализации: [LOCALIZATION.md](docs/LOCALIZATION.md).
 
 </details>
