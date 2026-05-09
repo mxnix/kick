@@ -20,17 +20,8 @@ class KickBackdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color.alphaBlend(scheme.primary.withValues(alpha: 0.035), scheme.surface),
-            scheme.surface,
-          ],
-        ),
-      ),
+    return ColoredBox(
+      color: scheme.surface,
       child: SafeArea(
         top: topInset,
         bottom: bottomInset,
