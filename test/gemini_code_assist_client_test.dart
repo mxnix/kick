@@ -2900,7 +2900,7 @@ void main() {
     final client = GeminiCodeAssistClient(
       onTokensUpdated: (account, tokens) async {},
       httpClient: QueueHttpClient([
-        (request) async => http.StreamedResponse(Stream<List<int>>.empty(), 200),
+        (request) async => http.StreamedResponse(const Stream<List<int>>.empty(), 200),
       ]),
     );
 

@@ -57,7 +57,7 @@ void main() {
       turns:
           turns ??
           [
-            UnifiedTurn(role: 'user', parts: [UnifiedPart.text('Hello')]),
+            const UnifiedTurn(role: 'user', parts: [UnifiedPart.text('Hello')]),
           ],
       tools: [],
       systemInstruction: systemInstruction,
@@ -456,7 +456,7 @@ void main() {
       httpClient: QueueHttpClient([
         (request) async {
           expect(request.url.path, '/generateAssistantResponse');
-          return http.StreamedResponse(Stream<List<int>>.empty(), 200);
+          return http.StreamedResponse(const Stream<List<int>>.empty(), 200);
         },
       ]),
     );

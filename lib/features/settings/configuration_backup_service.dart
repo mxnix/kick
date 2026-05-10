@@ -1042,16 +1042,16 @@ class _InvalidBackupPasswordException implements Exception {
 
 String? _readString(Object? value) {
   return switch (value) {
-    String text => text.trim(),
+    final String text => text.trim(),
     _ => null,
   };
 }
 
 int? _readInt(Object? value) {
   return switch (value) {
-    int number => number,
-    num number => number.round(),
-    String text => int.tryParse(text.trim()),
+    final int number => number,
+    final num number => number.round(),
+    final String text => int.tryParse(text.trim()),
     _ => null,
   };
 }

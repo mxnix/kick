@@ -36,8 +36,8 @@ class WindowBootstrap {
   static Future<void> _configureWindow() async {
     await windowManager.ensureInitialized();
     final options = WindowOptions(
-      size: Size(430, 860),
-      minimumSize: Size(400, 720),
+      size: const Size(430, 860),
+      minimumSize: const Size(400, 720),
       center: true,
       title: lookupKickLocalizations().appTitle,
       backgroundColor: Colors.transparent,

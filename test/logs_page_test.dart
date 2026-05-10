@@ -76,10 +76,10 @@ class _TestApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       overrides: [appBootstrapProvider.overrideWithValue(bootstrap)],
-      child: MaterialApp(
+      child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(body: LogsPage()),
+        home: Scaffold(body: LogsPage()),
       ),
     );
   }

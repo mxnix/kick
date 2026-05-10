@@ -109,7 +109,7 @@ void main() {
           FROM accounts
           WHERE id = ?1
         ''',
-          variables: [Variable<String>('account-1')],
+          variables: [const Variable<String>('account-1')],
         )
         .getSingle();
 

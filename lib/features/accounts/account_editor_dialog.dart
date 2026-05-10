@@ -256,7 +256,7 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Container(
+                DecoratedBox(
                   decoration: BoxDecoration(
                     color: scheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(24),

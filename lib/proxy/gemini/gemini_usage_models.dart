@@ -80,8 +80,8 @@ class GeminiUsageBucket {
 
   static double _readFraction(Object? value) {
     final numeric = switch (value) {
-      num number => number.toDouble(),
-      String text => double.tryParse(text),
+      final num number => number.toDouble(),
+      final String text => double.tryParse(text),
       _ => null,
     };
 
@@ -94,8 +94,8 @@ class GeminiUsageBucket {
 
   static double? _readNumber(Object? value) {
     final numeric = switch (value) {
-      num number => number.toDouble(),
-      String text => double.tryParse(text.trim()),
+      final num number => number.toDouble(),
+      final String text => double.tryParse(text.trim()),
       _ => null,
     };
     if (numeric == null || !numeric.isFinite) {

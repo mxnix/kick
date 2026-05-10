@@ -33,7 +33,7 @@ class SettingsRepository {
     final row = await _database
         .customSelect(
           'SELECT value FROM settings WHERE key = ?1 LIMIT 1',
-          variables: [Variable<String>('api_key')],
+          variables: [const Variable<String>('api_key')],
         )
         .getSingleOrNull();
     final value = row?.read<String>('value').trim();

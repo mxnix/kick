@@ -306,7 +306,7 @@ String _readRequiredString(Object? value, {required String fieldName}) {
 
 String? _readString(Object? value) {
   return switch (value) {
-    String text => text.trim(),
+    final String text => text.trim(),
     _ => null,
   };
 }
@@ -321,18 +321,18 @@ String? _readNullableString(Object? value) {
 
 bool _readBool(Object? value, {required bool defaultValue}) {
   return switch (value) {
-    bool flag => flag,
-    String text => text.trim().toLowerCase() == 'true',
-    num number => number != 0,
+    final bool flag => flag,
+    final String text => text.trim().toLowerCase() == 'true',
+    final num number => number != 0,
     _ => defaultValue,
   };
 }
 
 int? _readInt(Object? value) {
   return switch (value) {
-    int number => number,
-    num number => number.round(),
-    String text => int.tryParse(text.trim()),
+    final int number => number,
+    final num number => number.round(),
+    final String text => int.tryParse(text.trim()),
     _ => null,
   };
 }

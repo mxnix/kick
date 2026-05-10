@@ -73,10 +73,10 @@ class _TestApp extends StatelessWidget {
         appBootstrapProvider.overrideWithValue(bootstrap),
         geminiUsageServiceProvider.overrideWithValue(usageService),
       ],
-      child: MaterialApp(
+      child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const _UsageHost(),
+        home: _UsageHost(),
       ),
     );
   }

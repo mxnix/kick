@@ -131,7 +131,7 @@ class AptabaseAnalyticsTransport implements AnalyticsTransport {
   ) async {
     final host = config.host?.trim();
     final options = host == null || host.isEmpty
-        ? InitOptions(printDebugMessages: !kReleaseMode)
+        ? const InitOptions(printDebugMessages: !kReleaseMode)
         : InitOptions(host: host, printDebugMessages: !kReleaseMode);
     await Aptabase.init(config.appKey, options, storage);
   }

@@ -30,7 +30,7 @@ void main() {
   testWidgets('kiro account card shows subtitle and credential source', (tester) async {
     final bootstrap = await _createBootstrap(
       initialAccounts: [
-        AccountProfile(
+        const AccountProfile(
           id: 'kiro-1',
           label: 'Kiro',
           email: 'AWS Builder ID',
@@ -41,7 +41,7 @@ void main() {
           credentialSourcePath: r'C:\Users\demo\AppData\Roaming\KiCk\kiro-auth-demo.json',
           enabled: true,
           priority: 0,
-          notSupportedModels: const [],
+          notSupportedModels: [],
           lastUsedAt: null,
           usageCount: 0,
           errorCount: 0,

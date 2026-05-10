@@ -149,8 +149,8 @@ bool _looksLikeInvalidRuntimeHost(String value) {
 int _runtimePortFromSettings(Map<String, Object?>? settings) {
   final raw = settings?['port'];
   final port = switch (raw) {
-    int value => value,
-    num value => value.toInt(),
+    final int value => value,
+    final num value => value.toInt(),
     _ => defaultProxyRuntimePort,
   };
   if (port < 0 || port > 65535) {
@@ -434,7 +434,7 @@ class _ProxyIsolateHost {
       return;
     }
 
-    final handler = Pipeline()
+    final handler = const Pipeline()
         .addMiddleware(_errorMiddleware(this))
         .addMiddleware(_corsMiddleware(this))
         .addHandler(_router.call);

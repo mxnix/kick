@@ -361,7 +361,7 @@ String? _readString(Map<String, Object?> json, List<String> keys) {
   for (final key in keys) {
     final value = json[key];
     final trimmed = switch (value) {
-      String text => text.trim(),
+      final String text => text.trim(),
       _ => null,
     };
     if (trimmed != null && trimmed.isNotEmpty) {

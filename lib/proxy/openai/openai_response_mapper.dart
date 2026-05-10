@@ -670,9 +670,9 @@ class OpenAiResponseMapper {
 
   static int? _parseInt(Object? value) {
     return switch (value) {
-      int integer => integer,
-      num number => number.toInt(),
-      String text => int.tryParse(text.trim()),
+      final int integer => integer,
+      final num number => number.toInt(),
+      final String text => int.tryParse(text.trim()),
       _ => null,
     };
   }

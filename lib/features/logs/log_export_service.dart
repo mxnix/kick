@@ -580,9 +580,9 @@ class LogExportService {
 
   int? _readInt(Object? value) {
     return switch (value) {
-      int number => number,
-      num number => number.round(),
-      String text => int.tryParse(text.trim()),
+      final int number => number,
+      final num number => number.round(),
+      final String text => int.tryParse(text.trim()),
       _ => null,
     };
   }

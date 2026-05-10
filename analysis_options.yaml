@@ -18,3 +18,11 @@ linter:
     avoid_void_async: true
     discarded_futures: true
     directives_ordering: true
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+    prefer_final_locals: true
+    use_decorated_box: true
+    require_trailing_commas: true
+    unawaited_futures: true
+    cancel_subscriptions: true
+    close_sinks: true

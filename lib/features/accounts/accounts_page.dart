@@ -394,7 +394,7 @@ class _AccountsMetricsBar extends StatelessWidget {
       return Container(width: 1, height: 34, color: scheme.outlineVariant.withValues(alpha: 0.38));
     }
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(18),
@@ -1421,22 +1421,24 @@ Future<void> _diagnoseProject(BuildContext context, WidgetRef ref, AccountProfil
   final l10n = context.l10n;
   final navigator = Navigator.of(context, rootNavigator: true);
 
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) => PopScope(
-      canPop: false,
-      child: AlertDialog(
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: KickLoadingIndicator(size: 24, contained: false),
-            ),
-            const SizedBox(width: 16),
-            Expanded(child: Text(l10n.accountProjectCheckInProgressMessage)),
-          ],
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: KickLoadingIndicator(size: 24, contained: false),
+              ),
+              const SizedBox(width: 16),
+              Expanded(child: Text(l10n.accountProjectCheckInProgressMessage)),
+            ],
+          ),
         ),
       ),
     ),
