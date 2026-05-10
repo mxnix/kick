@@ -46,6 +46,10 @@ AUR publishing secrets:
 
 - `AUR_SSH_PRIVATE_KEY`: a private SSH key whose public key is registered in the AUR account that can push to `kick-bin`.
 
+WinGet publishing secrets:
+
+- `WINGET_PAT`: a GitHub personal access token accepted by `wingetcreate` for opening pull requests in `microsoft/winget-pkgs`.
+
 Optional AUR publishing repository variables:
 
 - `AUR_GIT_NAME`
@@ -59,6 +63,17 @@ Command:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows-installer.ps1
+```
+
+## WinGet package
+
+The release workflow generates and submits the WinGet manifest after the GitHub release is published.
+
+For the first manual submission or a local check:
+
+```powershell
+winget validate --manifest .\manifests\n\nikzmx\KiCk\VERSION --disable-interactivity
+wingetcreate submit --prtitle "Add nikzmx.KiCk version VERSION" .\manifests\n\nikzmx\KiCk\VERSION
 ```
 
 ## Linux packages

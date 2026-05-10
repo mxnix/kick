@@ -739,41 +739,200 @@ jobs:
           git commit -m "Update to ${{ needs.metadata.outputs.version }}"
           git push origin master
 
-  # TODO: Temporarily disabled. Re-enable when WinGet publishing is ready again.
-  # publish-winget-package:
-  #   name: Publish WinGet package
-  #   runs-on: windows-latest
-  #   needs:
-  #     - metadata
-  #     - publish-release
-  #
-  #   steps:
-  #     - name: Validate WinGet publishing secret
-  #       shell: pwsh
-  #       env:
-  #         WINGET_PAT: ${{ secrets.WINGET_PAT }}
-  #       run: |
-  #         if ([string]::IsNullOrWhiteSpace($env:WINGET_PAT)) {
-  #           Write-Error "Missing required secret: WINGET_PAT"
-  #           exit 1
-  #         }
-  #
-  #     - name: Download wingetcreate
-  #       shell: pwsh
-  #       run: |
-  #         Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
-  #
-  #     - name: Submit package update to WinGet
-  #       shell: pwsh
-  #       env:
-  #         WINGET_PAT: ${{ secrets.WINGET_PAT }}
-  #       run: |
-  #         $version = "${{ needs.metadata.outputs.version }}"
-  #         $tag = "${{ needs.metadata.outputs.tag }}"
-  #         $url = "https://github.com/${{ github.repository }}/releases/download/${tag}/kick-windows-${version}-setup.exe"
-  #
-  #         .\wingetcreate.exe update nikzmx.KiCk `
-  #           --version $version `
-  #           --urls $url `
-  #           --submit `
-  #           --token $env:WINGET_PAT
+  publish-winget-package:
+    name: Publish WinGet package
+    runs-on: windows-latest
+    needs:
+      - metadata
+      - publish-release
+
+    steps:
+      - name: Validate WinGet publishing secret
+        shell: pwsh
+        env:
+          WINGET_PAT: ${{ secrets.WINGET_PAT }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINGET_PAT)) {
+            Write-Error "Missing required secret: WINGET_PAT"
+            exit 1
+          }
+
+      - name: Download wingetcreate
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+      - name: Generate WinGet manifest
+        id: winget_manifest
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+
+          $version = "${{ needs.metadata.outputs.version }}"
+          $tag = "${{ needs.metadata.outputs.tag }}"
+          $repository = "${{ github.repository }}"
+          $installerFileName = "kick-windows-$version-setup.exe"
+          $installerUrl = "https://github.com/$repository/releases/download/$tag/$installerFileName"
+          $checksumUrl = "https://github.com/$repository/releases/download/$tag/kick-$version-checksums.txt"
+          $releaseApiUrl = "https://api.github.com/repos/$repository/releases/tags/$tag"
+
+          $headers = @{
+            'Authorization' = "Bearer $env:GITHUB_TOKEN"
+            'User-Agent' = 'kick-release-workflow'
+            'Accept' = 'application/vnd.github+json'
+          }
+          $release = Invoke-RestMethod -Headers $headers -Uri $releaseApiUrl
+          $releaseDate = ([datetimeoffset]$release.published_at).UtcDateTime.ToString('yyyy-MM-dd')
+
+          $checksumText = Invoke-RestMethod -Headers @{ 'User-Agent' = 'kick-release-workflow' } -Uri $checksumUrl
+          $escapedInstallerFileName = [regex]::Escape($installerFileName)
+          $checksumLine = ($checksumText -split '\r?\n') |
+            Where-Object { $_ -match "^[A-Fa-f0-9]{64}\s+\*$escapedInstallerFileName$" } |
+            Select-Object -First 1
+
+          if (-not $checksumLine) {
+            throw "Could not find $installerFileName in $checksumUrl."
+          }
+
+          $installerSha256 = (($checksumLine.Trim() -split '\s+')[0]).ToUpperInvariant()
+          if ($installerSha256 -notmatch '^[A-F0-9]{64}$') {
+            throw "Invalid installer SHA-256: $installerSha256"
+          }
+
+          $manifestDir = Join-Path $env:RUNNER_TEMP "winget-manifest\manifests\n\nikzmx\KiCk\$version"
+          New-Item -ItemType Directory -Force -Path $manifestDir | Out-Null
+
+          @"
+          # Created using wingetcreate 1.12.8.0
+          # yaml-language-server: `$schema=https://aka.ms/winget-manifest.version.1.12.0.schema.json
+
+          PackageIdentifier: nikzmx.KiCk
+          PackageVersion: $version
+          DefaultLocale: en-US
+          ManifestType: version
+          ManifestVersion: 1.12.0
+          "@ -replace '(?m)^[ ]{10}', '' |
+            Set-Content -Encoding utf8NoBOM (Join-Path $manifestDir 'nikzmx.KiCk.yaml')
+
+          @"
+          # Created using wingetcreate 1.12.8.0
+          # yaml-language-server: `$schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
+
+          PackageIdentifier: nikzmx.KiCk
+          PackageVersion: $version
+          MinimumOSVersion: 10.0.17763.0
+          InstallerType: inno
+          Scope: user
+          InstallModes:
+            - silent
+            - silentWithProgress
+            - interactive
+          UpgradeBehavior: install
+          ReleaseDate: $releaseDate
+          Installers:
+            - Architecture: x64
+              InstallerUrl: $installerUrl
+              InstallerSha256: $installerSha256
+              ProductCode: '{1D568E3B-29E9-4C4D-9438-308E83DCC73E}_is1'
+          ManifestType: installer
+          ManifestVersion: 1.12.0
+          "@ -replace '(?m)^[ ]{10}', '' |
+            Set-Content -Encoding utf8NoBOM (Join-Path $manifestDir 'nikzmx.KiCk.installer.yaml')
+
+          @"
+          # Created using wingetcreate 1.12.8.0
+          # yaml-language-server: `$schema=https://aka.ms/winget-manifest.defaultLocale.1.12.0.schema.json
+
+          PackageIdentifier: nikzmx.KiCk
+          PackageVersion: $version
+          PackageLocale: en-US
+          Publisher: nikzmx
+          PublisherUrl: https://github.com/mxnix
+          PublisherSupportUrl: https://github.com/mxnix/kick/issues
+          PrivacyUrl: https://github.com/mxnix/kick/blob/main/docs/PRIVACY.md
+          Author: nikzmx
+          PackageName: KiCk
+          PackageUrl: https://github.com/mxnix/kick
+          License: Apache-2.0
+          LicenseUrl: https://github.com/mxnix/kick/blob/main/LICENSE.md
+          Copyright: Copyright 2026 nikzmx
+          ShortDescription: A local OpenAI-compatible proxy for Gemini CLI and Kiro in a native Flutter app
+          Description: |-
+            KiCk starts a local OpenAI-compatible endpoint on your device and forwards
+            requests to Gemini CLI through connected Google accounts, or to Kiro through
+            an AWS Builder ID session. It is built for people who want to use Gemini CLI
+            or Kiro without the terminal, manual sign-in setup, or a separate local server.
+          Moniker: kick
+          Tags:
+            - ai
+            - proxy
+            - gemini
+            - kiro
+            - openai-compatible
+          ReleaseNotesUrl: https://github.com/$repository/releases/tag/$tag
+          ManifestType: defaultLocale
+          ManifestVersion: 1.12.0
+          "@ -replace '(?m)^[ ]{10}', '' |
+            Set-Content -Encoding utf8NoBOM (Join-Path $manifestDir 'nikzmx.KiCk.locale.en-US.yaml')
+
+          @"
+          # yaml-language-server: `$schema=https://aka.ms/winget-manifest.locale.1.12.0.schema.json
+
+          PackageIdentifier: nikzmx.KiCk
+          PackageVersion: $version
+          PackageLocale: ru-RU
+          Publisher: nikzmx
+          PublisherUrl: https://github.com/mxnix
+          PublisherSupportUrl: https://github.com/mxnix/kick/issues
+          Author: nikzmx
+          PackageName: KiCk
+          PackageUrl: https://github.com/mxnix/kick
+          License: Apache-2.0
+          LicenseUrl: https://github.com/mxnix/kick/blob/main/LICENSE.md
+          Copyright: Copyright 2026 nikzmx
+          ShortDescription: Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном Flutter-приложении
+          Description: |-
+            KiCk поднимает у вас на устройстве локальный адрес в формате OpenAI и
+            пересылает запросы в Gemini CLI через подключённые Google-аккаунты, а в Kiro
+            через сессию AWS Builder ID. Приложение нужно для тех, кто хочет работать
+            с Gemini CLI или Kiro без терминала, ручной настройки входа и отдельного
+            локального сервера.
+          Tags:
+            - ai
+            - proxy
+            - gemini
+            - kiro
+            - openai-compatible
+          ReleaseNotesUrl: https://github.com/$repository/releases/tag/$tag
+          ManifestType: locale
+          ManifestVersion: 1.12.0
+          "@ -replace '(?m)^[ ]{10}', '' |
+            Set-Content -Encoding utf8NoBOM (Join-Path $manifestDir 'nikzmx.KiCk.locale.ru-RU.yaml')
+
+          "manifest_dir=$manifestDir" >> $env:GITHUB_OUTPUT
+
+      - name: Validate WinGet manifest
+        shell: pwsh
+        run: |
+          $winget = Get-Command winget -ErrorAction SilentlyContinue
+          if (-not $winget) {
+            Write-Warning "winget.exe was not found on the runner; skipping local manifest validation."
+            exit 0
+          }
+
+          & $winget.Source validate --manifest "${{ steps.winget_manifest.outputs.manifest_dir }}" --disable-interactivity
+
+      - name: Submit package to WinGet
+        shell: pwsh
+        env:
+          WINGET_PAT: ${{ secrets.WINGET_PAT }}
+        run: |
+          $version = "${{ needs.metadata.outputs.version }}"
+          & .\wingetcreate.exe submit `
+            --prtitle "Add nikzmx.KiCk version $version" `
+            --token $env:WINGET_PAT `
+            --no-open `
+            "${{ steps.winget_manifest.outputs.manifest_dir }}"
