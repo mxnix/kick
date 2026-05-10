@@ -27,6 +27,19 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
+
+  // If a window already exists for this application, this activation comes
+  // from a secondary launch of KiCk (or a re-activation request). Present the
+  // existing window instead of creating another one. This prevents duplicate
+  // windows and, critically, duplicate tray icons when the user launches
+  // KiCk while an instance is already running.
+  GList* existing_windows =
+      gtk_application_get_windows(GTK_APPLICATION(application));
+  if (existing_windows != nullptr) {
+    gtk_window_present(GTK_WINDOW(existing_windows->data));
+    return;
+  }
+
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
@@ -106,6 +119,21 @@ static gboolean my_application_local_command_line(GApplication* application,
     return TRUE;
   }
 
+  // If another KiCk instance is already running, GApplication's D-Bus
+  // machinery routes the activation to it. Defer to the primary instance and
+  // exit immediately so we don't spin up another window, tray icon, or
+  // Flutter engine in this secondary process.
+  if (g_application_get_is_remote(application)) {
+    // When started via launch-at-startup with --background, the primary
+    // instance is already alive (and possibly already hidden to tray). There
+    // is nothing to activate; just exit quietly.
+    if (!self->start_hidden) {
+      g_application_activate(application);
+    }
+    *exit_status = 0;
+    return TRUE;
+  }
+
   g_application_activate(application);
   *exit_status = 0;
 
@@ -155,7 +183,11 @@ MyApplication* my_application_new() {
   // the application to be recognized beyond its binary name.
   g_set_prgname(APPLICATION_ID);
 
+  // Use default (unique) GApplication flags so that launching KiCk while it
+  // is already running forwards the activation to the existing process via
+  // D-Bus instead of spawning a second instance. A second instance would
+  // register its own tray icon, resulting in duplicates in the system tray.
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID, "flags",
-                                     G_APPLICATION_NON_UNIQUE, nullptr));
+                                     G_APPLICATION_FLAGS_NONE, nullptr));
 }
