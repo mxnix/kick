@@ -357,6 +357,7 @@ class _ProxyStatusHero extends StatelessWidget {
 }
 
 const _sillyTavernLogoAssetPath = 'assets/st/logo.png';
+const _defaultSillyTavernUrl = 'http://127.0.0.1:8000';
 
 class _SillyTavernActionButton extends StatelessWidget {
   const _SillyTavernActionButton({
@@ -550,7 +551,7 @@ class _SillyTavernPushDialogState extends State<_SillyTavernPushDialog> {
   @override
   void initState() {
     super.initState();
-    _urlController = TextEditingController(text: 'http://127.0.0.1:8000');
+    _urlController = TextEditingController(text: _defaultSillyTavernUrl);
     _profileNameController = TextEditingController();
     _modelController = TextEditingController(text: _defaultSillyTavernModel(widget.settings));
   }
@@ -607,7 +608,7 @@ class _SillyTavernPushDialogState extends State<_SillyTavernPushDialog> {
               controller: _urlController,
               decoration: InputDecoration(
                 labelText: l10n.pushSillyTavernUrlLabel,
-                hintText: 'http://127.0.0.1:8000',
+                hintText: _defaultSillyTavernUrl,
                 prefixIcon: const Icon(KickIcons.link),
               ),
             ),

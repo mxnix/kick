@@ -357,14 +357,12 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
       Uri.parse('https://console.cloud.google.com/'),
       mode: LaunchMode.externalApplication,
     );
-    if (!opened || !mounted) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.projectIdLookupFailedMessage)));
+    if (!mounted || opened) {
+      return;
     }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.projectIdLookupFailedMessage)));
   }
 
   void _submit() {

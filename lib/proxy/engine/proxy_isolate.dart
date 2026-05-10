@@ -30,8 +30,8 @@ const _proxyBindRetryDelays = <Duration>[
   Duration(milliseconds: 400),
 ];
 const _modelCatalogRefreshInterval = Duration(minutes: 30);
-const _defaultProxyRuntimeHost = '127.0.0.1';
-const _defaultProxyRuntimePort = 3000;
+const defaultProxyRuntimeHost = '127.0.0.1';
+const defaultProxyRuntimePort = 3000;
 
 bool looksLikeProxyPortInUseError(String value) {
   final normalized = value.toLowerCase();
@@ -129,10 +129,10 @@ String _runtimeHostFromSettings(Map<String, Object?>? settings) {
   final raw = settings?['host'];
   final trimmed = raw is String ? raw.trim() : '';
   if (trimmed.isEmpty || _looksLikeInvalidRuntimeHost(trimmed)) {
-    return _defaultProxyRuntimeHost;
+    return defaultProxyRuntimeHost;
   }
   if (settings?['allow_lan'] != true && trimmed == '0.0.0.0') {
-    return _defaultProxyRuntimeHost;
+    return defaultProxyRuntimeHost;
   }
   return trimmed;
 }
@@ -151,10 +151,10 @@ int _runtimePortFromSettings(Map<String, Object?>? settings) {
   final port = switch (raw) {
     int value => value,
     num value => value.toInt(),
-    _ => _defaultProxyRuntimePort,
+    _ => defaultProxyRuntimePort,
   };
   if (port < 0 || port > 65535) {
-    return _defaultProxyRuntimePort;
+    return defaultProxyRuntimePort;
   }
   return port;
 }

@@ -26,6 +26,10 @@ typedef AndroidRuntimeRunningCheck = Future<bool> Function();
 typedef AndroidRuntimeEffect = Future<void> Function();
 typedef AndroidLocalNetworkPermissionRequest = Future<bool> Function();
 
+/// Short grace period after stopping the Android foreground runtime before the
+/// isolate binds a new socket. Gives the OS time to release the previous port.
+const _androidRuntimeStopGracePeriod = Duration(milliseconds: 250);
+
 class ProxyRuntimeState {
   const ProxyRuntimeState({
     required this.ready,
@@ -45,8 +49,8 @@ class ProxyRuntimeState {
       ready: false,
       running: false,
       startPending: false,
-      boundHost: '127.0.0.1',
-      port: 3000,
+      boundHost: defaultProxyRuntimeHost,
+      port: defaultProxyRuntimePort,
       startedAt: null,
       requestCount: 0,
       activeAccounts: 0,
@@ -101,8 +105,8 @@ class ProxyRuntimeState {
       ready: json['ready'] as bool? ?? false,
       running: json['running'] as bool? ?? false,
       startPending: json['start_pending'] as bool? ?? false,
-      boundHost: json['bound_host'] as String? ?? '127.0.0.1',
-      port: json['port'] as int? ?? 3000,
+      boundHost: json['bound_host'] as String? ?? defaultProxyRuntimeHost,
+      port: json['port'] as int? ?? defaultProxyRuntimePort,
       startedAt: DateTime.tryParse(json['started_at'] as String? ?? ''),
       requestCount: json['request_count'] as int? ?? 0,
       activeAccounts: json['active_accounts'] as int? ?? 0,
@@ -375,7 +379,7 @@ class KickProxyController {
           settings.androidBackgroundRuntime &&
           await _isAndroidRuntimeRunning()) {
         await _stopAndroidRuntimeIfRunning();
-        await Future<void>.delayed(const Duration(milliseconds: 250));
+        await Future<void>.delayed(_androidRuntimeStopGracePeriod);
       }
       waitingForRuntimeStatus = true;
       _commandPort?.send({'type': 'start'});

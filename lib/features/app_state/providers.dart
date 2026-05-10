@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -185,11 +186,13 @@ class SettingsController extends AsyncNotifier<AppSettings> {
   }
 
   void _refreshWindowTitleSafely() {
-    unawaited(() async {
-      try {
-        await WindowBootstrap.refreshTitle();
-      } catch (_) {}
-    }());
+    unawaited(
+      WindowBootstrap.refreshTitle().catchError((Object error, StackTrace stackTrace) {
+        if (kDebugMode) {
+          debugPrint('[settings] window title refresh failed: $error');
+        }
+      }),
+    );
   }
 }
 
