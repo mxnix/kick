@@ -93,10 +93,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountsSubtitle => 'Подключайте аккаунты Gemini CLI и Kiro и управляйте ими';
 
   @override
-  String get accountsSearchHint => 'Искать по имени, почте или ID проекта';
+  String get accountsSearchHint => 'Поиск по имени, почте или ID проекта';
 
   @override
-  String get accountsSortLabel => 'Сортировать';
+  String get accountsSortLabel => 'Сортировка';
 
   @override
   String get accountsSortAttention => 'По предупреждениям';
@@ -117,7 +117,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountsEmptyTitle => 'Аккаунтов пока нет';
 
   @override
-  String get accountsEmptyMessage => 'Подключите хотя бы один аккаунт Gemini CLI или Kiro';
+  String get accountsEmptyMessage => 'Подключите хотя бы один аккаунт Gemini CLI или Kiro.';
 
   @override
   String get connectAccountButton => 'Подключить аккаунт';
@@ -142,7 +142,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get accountsFilteredEmptyTitle => 'Нет релевантных аккаунтов';
+  String get accountsFilteredEmptyTitle => 'По запросу ничего не найдено';
 
   @override
   String get accountsFilteredEmptyMessage => 'Попробуйте другое имя, почту или ID проекта.';
@@ -163,7 +163,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountAvatarApplyButton => 'Применить';
 
   @override
-  String get accountAvatarDiceBearLicense => 'Identicon от DiceBear CC0 1.0';
+  String get accountAvatarDiceBearLicense => 'DiceBear Identicon CC0 1.0.';
 
   @override
   String get accountAvatarChooseFileButton => 'Свой файл';
@@ -172,7 +172,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountAvatarResetButton => 'Сбросить';
 
   @override
-  String get accountAvatarResetToDiceBearButton => 'Сбросить к DiceBear';
+  String get accountAvatarResetToDiceBearButton => 'Вернуть DiceBear';
 
   @override
   String get accountProviderLabel => 'Тип аккаунта';
@@ -190,13 +190,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get kiroBuilderIdStartUrlLabel => 'Ссылка Builder ID';
 
   @override
-  String get kiroBuilderIdStartUrlHelperText => 'Обычно менять не нужно.';
+  String get kiroBuilderIdStartUrlHelperText => 'Обычно менять не нужно';
 
   @override
   String get kiroRegionLabel => 'Регион AWS';
 
   @override
-  String get kiroRegionHelperText => 'Обычно оставьте значение us-east-1.';
+  String get kiroRegionHelperText => 'Обычно us-east-1';
 
   @override
   String kiroCredentialSourceChip(String value) {
@@ -220,7 +220,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountCoolingDownStatus => 'На паузе';
 
   @override
-  String get accountReadyStatus => 'Готов к работе';
+  String get accountReadyStatus => 'Готов';
 
   @override
   String get accountDisabledStatus => 'Выключен';
@@ -231,10 +231,10 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get editAccountTitle => 'Редактирование аккаунта';
+  String get editAccountTitle => 'Изменить аккаунт';
 
   @override
-  String get editButton => 'Редактировать';
+  String get editButton => 'Изменить';
 
   @override
   String get reauthorizeAccountTitle => 'Переподключить аккаунт';
@@ -246,14 +246,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountProjectCheckButton => 'Проверить доступ к проекту';
 
   @override
-  String get accountProjectCheckInProgressMessage => 'Проверка...';
+  String get accountProjectCheckInProgressMessage => 'Проверяем...';
 
   @override
   String get accountProjectCheckSuccessTitle => 'Доступ к проекту подтвержден';
 
   @override
   String get accountProjectCheckSuccessMessage =>
-      'KiCk смог выполнить тестовый запрос к Google для этого аккаунта и проекта';
+      'KiCk успешно выполнил тестовый запрос к Google для этого аккаунта и проекта.';
 
   @override
   String accountProjectCheckModelValue(String model) {
@@ -266,7 +266,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get accountProjectCheckFailureTitle => 'Не удалось проверить';
+  String get accountProjectCheckFailureTitle => 'Проверка не удалась';
 
   @override
   String get resetCooldownTooltip => 'Сбросить состояние';
@@ -319,17 +319,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountQuotaWarningStatus => 'Лимит заканчивается';
 
   @override
-  String get accountBanCheckPendingStatus => 'Проверяем бан';
+  String get accountBanCheckPendingStatus => 'Проверяем блокировку';
 
   @override
-  String get accountBanCheckPendingMessage => 'Google вернул RESOURCE_EXHAUSTED без времени сброса';
+  String get accountBanCheckPendingMessage =>
+      'Google вернул RESOURCE_EXHAUSTED без времени сброса.';
 
   @override
-  String get accountTermsOfServiceStatus => 'Бан подтвержден';
+  String get accountTermsOfServiceStatus => 'Блокировка подтверждена';
 
   @override
   String get accountTermsOfServiceMessage =>
-      'Google подтвердил блокировку этого аккаунта за нарушение условий обслуживания. Аккаунт выведен из ротации.';
+      'Google подтвердил блокировку этого аккаунта за нарушение условий использования. Аккаунт выведен из ротации.';
 
   @override
   String get accountUsageLoadErrorTitle => 'Не удалось загрузить данные по лимитам';
@@ -348,24 +349,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accountUsageVerificationOpenFailedMessage =>
-      'Не удалось открыть страницу подтверждения в Google';
+      'Не удалось открыть страницу подтверждения в Google.';
 
   @override
-  String get accountErrorActionOpenFailedMessage => 'Не удалось открыть страницу Google';
+  String get accountErrorActionOpenFailedMessage => 'Не удалось открыть страницу Google.';
 
   @override
   String get accountUsageEmptyTitle => 'Данные по лимитам недоступны';
 
   @override
   String get accountUsageEmptyMessage =>
-      'Провайдер не прислал данные по лимитам для этого аккаунта';
+      'Провайдер не вернул данные по лимитам для этого аккаунта.';
 
   @override
   String get accountUsageUnavailableTitle => 'Лимиты для этого аккаунта недоступны';
 
   @override
   String get accountUsageUnavailableMessage =>
-      'Страница лимитов работает для аккаунтов Gemini CLI и Kiro.';
+      'Страница лимитов работает только для аккаунтов Gemini CLI и Kiro.';
 
   @override
   String get accountUsageMissingTitle => 'Аккаунт не найден';
@@ -375,7 +376,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accountUsageMissingMessage =>
-      'Возможно, аккаунт уже удален или список еще не успел обновиться';
+      'Возможно, аккаунт уже удален или список еще не успел обновиться.';
 
   @override
   String accountUsageResetsAt(String time) {
@@ -383,7 +384,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get accountUsageResetUnknown => 'Время следующего сброса неизвестно';
+  String get accountUsageResetUnknown => 'Время следующего сброса неизвестно.';
 
   @override
   String accountUsageLastUpdated(String time) {
@@ -402,7 +403,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String accountUsageCriticalCount(int count) {
-    return 'Почти исчерпано: $count';
+    return 'Почти закончилось: $count';
   }
 
   @override
@@ -417,12 +418,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String accountUsageUsedPercent(String value) {
-    return 'Израсходовано $value%';
+    return 'Использовано $value%';
   }
 
   @override
   String accountUsageUsedOfLimit(String used, String limit) {
-    return 'Израсходовано $used из $limit';
+    return 'Использовано $used из $limit';
   }
 
   @override
@@ -432,7 +433,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountUsageBucketLow => 'Заканчивается';
 
   @override
-  String get accountUsageBucketCritical => 'Почти исчерпано';
+  String get accountUsageBucketCritical => 'Почти закончилось';
 
   @override
   String get accountUsageKiroAllModelsLimit => 'Лимит на все модели';
@@ -447,7 +448,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get languageLabel => 'Язык';
 
   @override
-  String get languageHelperText => '\"Системный\" следует языку устройства';
+  String get languageHelperText => '«Системный» использует язык устройства';
 
   @override
   String get languageOptionSystem => 'Системный';
@@ -492,7 +493,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsAppearanceSectionTitle => 'Оформление и поведение';
 
   @override
-  String get settingsAppearanceSectionSummary => 'Тема, логи и работа приложения';
+  String get settingsAppearanceSectionSummary => 'Язык, тема, логи и поведение приложения';
 
   @override
   String get settingsNetworkSectionTitle => 'Сеть';
@@ -526,7 +527,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get windowsTraySubtitle => 'При закрытии окна KiCk продолжит работать в системном трее';
 
   @override
-  String get windowsLaunchAtStartupTitle => 'Запускать при входе';
+  String get windowsLaunchAtStartupTitle => 'Запускать при входе в систему';
 
   @override
   String get windowsLaunchAtStartupSubtitle =>
@@ -562,7 +563,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsBackupInfoSubtitle =>
-      'Храните файл в безопасном месте! После восстановления текущие настройки и список аккаунтов будут полностью заменены.';
+      'Храните файл в безопасном месте. После восстановления текущие настройки и список аккаунтов будут полностью заменены.';
 
   @override
   String get hostLabel => 'Хост';
@@ -613,17 +614,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get requestRetriesInvalidError => 'Укажите число от 0 до 20';
 
   @override
-  String get retry429DelayLabel => 'Интервал повтора для 429';
+  String get retry429DelayLabel => 'Интервал повтора при 429';
 
   @override
   String get retry429DelayHelperText =>
-      'Интервал, с которым прокси повторяет запрос при ошибке 429';
+      'Интервал, с которым прокси повторяет запрос после ошибки 429';
 
   @override
   String get retry429DelayInvalidError => 'Укажите число от 1 до 3600';
 
   @override
-  String get mark429AsUnhealthyTitle => 'Временно выводить аккаунт из ротации при ошибке 429';
+  String get mark429AsUnhealthyTitle => 'Выводить аккаунт из ротации при ошибке 429';
 
   @override
   String get mark429AsUnhealthySubtitle =>
@@ -646,7 +647,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get logRetentionHelperText =>
-      'Когда лимит достигнут, самые старые записи будут автоматически удаляться';
+      'При достижении лимита самые старые записи автоматически удаляются';
 
   @override
   String logRetentionInvalidError(int min, int max) {
@@ -658,21 +659,21 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get unsafeRawLoggingSubtitle =>
-      'Сохраняет содержимое запросов и ответов. Включайте только для отладки!';
+      'Сохраняет содержимое запросов и ответов. Включайте только для отладки.';
 
   @override
   String get defaultGoogleWebSearchTitle => 'Включать веб-поиск по умолчанию';
 
   @override
   String get defaultGoogleWebSearchSubtitle =>
-      'KiCk будет автоматически использовать Google Поиск, если клиент не передал явное переопределение параметров, а в запросе нет вызовов функций';
+      'KiCk будет автоматически использовать Google Поиск, если клиент не задал свои параметры и в запросе нет вызовов функций';
 
   @override
   String get renderGoogleGroundingInMessageTitle => 'Показывать цитаты и источники в ответе';
 
   @override
   String get renderGoogleGroundingInMessageSubtitle =>
-      'Если отключить, ссылки на источники останутся в метаданных и не будут добавляться в сам текст ответа';
+      'Если выключить, ссылки на источники останутся в метаданных и не будут добавляться в текст ответа';
 
   @override
   String get customModelsLabel => 'Пользовательские ID моделей';
@@ -725,14 +726,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsBackupPasswordHelperText =>
-      'Запомните этот пароль: без него зашифрованную резервную копию восстановить нельзя!';
+      'Запомните этот пароль: без него восстановить зашифрованную копию не получится';
 
   @override
   String get settingsBackupPasswordsDoNotMatch => 'Пароли не совпадают';
 
   @override
   String get settingsBackupUnprotectedWarning =>
-      'Внимание! Ваши токены и ключи будут сохранены в открытом виде. Любой, кто получит этот файл, получит доступ к вашим данным.';
+      'Ваши токены и ключи будут сохранены в открытом виде. Любой, кто получит этот файл, получит доступ к вашим данным.';
 
   @override
   String get settingsBackupRestoreDialogTitle => 'Восстановить конфигурацию?';
@@ -810,7 +811,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном Flutter-приложении';
+      'Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном приложении Flutter';
 
   @override
   String get aboutUpdatesTitle => 'Обновления';
@@ -867,22 +868,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutUpdateDownloadingIndeterminate => 'Скачиваем обновление в фоне...';
 
   @override
-  String get aboutUpdateVerifyingMessage => 'Сверяем скачанный файл с SHA-256...';
+  String get aboutUpdateVerifyingMessage => 'Проверяем скачанный файл по SHA-256...';
 
   @override
-  String get aboutUpdateReadyVerifiedMessage => 'Обновление скачано и готово к установке.';
+  String get aboutUpdateReadyVerifiedMessage =>
+      'Обновление скачано, проверено и готово к установке.';
 
   @override
   String get aboutUpdateReadyUnverifiedMessage =>
-      'Обновление скачано и готово к установке. Этот релиз не предоставил файл контрольной суммы.';
+      'Обновление скачано и готово к установке. Для этого релиза не была предоставлена контрольная сумма.';
 
   @override
   String get aboutUpdateUnknownSourcesMessage =>
-      'Разрешите установку из этого источника в настройках Android, затем вернитесь сюда и нажмите на кнопку установки снова.';
+      'Разрешите установку из этого источника в настройках Android, затем вернитесь сюда и снова нажмите «Установить обновление».';
 
   @override
   String aboutUpdateOperationFailedMessage(String error) {
-    return 'Ошибка в подготовке обновления: $error';
+    return 'Не удалось подготовить обновление: $error';
   }
 
   @override
@@ -901,7 +903,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutLicenseTitle => 'Лицензия';
 
   @override
-  String get aboutLicenseMessage => 'KiCk распространяется как проект с открытым исходным кодом';
+  String get aboutLicenseMessage => 'KiCk распространяется как проект с открытым исходным кодом.';
 
   @override
   String get aboutOpenLicenseButton => 'Открыть лицензию';
@@ -910,7 +912,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutPrivacyTitle => 'Приватность';
 
   @override
-  String get aboutPrivacyMessage => 'KiCk хранит аккаунты, токены и настройки локально';
+  String get aboutPrivacyMessage => 'KiCk хранит аккаунты, токены и настройки локально.';
 
   @override
   String get aboutOpenPrivacyButton => 'Открыть заметку о приватности';
@@ -919,7 +921,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutDisclaimerTitle => 'Отказ от ответственности';
 
   @override
-  String get aboutDisclaimerMessage => 'KiCk не связан с Google, AWS, Kiro или SillyTavern';
+  String get aboutDisclaimerMessage => 'KiCk не связан с Google, AWS, Kiro или SillyTavern.';
 
   @override
   String get aboutCreditsTitle => 'Благодарности';
@@ -928,7 +930,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aboutCreditsMessage => 'Собрано на Flutter. DiceBear Identicon CC0 1.0.';
 
   @override
-  String get aboutOpenLinkFailedMessage => 'Не удалось открыть ссылку.';
+  String get aboutOpenLinkFailedMessage => 'Не удалось открыть ссылку';
 
   @override
   String get copyProxyEndpointTooltip => 'Скопировать адрес прокси';
@@ -950,7 +952,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get pushSillyTavernDialogMessage =>
-      'KiCk добавит профиль и выберет его в настройках подключений';
+      'KiCk добавит профиль и выберет его в менеджере подключений.';
 
   @override
   String get pushSillyTavernUrlLabel => 'URL SillyTavern';
@@ -976,7 +978,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get pushSillyTavernErrorInvalidUrl =>
-      'Укажите полный URL SillyTavern, например http://127.0.0.1:8000';
+      'Укажите полный URL SillyTavern, например http://127.0.0.1:8000.';
 
   @override
   String get pushSillyTavernErrorMissingCsrf => 'SillyTavern не вернул CSRF-токен.';
@@ -993,7 +995,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get homeOnboardingTitle => 'С чего начать';
 
   @override
-  String get homeOnboardingSubtitle => 'Небольшая подсказка для первого запуска';
+  String get homeOnboardingSubtitle => 'Короткая подсказка для первого запуска';
 
   @override
   String get homeOnboardingAccountsTitle => 'Подключите аккаунт';
@@ -1003,7 +1005,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Без активного аккаунта Gemini CLI или Kiro KiCk не сможет обрабатывать запросы.';
 
   @override
-  String get homeOnboardingEndpointTitle => 'Проверьте адрес прокси';
+  String get homeOnboardingEndpointTitle => 'Посмотрите адрес прокси';
 
   @override
   String homeOnboardingEndpointMessage(String endpoint) {
@@ -1032,7 +1034,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get regenerateApiKeyDialogMessage =>
-      'Старый ключ будет сразу отозван. Всем подключенным клиентам понадобится новый ключ для работы.';
+      'Старый ключ будет сразу отозван. Всем подключенным клиентам понадобится новый ключ, чтобы продолжить работу.';
 
   @override
   String get regenerateApiKeyConfirmButton => 'Сгенерировать';
@@ -1068,7 +1070,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get welcomeStepAccountsMessage =>
-      'Это можно сделать на экране аккаунтов. Можно подключить Gemini CLI или Kiro.';
+      'Сделайте это на экране аккаунтов. Можно подключить Gemini CLI или Kiro.';
 
   @override
   String get welcomeStepHomeTitle => 'Откройте главную';
@@ -1219,7 +1221,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get logsLoadMoreButton => 'Загрузить еще';
 
   @override
-  String get logsNothingToExportMessage => 'Нет логов для сохранения';
+  String get logsNothingToExportMessage => 'Нет логов для сохранения.';
 
   @override
   String logsExportedMessage(String fileName) {
@@ -1237,13 +1239,13 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get logsExportFileTitle => 'Экспортированный лог из KiCk';
+  String get logsExportFileTitle => 'Экспорт логов KiCk';
 
   @override
   String get logsExportShareSubject => 'Логи KiCk';
 
   @override
-  String get logsExportGeneratedAtLabel => 'Сгенерировано в';
+  String get logsExportGeneratedAtLabel => 'Сгенерировано';
 
   @override
   String logsExportEntriesCount(int count) {
@@ -1263,16 +1265,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get logsExportScopeLabel => 'Область';
 
   @override
-  String get logsExportRuntimeSettingsLabel => 'Настройки рантайма';
+  String get logsExportRuntimeSettingsLabel => 'Настройки во время работы';
 
   @override
   String get logsExportNoneValue => 'нет';
 
   @override
-  String get logsExportNoneDetectedValue => 'ничего не найдено';
+  String get logsExportNoneDetectedValue => 'не обнаружено';
 
   @override
-  String get logsExportSectionDiagnostics => 'Общая сводка диагностики';
+  String get logsExportSectionDiagnostics => 'Сводка диагностики';
 
   @override
   String get logsExportTimeRangeLabel => 'Временной диапазон';
@@ -1290,16 +1292,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get logsExportModelsLabel => 'Модели';
 
   @override
-  String get logsExportStatusCodesLabel => 'Коды состояния';
+  String get logsExportStatusCodesLabel => 'Коды статуса';
 
   @override
-  String get logsExportErrorDetailsLabel => 'Подробности ошибки';
+  String get logsExportErrorDetailsLabel => 'Подробности ошибок';
 
   @override
-  String get logsExportUpstreamReasonsLabel => 'Причины на стороне апстрима';
+  String get logsExportUpstreamReasonsLabel => 'Причины от провайдера';
 
   @override
-  String get logsExportRetriedRequestsLabel => 'Повторено запросов';
+  String get logsExportRetriedRequestsLabel => 'Повторов запросов';
 
   @override
   String get logsExportTokensLabel => 'Токены';
@@ -1308,7 +1310,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get logsExportAndroidBackgroundSessionsLabel => 'Фоновые сессии Android';
 
   @override
-  String get logsExportTimestampLabel => 'Время события';
+  String get logsExportTimestampLabel => 'Время';
 
   @override
   String get logsExportLevelLabel => 'Уровень';
@@ -1323,16 +1325,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get logsExportMessageLabel => 'Сообщение';
 
   @override
-  String get logsExportMaskedPayloadLabel => 'Маскированная сводка';
+  String get logsExportMaskedPayloadLabel => 'Payload (замаскированный)';
 
   @override
-  String get logsExportRawPayloadLabel => 'Сырая сводка';
+  String get logsExportRawPayloadLabel => 'Payload (без маскировки)';
 
   @override
   String get logMessageRequestReceived => 'Запрос получен';
 
   @override
-  String get logMessageParsedRequest => 'Разобранный запрос';
+  String get logMessageParsedRequest => 'Запрос разобран';
 
   @override
   String get logMessageResponseCompleted => 'Ответ завершен';
@@ -1341,39 +1343,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get logMessageStreamClientAborted => 'Потоковый ответ прерван клиентом';
 
   @override
-  String get logMessageRetryScheduled => 'Повторная попытка запланирована после сбоя запроса';
+  String get logMessageRetryScheduled => 'Запланирован повтор после сбоя запроса';
 
   @override
-  String get logMessageRetryWithAnotherAccount =>
-      'Повторная попытка с другим аккаунтом после сбоя запроса';
+  String get logMessageRetryWithAnotherAccount => 'Повторяем запрос с другим аккаунтом после сбоя';
 
   @override
-  String get logMessageRequestSucceededAfterRetries =>
-      'Запрос успешно выполнен после повторных попыток';
+  String get logMessageRequestSucceededAfterRetries => 'Запрос выполнен после повторных попыток';
 
   @override
   String get logMessageRequestFailedAfterRetries => 'Запрос не удался после повторных попыток';
 
   @override
-  String get logMessageDispatchingStreamingRequest => 'Отправка потокового запроса апстриму';
+  String get logMessageDispatchingStreamingRequest => 'Отправляем потоковый запрос провайдеру';
 
   @override
-  String get logMessageDispatchingRequest => 'Отправка запроса апстрим провайдеру';
+  String get logMessageDispatchingRequest => 'Отправляем запрос провайдеру';
 
   @override
-  String get logMessageUpstreamPayloadReturned => 'Апстрим вернул сводку';
+  String get logMessageUpstreamPayloadReturned => 'Провайдер вернул ответ';
 
   @override
   String get logMessageMappedChatCompletion =>
-      'Сводка от апстрима сопоставлена с форматом OpenAI chat completion';
+      'Ответ провайдера преобразован в формат OpenAI Chat Completion';
 
   @override
   String logMessageUsingAccountForModel(String account, String model) {
-    return 'Используется аккаунт $account для $model';
+    return 'Используем аккаунт $account для $model';
   }
 
   @override
-  String get logMessageProxySessionSummary => 'Сводка по прокси-сессии';
+  String get logMessageProxySessionSummary => 'Сводка по сессии прокси';
 
   @override
   String get logMessageAndroidBackgroundSessionStarted => 'Фоновая сессия Android началась';
@@ -1402,7 +1402,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accountDialogAdvancedHint =>
-      'Если не хочется настраивать вручную, этот блок можно оставить как есть.';
+      'Если не хотите настраивать вручную, этот блок можно оставить как есть.';
 
   @override
   String get projectIdLabel => 'ID проекта';
@@ -1459,7 +1459,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get kiroLinkAuthDialogMessage =>
-      'Откройте ссылку, войдите в Kiro через GitHub или Google. KiCk сам дождётся callback из браузера.';
+      'Откройте ссылку и войдите в Kiro через GitHub или Google. KiCk сам дождется ответа из браузера.';
 
   @override
   String get kiroLinkAuthUserCodeLabel => 'Код для сверки';
@@ -1468,13 +1468,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get kiroLinkAuthVerificationUrlLabel => 'Ссылка для входа';
 
   @override
-  String get kiroLinkAuthWaitingMessage => 'Ждём, пока вы подтвердите вход в браузере...';
+  String get kiroLinkAuthWaitingMessage => 'Ждем подтверждения входа в браузере...';
 
   @override
   String get kiroLinkAuthOpenLinkButton => 'Открыть ссылку';
 
   @override
-  String get kiroLinkAuthOpenLinkAgainButton => 'Открыть ещё раз';
+  String get kiroLinkAuthOpenLinkAgainButton => 'Открыть снова';
 
   @override
   String get kiroLinkAuthOpenLinkFailedMessage => 'Не удалось открыть ссылку для входа в Kiro.';
@@ -1522,17 +1522,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get oauthPageTitleSuccess => 'Успешная авторизация';
 
   @override
-  String get oauthPageStateMismatchMessage =>
-      'Несоответствие состояний. Вы можете закрыть эту вкладку.';
+  String get oauthPageStateMismatchMessage => 'Состояния не совпадают. Можно закрыть эту вкладку.';
 
   @override
-  String get oauthPageGoogleErrorMessage => 'Google вернул ошибку. Вы можете закрыть эту вкладку.';
+  String get oauthPageGoogleErrorMessage => 'Google вернул ошибку. Можно закрыть эту вкладку.';
 
   @override
-  String get oauthPageCodeMissingMessage => 'Код не получен. Вы можете закрыть эту вкладку.';
+  String get oauthPageCodeMissingMessage => 'Код не получен. Можно закрыть эту вкладку.';
 
   @override
-  String get oauthPageCloseTabMessage => 'Вы можете закрыть вкладку.';
+  String get oauthPageCloseTabMessage => 'Вкладку можно закрыть.';
 
   @override
   String get accountDisplayNameFallbackGoogle => 'Google-аккаунт';
@@ -1542,32 +1541,31 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось связаться с серверами Google. Проверьте интернет и попробуйте снова.';
 
   @override
-  String get errorGoogleServiceUnavailable =>
-      'Сервис Google временно недоступен. Повторите попытку позже.';
+  String get errorGoogleServiceUnavailable => 'Google временно недоступен. Попробуйте позже.';
 
   @override
-  String get errorInvalidServiceResponse => 'Сервер вернул непонятный ответ. Попробуйте еще раз.';
+  String get errorInvalidServiceResponse => 'Сервер вернул неожиданный ответ. Попробуйте еще раз.';
 
   @override
-  String get errorGoogleAuthFailed => 'Авторизация Google завершилась с ошибкой. Попробуйте снова.';
+  String get errorGoogleAuthFailed => 'Не удалось войти в Google. Попробуйте снова.';
 
   @override
   String get errorGoogleAuthTimedOut =>
-      'Авторизация Google не завершилась вовремя. Вернитесь в приложение и попробуйте снова. Если это повторяется на Android, отключите для KiCk ограничения батареи.';
+      'Вход в Google не завершился вовремя. Вернитесь в приложение и попробуйте снова. Если это повторяется на Android, отключите для KiCk ограничения батареи.';
 
   @override
   String get errorGoogleAuthBrowserOpenFailed =>
-      'Не удалось открыть браузер для авторизации Google. Попробуйте снова.';
+      'Не удалось открыть браузер для входа в Google. Попробуйте снова.';
 
   @override
-  String get errorUnknown => 'Произошла неизвестная ошибка. Попробуйте снова.';
+  String get errorUnknown => 'Что-то пошло не так. Попробуйте снова.';
 
   @override
   String get errorOauthTokensMissing =>
-      'Для этого аккаунта не найдены токены авторизации. Переподключите аккаунт.';
+      'Токены авторизации для этого аккаунта не найдены. Переподключите аккаунт.';
 
   @override
-  String get errorAccountNotFound => 'Аккаунт не найден. Возможно, он уже был удалён.';
+  String get errorAccountNotFound => 'Аккаунт не найден. Возможно, он уже удален.';
 
   @override
   String get errorPortAlreadyInUse =>
@@ -1575,7 +1573,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorPermissionDenied =>
-      'Не хватило системных разрешений для запуска. Проверьте настройки приложения и повторите попытку.';
+      'Не хватает системных разрешений для запуска. Проверьте настройки приложения и попробуйте снова.';
 
   @override
   String errorGoogleRateLimitedRetry(String retryHint) {
@@ -1584,23 +1582,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorGoogleRateLimitedLater =>
-      'Google временно ограничил запросы для этого аккаунта. Попробуйте снова позже.';
+      'Google временно ограничил запросы для этого аккаунта. Попробуйте позже.';
 
   @override
   String get errorKiroAuthExpired => 'Сессия Kiro истекла. Войдите заново и попробуйте снова.';
 
   @override
-  String get errorKiroAuthStartFailed =>
-      'Не удалось запустить авторизацию Kiro. Попробуйте снова позже.';
+  String get errorKiroAuthStartFailed => 'Не удалось начать вход в Kiro. Попробуйте позже.';
 
   @override
-  String get errorKiroAuthCancelled => 'Авторизация Kiro была отменена.';
+  String get errorKiroAuthCancelled => 'Вход в Kiro был отменен.';
 
   @override
-  String get errorKiroAuthTimedOut => 'Время ожидания авторизации Kiro истекло. Попробуйте снова.';
+  String get errorKiroAuthTimedOut => 'Время ожидания входа в Kiro истекло. Попробуйте снова.';
 
   @override
-  String get errorKiroAuthRejected => 'Kiro отклонил авторизацию. Попробуйте начать вход заново.';
+  String get errorKiroAuthRejected => 'Kiro отклонил вход. Попробуйте начать заново.';
 
   @override
   String errorKiroRateLimitedRetry(String retryHint) {
@@ -1608,12 +1605,10 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get errorKiroRateLimitedLater =>
-      'Kiro временно ограничил запросы. Попробуйте снова позже.';
+  String get errorKiroRateLimitedLater => 'Kiro временно ограничил запросы. Попробуйте позже.';
 
   @override
-  String get errorKiroServiceUnavailable =>
-      'Сервис Kiro временно недоступен. Повторите попытку позже.';
+  String get errorKiroServiceUnavailable => 'Kiro временно недоступен. Попробуйте позже.';
 
   @override
   String get errorGoogleAccountVerificationRequired =>
@@ -1625,11 +1620,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorGoogleProjectApiDisabled =>
-      'Gemini for Google Cloud API отключен для этого проекта. Откройте Google Cloud, включите API для нужного ID проекта и повторите проверку.';
+      'Gemini for Google Cloud API выключен для этого проекта. Откройте Google Cloud, включите API для нужного ID проекта и повторите проверку.';
 
   @override
   String get errorGoogleProjectInvalid =>
-      'Google отклонил этот ID проекта. Проверьте, что указали существующий проект и что у аккаунта есть доступ именно к нему.';
+      'Google отклонил этот ID проекта. Убедитесь, что указан существующий проект и у аккаунта есть к нему доступ.';
 
   @override
   String get errorGoogleProjectAccessDenied =>
@@ -1637,20 +1632,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorAuthExpired =>
-      'Срок действия авторизации истек или она стала недействительной. Переподключите аккаунт и попробуйте снова.';
+      'Срок действия авторизации истек или она больше не действительна. Переподключите аккаунт и попробуйте снова.';
 
   @override
-  String get errorGoogleCapacity =>
-      'Сервера Google временно перегружены. Повторите попытку чуть позже.';
+  String get errorGoogleCapacity => 'Серверы Google временно перегружены. Попробуйте чуть позже.';
 
   @override
   String get errorUnsupportedModel => 'Выбранная модель сейчас недоступна для этого аккаунта.';
 
   @override
-  String get errorInvalidJson => 'Запрос имеет неверный формат JSON.';
+  String get errorInvalidJson => 'Запрос содержит некорректный JSON.';
 
   @override
-  String get errorUnexpectedResponse => 'Сервис вернул неожиданный ответ. Повторите попытку.';
+  String get errorUnexpectedResponse => 'Сервис вернул неожиданный ответ. Попробуйте снова.';
 
   @override
   String get errorQuotaExhausted =>
@@ -1663,18 +1657,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorQuotaExhaustedNoResetHint =>
-      'Google вернул RESOURCE_EXHAUSTED без времени сброса. KiCk отдельно проверит этот аккаунт; если ошибка повторяется, используйте другой аккаунт';
+      'Google вернул RESOURCE_EXHAUSTED без времени сброса. KiCk отдельно проверит этот аккаунт. Если ошибка повторится, используйте другой аккаунт.';
 
   @override
   String get errorGoogleTermsOfServiceViolation =>
-      'Google отключил этот аккаунт за нарушение ToS. Подайте апелляцию или используйте другой аккаунт.';
+      'Google отключил этот аккаунт за нарушение условий использования. Подайте апелляцию или используйте другой аккаунт.';
 
   @override
-  String get errorInvalidRequestRejected => 'Запрос имеет неверный формат и был отклонён.';
+  String get errorInvalidRequestRejected => 'Запрос имеет неверный формат и был отклонен.';
 
   @override
   String get errorReasoningConfigRejected =>
-      'Google отклонил параметры reasoning/thinking для этой модели. Включите автоматический режим размышлений (reasoning).';
+      'Google отклонил параметры reasoning/thinking для этой модели. Включите автоматический режим рассуждений (reasoning).';
 
   @override
   String get durationFewSeconds => 'несколько секунд';

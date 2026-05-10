@@ -117,7 +117,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountsEmptyTitle => 'No accounts yet';
 
   @override
-  String get accountsEmptyMessage => 'Connect at least one Gemini CLI or Kiro account';
+  String get accountsEmptyMessage => 'Connect at least one Gemini CLI or Kiro account.';
 
   @override
   String get connectAccountButton => 'Connect account';
@@ -145,7 +145,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountsFilteredEmptyTitle => 'No accounts matched the search';
 
   @override
-  String get accountsFilteredEmptyMessage => 'Try another name, email, or project ID.';
+  String get accountsFilteredEmptyMessage => 'Try a different name, email, or project ID.';
 
   @override
   String get accountAvatarOpenTooltip => 'Open avatar';
@@ -190,13 +190,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kiroBuilderIdStartUrlLabel => 'Builder ID URL';
 
   @override
-  String get kiroBuilderIdStartUrlHelperText => 'You usually don\'t need to change this.';
+  String get kiroBuilderIdStartUrlHelperText => 'You usually don\'t need to change this';
 
   @override
   String get kiroRegionLabel => 'AWS region';
 
   @override
-  String get kiroRegionHelperText => 'Usually keep us-east-1.';
+  String get kiroRegionHelperText => 'Usually keep us-east-1';
 
   @override
   String kiroCredentialSourceChip(String value) {
@@ -253,7 +253,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountProjectCheckSuccessMessage =>
-      'KiCk successfully made a test request to Google for this account and project';
+      'KiCk successfully made a test request to Google for this account and project.';
 
   @override
   String accountProjectCheckModelValue(String model) {
@@ -323,7 +323,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountBanCheckPendingMessage =>
-      'Google returned RESOURCE_EXHAUSTED without a reset time';
+      'Google returned RESOURCE_EXHAUSTED without a reset time.';
 
   @override
   String get accountTermsOfServiceStatus => 'Ban confirmed';
@@ -349,23 +349,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountUsageVerificationOpenFailedMessage =>
-      'Failed to open the verification page in Google';
+      'Failed to open the verification page in Google.';
 
   @override
-  String get accountErrorActionOpenFailedMessage => 'Failed to open the Google page';
+  String get accountErrorActionOpenFailedMessage => 'Failed to open the Google page.';
 
   @override
   String get accountUsageEmptyTitle => 'Quota data unavailable';
 
   @override
-  String get accountUsageEmptyMessage => 'The provider did not provide quota data for this account';
+  String get accountUsageEmptyMessage => 'The provider did not return quota data for this account.';
 
   @override
   String get accountUsageUnavailableTitle => 'Quotas are unavailable for this account';
 
   @override
   String get accountUsageUnavailableMessage =>
-      'The quotas page currently works only for Gemini CLI and Kiro accounts.';
+      'The quotas page only works for Gemini CLI and Kiro accounts.';
 
   @override
   String get accountUsageMissingTitle => 'Account not found';
@@ -375,7 +375,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountUsageMissingMessage =>
-      'The account may already have been deleted, or the list has not refreshed yet';
+      'The account may already have been deleted, or the list has not refreshed yet.';
 
   @override
   String accountUsageResetsAt(String time) {
@@ -383,7 +383,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get accountUsageResetUnknown => 'The next reset time is unknown';
+  String get accountUsageResetUnknown => 'The next reset time is unknown.';
 
   @override
   String accountUsageLastUpdated(String time) {
@@ -516,8 +516,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get apiKeyRequiredTitle => 'Require API key';
 
   @override
-  String get apiKeyRequiredSubtitle =>
-      'If disabled, requests will be accepted without a Bearer token';
+  String get apiKeyRequiredSubtitle => 'If disabled, requests are accepted without a Bearer token';
 
   @override
   String get windowsTrayTitle => 'Minimize to tray';
@@ -562,7 +561,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsBackupInfoSubtitle =>
-      'Keep the file in a safe place! Restoring will completely replace your current settings and account list.';
+      'Keep the file in a safe place. Restoring will completely replace your current settings and account list.';
 
   @override
   String get hostLabel => 'Host';
@@ -659,7 +658,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unsafeRawLoggingSubtitle =>
-      'Stores the contents of requests and responses. Enable only for debugging!';
+      'Stores the contents of requests and responses. Enable only for debugging.';
 
   @override
   String get defaultGoogleWebSearchTitle => 'Enable web search by default';
@@ -734,7 +733,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsBackupUnprotectedWarning =>
-      'Warning! Your tokens and keys will be saved in plain text. Anyone who gets this file will gain access to your data.';
+      'Your tokens and keys will be saved in plain text. Anyone who gets this file will gain access to your data.';
 
   @override
   String get settingsBackupRestoreDialogTitle => 'Restore configuration?';
@@ -904,7 +903,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutLicenseTitle => 'License';
 
   @override
-  String get aboutLicenseMessage => 'KiCk is distributed as an open project';
+  String get aboutLicenseMessage => 'KiCk is distributed as an open project.';
 
   @override
   String get aboutOpenLicenseButton => 'Open license';
@@ -913,7 +912,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutPrivacyTitle => 'Privacy';
 
   @override
-  String get aboutPrivacyMessage => 'KiCk stores accounts, tokens, and settings locally';
+  String get aboutPrivacyMessage => 'KiCk stores accounts, tokens, and settings locally.';
 
   @override
   String get aboutOpenPrivacyButton => 'Open privacy notes';
@@ -923,7 +922,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutDisclaimerMessage =>
-      'KiCk is not affiliated with Google, AWS, Kiro, or SillyTavern';
+      'KiCk is not affiliated with Google, AWS, Kiro, or SillyTavern.';
 
   @override
   String get aboutCreditsTitle => 'Credits';
@@ -933,7 +932,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Built with Flutter and Material Symbols. DiceBear Identicon CC0 1.0.';
 
   @override
-  String get aboutOpenLinkFailedMessage => 'Failed to open the link.';
+  String get aboutOpenLinkFailedMessage => 'Failed to open the link';
 
   @override
   String get copyProxyEndpointTooltip => 'Copy proxy address';
@@ -1223,7 +1222,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logsLoadMoreButton => 'Load more';
 
   @override
-  String get logsNothingToExportMessage => 'No logs to save';
+  String get logsNothingToExportMessage => 'No logs to save.';
 
   @override
   String logsExportedMessage(String fileName) {
@@ -1368,7 +1367,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logMessageUpstreamPayloadReturned => 'Upstream provider returned a payload';
 
   @override
-  String get logMessageMappedChatCompletion => 'Mapped upstream payload to OpenAI chat completion';
+  String get logMessageMappedChatCompletion => 'Mapped upstream payload to OpenAI Chat Completion';
 
   @override
   String logMessageUsingAccountForModel(String account, String model) {
@@ -1405,7 +1404,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountDialogAdvancedHint =>
-      'If you don\'t want to configure it manually, you can leave this section as is.';
+      'If you don\'t want to configure these manually, you can leave this section as is.';
 
   @override
   String get projectIdLabel => 'Project ID';
@@ -1545,26 +1544,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not reach Google\'s servers. Check your internet connection and try again.';
 
   @override
-  String get errorGoogleServiceUnavailable =>
-      'Google service is temporarily unavailable. Please try again later.';
+  String get errorGoogleServiceUnavailable => 'Google is temporarily unavailable. Try again later.';
 
   @override
-  String get errorInvalidServiceResponse =>
-      'The server returned an invalid response. Please try again.';
+  String get errorInvalidServiceResponse => 'The server returned an invalid response. Try again.';
 
   @override
-  String get errorGoogleAuthFailed => 'Google authorization failed. Please try again.';
+  String get errorGoogleAuthFailed => 'Google sign-in failed. Try again.';
 
   @override
   String get errorGoogleAuthTimedOut =>
-      'Google authorization did not finish in time. Return to the app and try again. If this keeps happening on Android, disable battery restrictions for KiCk.';
+      'Google sign-in did not finish in time. Return to the app and try again. If this keeps happening on Android, disable battery restrictions for KiCk.';
 
   @override
   String get errorGoogleAuthBrowserOpenFailed =>
-      'Failed to open the browser for Google authorization. Please try again.';
+      'Failed to open the browser for Google sign-in. Try again.';
 
   @override
-  String get errorUnknown => 'An unknown error occurred. Please try again.';
+  String get errorUnknown => 'Something went wrong. Try again.';
 
   @override
   String get errorOauthTokensMissing =>
@@ -1594,18 +1591,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorKiroAuthExpired => 'Kiro session expired. Sign in again and try again.';
 
   @override
-  String get errorKiroAuthStartFailed =>
-      'Failed to start Kiro authorization. Please try again later.';
+  String get errorKiroAuthStartFailed => 'Failed to start Kiro sign-in. Try again later.';
 
   @override
-  String get errorKiroAuthCancelled => 'Kiro authorization was canceled.';
+  String get errorKiroAuthCancelled => 'Kiro sign-in was canceled.';
 
   @override
-  String get errorKiroAuthTimedOut => 'Kiro authorization timed out. Please try again.';
+  String get errorKiroAuthTimedOut => 'Kiro sign-in timed out. Try again.';
 
   @override
-  String get errorKiroAuthRejected =>
-      'Kiro rejected the authorization. Try starting sign-in again.';
+  String get errorKiroAuthRejected => 'Kiro rejected the sign-in. Try starting again.';
 
   @override
   String errorKiroRateLimitedRetry(String retryHint) {
@@ -1617,8 +1612,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Kiro has temporarily rate-limited requests. Try again later.';
 
   @override
-  String get errorKiroServiceUnavailable =>
-      'Kiro service is temporarily unavailable. Please try again later.';
+  String get errorKiroServiceUnavailable => 'Kiro is temporarily unavailable. Try again later.';
 
   @override
   String get errorGoogleAccountVerificationRequired =>
@@ -1646,7 +1640,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorGoogleCapacity =>
-      'Google servers are temporarily overloaded. Please try again a little later.';
+      'Google servers are temporarily overloaded. Try again a little later.';
 
   @override
   String get errorUnsupportedModel =>
@@ -1656,8 +1650,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorInvalidJson => 'The request has an invalid JSON format.';
 
   @override
-  String get errorUnexpectedResponse =>
-      'The service returned an unexpected response. Please try again.';
+  String get errorUnexpectedResponse => 'The service returned an unexpected response. Try again.';
 
   @override
   String get errorQuotaExhausted =>
@@ -1670,7 +1663,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorQuotaExhaustedNoResetHint =>
-      'Google returned RESOURCE_EXHAUSTED without a reset time. KiCk will check this account separately; if the error repeats, use another account';
+      'Google returned RESOURCE_EXHAUSTED without a reset time. KiCk will check this account separately. If the error repeats, use another account.';
 
   @override
   String get errorGoogleTermsOfServiceViolation =>

@@ -300,7 +300,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountsEmptyMessage.
   ///
   /// In en, this message translates to:
-  /// **'Connect at least one Gemini CLI or Kiro account'**
+  /// **'Connect at least one Gemini CLI or Kiro account.'**
   String get accountsEmptyMessage;
 
   /// No description provided for @connectAccountButton.
@@ -348,7 +348,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountsFilteredEmptyMessage.
   ///
   /// In en, this message translates to:
-  /// **'Try another name, email, or project ID.'**
+  /// **'Try a different name, email, or project ID.'**
   String get accountsFilteredEmptyMessage;
 
   /// No description provided for @accountAvatarOpenTooltip.
@@ -438,7 +438,7 @@ abstract class AppLocalizations {
   /// No description provided for @kiroBuilderIdStartUrlHelperText.
   ///
   /// In en, this message translates to:
-  /// **'You usually don\'t need to change this.'**
+  /// **'You usually don\'t need to change this'**
   String get kiroBuilderIdStartUrlHelperText;
 
   /// No description provided for @kiroRegionLabel.
@@ -450,7 +450,7 @@ abstract class AppLocalizations {
   /// No description provided for @kiroRegionHelperText.
   ///
   /// In en, this message translates to:
-  /// **'Usually keep us-east-1.'**
+  /// **'Usually keep us-east-1'**
   String get kiroRegionHelperText;
 
   /// No description provided for @kiroCredentialSourceChip.
@@ -546,7 +546,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountProjectCheckSuccessMessage.
   ///
   /// In en, this message translates to:
-  /// **'KiCk successfully made a test request to Google for this account and project'**
+  /// **'KiCk successfully made a test request to Google for this account and project.'**
   String get accountProjectCheckSuccessMessage;
 
   /// Shown in the successful project diagnostics dialog after the project check completes.
@@ -672,7 +672,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountBanCheckPendingMessage.
   ///
   /// In en, this message translates to:
-  /// **'Google returned RESOURCE_EXHAUSTED without a reset time'**
+  /// **'Google returned RESOURCE_EXHAUSTED without a reset time.'**
   String get accountBanCheckPendingMessage;
 
   /// No description provided for @accountTermsOfServiceStatus.
@@ -720,13 +720,13 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageVerificationOpenFailedMessage.
   ///
   /// In en, this message translates to:
-  /// **'Failed to open the verification page in Google'**
+  /// **'Failed to open the verification page in Google.'**
   String get accountUsageVerificationOpenFailedMessage;
 
   /// No description provided for @accountErrorActionOpenFailedMessage.
   ///
   /// In en, this message translates to:
-  /// **'Failed to open the Google page'**
+  /// **'Failed to open the Google page.'**
   String get accountErrorActionOpenFailedMessage;
 
   /// No description provided for @accountUsageEmptyTitle.
@@ -738,7 +738,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageEmptyMessage.
   ///
   /// In en, this message translates to:
-  /// **'The provider did not provide quota data for this account'**
+  /// **'The provider did not return quota data for this account.'**
   String get accountUsageEmptyMessage;
 
   /// No description provided for @accountUsageUnavailableTitle.
@@ -750,7 +750,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageUnavailableMessage.
   ///
   /// In en, this message translates to:
-  /// **'The quotas page currently works only for Gemini CLI and Kiro accounts.'**
+  /// **'The quotas page only works for Gemini CLI and Kiro accounts.'**
   String get accountUsageUnavailableMessage;
 
   /// No description provided for @accountUsageMissingTitle.
@@ -768,7 +768,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageMissingMessage.
   ///
   /// In en, this message translates to:
-  /// **'The account may already have been deleted, or the list has not refreshed yet'**
+  /// **'The account may already have been deleted, or the list has not refreshed yet.'**
   String get accountUsageMissingMessage;
 
   /// No description provided for @accountUsageResetsAt.
@@ -780,7 +780,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageResetUnknown.
   ///
   /// In en, this message translates to:
-  /// **'The next reset time is unknown'**
+  /// **'The next reset time is unknown.'**
   String get accountUsageResetUnknown;
 
   /// No description provided for @accountUsageLastUpdated.
@@ -1014,7 +1014,7 @@ abstract class AppLocalizations {
   /// No description provided for @apiKeyRequiredSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'If disabled, requests will be accepted without a Bearer token'**
+  /// **'If disabled, requests are accepted without a Bearer token'**
   String get apiKeyRequiredSubtitle;
 
   /// No description provided for @windowsTrayTitle.
@@ -1098,7 +1098,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsBackupInfoSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Keep the file in a safe place! Restoring will completely replace your current settings and account list.'**
+  /// **'Keep the file in a safe place. Restoring will completely replace your current settings and account list.'**
   String get settingsBackupInfoSubtitle;
 
   /// No description provided for @hostLabel.
@@ -1272,7 +1272,7 @@ abstract class AppLocalizations {
   /// No description provided for @unsafeRawLoggingSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Stores the contents of requests and responses. Enable only for debugging!'**
+  /// **'Stores the contents of requests and responses. Enable only for debugging.'**
   String get unsafeRawLoggingSubtitle;
 
   /// No description provided for @defaultGoogleWebSearchTitle.
@@ -1410,7 +1410,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsBackupUnprotectedWarning.
   ///
   /// In en, this message translates to:
-  /// **'Warning! Your tokens and keys will be saved in plain text. Anyone who gets this file will gain access to your data.'**
+  /// **'Your tokens and keys will be saved in plain text. Anyone who gets this file will gain access to your data.'**
   String get settingsBackupUnprotectedWarning;
 
   /// No description provided for @settingsBackupRestoreDialogTitle.
@@ -1692,7 +1692,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutLicenseMessage.
   ///
   /// In en, this message translates to:
-  /// **'KiCk is distributed as an open project'**
+  /// **'KiCk is distributed as an open project.'**
   String get aboutLicenseMessage;
 
   /// No description provided for @aboutOpenLicenseButton.
@@ -1710,7 +1710,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutPrivacyMessage.
   ///
   /// In en, this message translates to:
-  /// **'KiCk stores accounts, tokens, and settings locally'**
+  /// **'KiCk stores accounts, tokens, and settings locally.'**
   String get aboutPrivacyMessage;
 
   /// No description provided for @aboutOpenPrivacyButton.
@@ -1728,7 +1728,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutDisclaimerMessage.
   ///
   /// In en, this message translates to:
-  /// **'KiCk is not affiliated with Google, AWS, Kiro, or SillyTavern'**
+  /// **'KiCk is not affiliated with Google, AWS, Kiro, or SillyTavern.'**
   String get aboutDisclaimerMessage;
 
   /// No description provided for @aboutCreditsTitle.
@@ -1746,7 +1746,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutOpenLinkFailedMessage.
   ///
   /// In en, this message translates to:
-  /// **'Failed to open the link.'**
+  /// **'Failed to open the link'**
   String get aboutOpenLinkFailedMessage;
 
   /// No description provided for @copyProxyEndpointTooltip.
@@ -2262,7 +2262,7 @@ abstract class AppLocalizations {
   /// No description provided for @logsNothingToExportMessage.
   ///
   /// In en, this message translates to:
-  /// **'No logs to save'**
+  /// **'No logs to save.'**
   String get logsNothingToExportMessage;
 
   /// No description provided for @logsExportedMessage.
@@ -2532,7 +2532,7 @@ abstract class AppLocalizations {
   /// No description provided for @logMessageMappedChatCompletion.
   ///
   /// In en, this message translates to:
-  /// **'Mapped upstream payload to OpenAI chat completion'**
+  /// **'Mapped upstream payload to OpenAI Chat Completion'**
   String get logMessageMappedChatCompletion;
 
   /// No description provided for @logMessageUsingAccountForModel.
@@ -2598,7 +2598,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountDialogAdvancedHint.
   ///
   /// In en, this message translates to:
-  /// **'If you don\'t want to configure it manually, you can leave this section as is.'**
+  /// **'If you don\'t want to configure these manually, you can leave this section as is.'**
   String get accountDialogAdvancedHint;
 
   /// No description provided for @projectIdLabel.
@@ -2868,37 +2868,37 @@ abstract class AppLocalizations {
   /// No description provided for @errorGoogleServiceUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Google service is temporarily unavailable. Please try again later.'**
+  /// **'Google is temporarily unavailable. Try again later.'**
   String get errorGoogleServiceUnavailable;
 
   /// No description provided for @errorInvalidServiceResponse.
   ///
   /// In en, this message translates to:
-  /// **'The server returned an invalid response. Please try again.'**
+  /// **'The server returned an invalid response. Try again.'**
   String get errorInvalidServiceResponse;
 
   /// No description provided for @errorGoogleAuthFailed.
   ///
   /// In en, this message translates to:
-  /// **'Google authorization failed. Please try again.'**
+  /// **'Google sign-in failed. Try again.'**
   String get errorGoogleAuthFailed;
 
   /// No description provided for @errorGoogleAuthTimedOut.
   ///
   /// In en, this message translates to:
-  /// **'Google authorization did not finish in time. Return to the app and try again. If this keeps happening on Android, disable battery restrictions for KiCk.'**
+  /// **'Google sign-in did not finish in time. Return to the app and try again. If this keeps happening on Android, disable battery restrictions for KiCk.'**
   String get errorGoogleAuthTimedOut;
 
   /// No description provided for @errorGoogleAuthBrowserOpenFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to open the browser for Google authorization. Please try again.'**
+  /// **'Failed to open the browser for Google sign-in. Try again.'**
   String get errorGoogleAuthBrowserOpenFailed;
 
   /// No description provided for @errorUnknown.
   ///
   /// In en, this message translates to:
-  /// **'An unknown error occurred. Please try again.'**
+  /// **'Something went wrong. Try again.'**
   String get errorUnknown;
 
   /// No description provided for @errorOauthTokensMissing.
@@ -2946,25 +2946,25 @@ abstract class AppLocalizations {
   /// No description provided for @errorKiroAuthStartFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to start Kiro authorization. Please try again later.'**
+  /// **'Failed to start Kiro sign-in. Try again later.'**
   String get errorKiroAuthStartFailed;
 
   /// No description provided for @errorKiroAuthCancelled.
   ///
   /// In en, this message translates to:
-  /// **'Kiro authorization was canceled.'**
+  /// **'Kiro sign-in was canceled.'**
   String get errorKiroAuthCancelled;
 
   /// No description provided for @errorKiroAuthTimedOut.
   ///
   /// In en, this message translates to:
-  /// **'Kiro authorization timed out. Please try again.'**
+  /// **'Kiro sign-in timed out. Try again.'**
   String get errorKiroAuthTimedOut;
 
   /// No description provided for @errorKiroAuthRejected.
   ///
   /// In en, this message translates to:
-  /// **'Kiro rejected the authorization. Try starting sign-in again.'**
+  /// **'Kiro rejected the sign-in. Try starting again.'**
   String get errorKiroAuthRejected;
 
   /// No description provided for @errorKiroRateLimitedRetry.
@@ -2982,7 +2982,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorKiroServiceUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Kiro service is temporarily unavailable. Please try again later.'**
+  /// **'Kiro is temporarily unavailable. Try again later.'**
   String get errorKiroServiceUnavailable;
 
   /// No description provided for @errorGoogleAccountVerificationRequired.
@@ -3024,7 +3024,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorGoogleCapacity.
   ///
   /// In en, this message translates to:
-  /// **'Google servers are temporarily overloaded. Please try again a little later.'**
+  /// **'Google servers are temporarily overloaded. Try again a little later.'**
   String get errorGoogleCapacity;
 
   /// No description provided for @errorUnsupportedModel.
@@ -3042,7 +3042,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorUnexpectedResponse.
   ///
   /// In en, this message translates to:
-  /// **'The service returned an unexpected response. Please try again.'**
+  /// **'The service returned an unexpected response. Try again.'**
   String get errorUnexpectedResponse;
 
   /// No description provided for @errorQuotaExhausted.
@@ -3060,7 +3060,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorQuotaExhaustedNoResetHint.
   ///
   /// In en, this message translates to:
-  /// **'Google returned RESOURCE_EXHAUSTED without a reset time. KiCk will check this account separately; if the error repeats, use another account'**
+  /// **'Google returned RESOURCE_EXHAUSTED without a reset time. KiCk will check this account separately. If the error repeats, use another account.'**
   String get errorQuotaExhaustedNoResetHint;
 
   /// No description provided for @errorGoogleTermsOfServiceViolation.
