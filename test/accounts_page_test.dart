@@ -27,7 +27,7 @@ void main() {
   final enL10n = lookupKickLocalizations(const Locale('en'));
   final ruL10n = lookupKickLocalizations(const Locale('ru'));
 
-  testWidgets('kiro account card does not show source badge', (tester) async {
+  testWidgets('kiro account card shows subtitle and credential source', (tester) async {
     final bootstrap = await _createBootstrap(
       initialAccounts: [
         AccountProfile(
@@ -78,9 +78,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('Kiro'), findsWidgets);
-    expect(find.text('AWS Builder ID'), findsOneWidget);
-    expect(find.textContaining(enL10n.kiroCredentialSourceChip('').split(':').first), findsNothing);
-    expect(find.text(enL10n.kiroCredentialSourceChip('Builder ID')), findsNothing);
+    expect(find.text('Kiro • AWS Builder ID'), findsOneWidget);
+    expect(find.text(enL10n.kiroCredentialSourceChip(defaultKiroRegion)), findsOneWidget);
   });
 
   testWidgets('kiro link authorization dialog removes code copy action', (tester) async {
