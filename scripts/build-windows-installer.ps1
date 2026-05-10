@@ -64,7 +64,7 @@ foreach ($dll in $vcRuntimeDlls) {
     Copy-Item $systemCopy -Destination $SourceDir -Force
     Write-Host "Bundled $dll from System32."
   } else {
-    Write-Warning "$dll was not found on this system — the installer may fail on clean machines."
+    Write-Warning "$dll was not found on this system; the installer may fail on clean machines."
   }
 }
 
