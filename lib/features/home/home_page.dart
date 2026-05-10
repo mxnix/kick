@@ -580,6 +580,7 @@ class _SillyTavernPushDialogState extends State<_SillyTavernPushDialog> {
     final scheme = Theme.of(context).colorScheme;
 
     return AlertDialog(
+      scrollable: true,
       icon: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Image.asset(
