@@ -374,24 +374,24 @@ class _SillyTavernActionButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final button = Material(
       color: scheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: busy ? null : onPressed,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         child: SizedBox(
-          width: 44,
-          height: 44,
+          width: 56,
+          height: 56,
           child: Center(
             child: busy
-                ? const KickLoadingIndicator(size: 18, contained: false)
+                ? const KickLoadingIndicator(size: 22, contained: false)
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: Image.asset(
                       _sillyTavernLogoAssetPath,
-                      width: 20,
-                      height: 20,
+                      width: 24,
+                      height: 24,
                       filterQuality: FilterQuality.high,
-                      errorBuilder: (_, _, _) => const Icon(KickIcons.link, size: 20),
+                      errorBuilder: (_, _, _) => const Icon(KickIcons.link, size: 24),
                     ),
                   ),
           ),
