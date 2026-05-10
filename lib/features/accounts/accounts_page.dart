@@ -616,6 +616,18 @@ class _AccountCard extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ] else ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.kiroCredentialSourceChip(_kiroSourceChipValue(account)),
+                        style: textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ],
                 ),
@@ -1544,6 +1556,21 @@ Color _accountRuntimeNoticeTint(ColorScheme scheme, AccountRuntimeNotice? runtim
   return switch (runtimeNotice?.kind) {
     AccountRuntimeNoticeKind.termsOfServiceViolation => scheme.error,
     AccountRuntimeNoticeKind.banCheckPending || null => scheme.tertiary,
+  };
+}
+
+String _kiroSourceChipValue(AccountProfile account) {
+  final region = account.providerRegion?.trim();
+  if (region != null && region.isNotEmpty) {
+    return region;
+  }
+
+  final sourceType = account.credentialSourceType?.trim().toLowerCase();
+  return switch (sourceType) {
+    builderIdKiroCredentialSourceType => 'AWS Builder ID',
+    manualKiroCredentialSourceType => 'Kiro token file',
+    defaultKiroCredentialSourceType => 'Kiro local session',
+    _ => defaultKiroRegion,
   };
 }
 
