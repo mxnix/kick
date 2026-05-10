@@ -362,6 +362,60 @@ void main() {
     expect(models, ['auto', 'claude-sonnet-4', 'claude-sonnet-4.5', 'deepseek-3.2']);
   });
 
+  test('maps public Claude aliases to Kiro upstream model ids', () async {
+    late Map<String, Object?> capturedBody;
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          final typedRequest = request as http.Request;
+          capturedBody = (jsonDecode(typedRequest.body) as Map).cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('{"content":"Hello from Kiro"}')),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'kiro/claude-opus-4-7'),
+    );
+
+    final conversationState = (capturedBody['conversationState'] as Map).cast<String, Object?>();
+    final currentMessage = (conversationState['currentMessage'] as Map).cast<String, Object?>();
+    final userInputMessage = (currentMessage['userInputMessage'] as Map).cast<String, Object?>();
+
+    expect(userInputMessage['modelId'], 'claude-opus-4.7');
+  });
+
+  test('maps auto to the Kiro simple task model', () async {
+    late Map<String, Object?> capturedBody;
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          final typedRequest = request as http.Request;
+          capturedBody = (jsonDecode(typedRequest.body) as Map).cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('{"content":"Hello from Kiro"}')),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'kiro/auto'),
+    );
+
+    final conversationState = (capturedBody['conversationState'] as Map).cast<String, Object?>();
+    final currentMessage = (conversationState['currentMessage'] as Map).cast<String, Object?>();
+    final userInputMessage = (currentMessage['userInputMessage'] as Map).cast<String, Object?>();
+
+    expect(userInputMessage['modelId'], 'simple-task');
+  });
+
   test('retries Kiro generation after upstream service unavailable', () async {
     final waits = <Duration>[];
     var attempts = 0;
@@ -559,13 +613,14 @@ void main() {
     expect(OpenAiResponseMapper.currentReasoningTokenCount(response), 0);
   });
 
-  test('suppresses Kiro reasoning output unless reasoning is explicitly requested', () async {
+  test('exposes Kiro reasoning output separately from response text', () async {
     final client = KiroCodeAssistClient(
       httpClient: QueueHttpClient([
         (request) async {
           expect(request.url.path, '/generateAssistantResponse');
           return http.StreamedResponse(
             Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"contextUsagePercentage":17.136499404907227}'),
               utf8.encode('\u0000\u0000{"text":"Plan first.","signature":"sig-1"}'),
               utf8.encode('\u0000\u0000{"content":"Done."}'),
             ]),
@@ -581,7 +636,7 @@ void main() {
     );
 
     expect(OpenAiResponseMapper.currentText(response), 'Done.');
-    expect(OpenAiResponseMapper.currentReasoningText(response), isEmpty);
+    expect(OpenAiResponseMapper.currentReasoningText(response), 'Plan first.');
     expect(OpenAiResponseMapper.currentReasoningTokenCount(response), greaterThan(0));
 
     final chatCompletion = OpenAiResponseMapper.toChatCompletion(
@@ -592,9 +647,74 @@ void main() {
     final choices = (chatCompletion['choices'] as List).cast<Map<String, Object?>>();
     final message = (choices.single['message'] as Map).cast<String, Object?>();
 
-    expect(message.containsKey('reasoning_content'), isFalse);
-    expect(message.containsKey('reasoning_signature'), isFalse);
+    expect(message['reasoning_content'], 'Plan first.');
+    expect(message['reasoning_signature'], 'sig-1');
     expect(message['content'], 'Done.');
+  });
+
+  test('streams Kiro reasoning as OpenAI reasoning deltas by default', () async {
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/generateAssistantResponse');
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"text":"Plan first.","signature":"sig-1"}'),
+              utf8.encode('\u0000\u0000{"content":"Done."}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final stream = await client.generateContentStream(
+      account: sampleAccount(),
+      request: sampleRequest(),
+    );
+    final deltas = <Map<String, Object?>>[];
+    var includeRole = true;
+    var previousText = '';
+    var previousReasoningText = '';
+    var previousToolCallCount = 0;
+
+    await for (final payload in stream) {
+      deltas.addAll(
+        OpenAiResponseMapper.toChatStreamDeltas(
+          requestId: 'req-1',
+          model: 'kiro/claude-sonnet-4',
+          payload: payload,
+          includeRole: includeRole,
+          previousText: previousText,
+          previousReasoningText: previousReasoningText,
+          previousToolCallCount: previousToolCallCount,
+        ),
+      );
+      includeRole = false;
+      previousText = OpenAiResponseMapper.currentText(payload);
+      previousReasoningText = OpenAiResponseMapper.currentReasoningText(payload);
+      previousToolCallCount = OpenAiResponseMapper.currentToolCallCount(payload);
+    }
+
+    final deltaObjects = deltas
+        .map(
+          (event) =>
+              (((event['choices'] as List).single as Map)['delta'] as Map).cast<String, Object?>(),
+        )
+        .toList();
+
+    expect(deltaObjects.where((delta) => delta.containsKey('reasoning_content')).toList(), [
+      {'reasoning_content': 'Plan first.'},
+    ]);
+    expect(deltaObjects.where((delta) => delta.containsKey('content')).toList(), [
+      {'content': 'Done.'},
+    ]);
+    expect(
+      deltaObjects.any(
+        (delta) => delta['content'] == '[Upstream returned an empty response. Please retry.]',
+      ),
+      isFalse,
+    );
   });
 
   test('maps Kiro reasoning stream events when reasoning effort is enabled', () async {

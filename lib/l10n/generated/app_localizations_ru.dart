@@ -1459,7 +1459,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get kiroLinkAuthDialogMessage =>
-      'Откройте ссылку, войдите через AWS Builder ID и подтвердите вход для Kiro. Код нужен только для сверки. KiCk сам дождётся завершения.';
+      'Откройте ссылку, войдите в Kiro через GitHub или Google. KiCk сам дождётся callback из браузера.';
 
   @override
   String get kiroLinkAuthUserCodeLabel => 'Код для сверки';

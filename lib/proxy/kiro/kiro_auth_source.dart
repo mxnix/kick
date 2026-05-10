@@ -9,13 +9,34 @@ import '../../data/models/oauth_tokens.dart';
 const defaultKiroRegion = 'us-east-1';
 const defaultKiroBuilderIdStartUrl = 'https://view.awsapps.com/start';
 const defaultKiroBuilderIdProfileArn =
-    'arn:aws:codewhisperer:us-east-1:638616132270:profile/AAAACCCCXXXX';
+    'arn:aws:codewhisperer:us-east-1:699475941385:profile/EHGA3GRVQMUK';
 const defaultKiroSocialProfileArn =
     'arn:aws:codewhisperer:us-east-1:699475941385:profile/EHGA3GRVQMUK';
+
+const _legacyBuilderIdPlaceholderProfileArn =
+    'arn:aws:codewhisperer:us-east-1:638616132270:profile/AAAACCCCXXXX';
+
+bool isLegacyPlaceholderKiroProfileArn(String? profileArn) {
+  final trimmed = profileArn?.trim();
+  return trimmed != null && trimmed == _legacyBuilderIdPlaceholderProfileArn;
+}
+
+String? resolveKiroProfileArn(String? profileArn, {String? fallback}) {
+  final trimmed = profileArn?.trim();
+  if (trimmed == null || trimmed.isEmpty) {
+    return fallback?.trim().isNotEmpty == true ? fallback!.trim() : null;
+  }
+  if (trimmed == _legacyBuilderIdPlaceholderProfileArn) {
+    return fallback?.trim().isNotEmpty == true ? fallback!.trim() : defaultKiroBuilderIdProfileArn;
+  }
+  return trimmed;
+}
+
 const defaultKiroCredentialSourceType = 'local_json';
 const manualKiroCredentialSourceType = 'manual_json';
 const builderIdKiroCredentialSourceType = 'builder_id_link';
 const builderIdKiroAuthMethod = 'builder-id';
+const socialKiroAuthMethod = 'social';
 
 class KiroAuthSourceSnapshot {
   const KiroAuthSourceSnapshot({
@@ -58,13 +79,17 @@ class KiroAuthSourceSnapshot {
 
   String get displayIdentity {
     final sourceName = p.basename(sourcePath).trim();
-    final normalizedSource = switch (authMethod?.trim().toLowerCase()) {
+    final normalizedAuthMethod = authMethod?.trim().toLowerCase();
+    final normalizedSource = switch (normalizedAuthMethod) {
       builderIdKiroAuthMethod => 'AWS Builder ID',
       _ when sourceName == 'kiro-auth-token.json' => 'Kiro local session',
       _ => sourceName,
     };
-    if (authMethod?.trim().toLowerCase() == builderIdKiroAuthMethod) {
+    if (normalizedAuthMethod == builderIdKiroAuthMethod) {
       return _firstNonEmpty(normalizedSource, profileArn, 'Kiro local session');
+    }
+    if (normalizedAuthMethod == socialKiroAuthMethod) {
+      return _firstNonEmpty(provider, normalizedSource, profileArn, 'Kiro local session');
     }
     return _firstNonEmpty(profileArn, normalizedSource, 'Kiro local session');
   }
@@ -161,9 +186,11 @@ Future<KiroAuthSourceSnapshot?> loadKiroAuthSource({String? sourcePath}) async {
       DateTime.now().subtract(const Duration(minutes: 5));
   final authMethod = _readString(json, const ['authMethod', 'auth_method']);
   final provider = _readString(json, const ['provider']);
-  final profileArn =
-      _readString(json, const ['profileArn', 'profile_arn']) ??
-      _fallbackKiroProfileArn(authMethod: authMethod, provider: provider);
+  final storedProfileArn = _readString(json, const ['profileArn', 'profile_arn']);
+  final fallbackProfileArn = _fallbackKiroProfileArn(authMethod: authMethod, provider: provider);
+  final profileArn = storedProfileArn == _legacyBuilderIdPlaceholderProfileArn
+      ? (fallbackProfileArn ?? storedProfileArn)
+      : (storedProfileArn ?? fallbackProfileArn);
 
   return KiroAuthSourceSnapshot(
     sourcePath: file.path,
@@ -181,6 +208,16 @@ Future<KiroAuthSourceSnapshot?> loadKiroAuthSource({String? sourcePath}) async {
     clientSecret: _readString(json, const ['clientSecret', 'client_secret']),
     startUrl: _readString(json, const ['startUrl', 'start_url']),
   );
+}
+
+Future<KiroAuthSourceSnapshot?> loadEffectiveKiroAuthSource({
+  String? sourcePath,
+  String? defaultSourcePath,
+}) async {
+  if (sourcePath?.trim().isNotEmpty != true) {
+    return null;
+  }
+  return loadKiroAuthSource(sourcePath: sourcePath);
 }
 
 Future<KiroAuthSourceSnapshot> persistKiroAuthSourceSnapshot(
@@ -210,7 +247,12 @@ Future<KiroAuthSourceSnapshot> persistKiroAuthSourceSnapshot(
     ...?_optionalEntry('startUrl', snapshot.startUrl),
   };
   await file.writeAsString(const JsonEncoder.withIndent('  ').convert(payload));
-  return snapshot.copyWith(sourcePath: file.path);
+  return snapshot.copyWith(
+    sourcePath: file.path,
+    sourceType: snapshot.authMethod?.trim().toLowerCase() == builderIdKiroAuthMethod
+        ? builderIdKiroCredentialSourceType
+        : _credentialSourceTypeForPath(resolvedOutputPath, file.path),
+  );
 }
 
 Future<bool> isManagedKiroCredentialSourcePath(
@@ -234,6 +276,15 @@ Future<bool> isManagedKiroCredentialSourcePath(
 
   return p.equals(p.dirname(normalizedSourcePath), normalizedManagedDirectory) ||
       p.isWithin(normalizedManagedDirectory, normalizedSourcePath);
+}
+
+bool isDefaultKiroCredentialSourcePath(String? sourcePath) {
+  final resolvedPath = sourcePath?.trim();
+  final defaultPath = resolveKiroCredentialSourcePath(null);
+  if (resolvedPath == null || resolvedPath.isEmpty || defaultPath == null) {
+    return false;
+  }
+  return p.equals(p.normalize(resolvedPath), p.normalize(defaultPath));
 }
 
 Future<bool> deleteManagedKiroCredentialSource(
@@ -292,10 +343,6 @@ String _credentialSourceTypeForPath(String? requestedPath, String resolvedPath) 
     return defaultKiroCredentialSourceType;
   }
 
-  final fileName = p.basename(resolvedPath).toLowerCase();
-  if (fileName.startsWith('kiro-auth-')) {
-    return builderIdKiroCredentialSourceType;
-  }
   return manualKiroCredentialSourceType;
 }
 
@@ -340,8 +387,8 @@ Map<String, Object?>? _optionalEntry(String key, String? value) {
   return {key: trimmed};
 }
 
-String _firstNonEmpty(String? first, [String? second, String? fallback]) {
-  for (final candidate in [first, second, fallback]) {
+String _firstNonEmpty(String? first, [String? second, String? third, String? fallback]) {
+  for (final candidate in [first, second, third, fallback]) {
     final trimmed = candidate?.trim();
     if (trimmed != null && trimmed.isNotEmpty) {
       return trimmed;

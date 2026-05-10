@@ -496,6 +496,11 @@ class _FakeKiroLinkAuthService extends KiroLinkAuthService {
   }
 
   @override
+  Future<KiroLinkAuthRequest> startSocialAuthorization({String region = defaultKiroRegion}) async {
+    return request;
+  }
+
+  @override
   Future<KiroAuthSourceSnapshot> completeBuilderIdAuthorization(
     KiroLinkAuthRequest request, {
     bool Function()? isCancelled,

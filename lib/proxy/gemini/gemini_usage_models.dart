@@ -245,16 +245,16 @@ class GeminiUsageSnapshot {
       if (currentUsage != null || usageLimit != null) {
         buckets.add(
           GeminiUsageBucket(
-            modelId: 'AGENTIC_REQUEST',
+            modelId: 'CREDIT',
             remainingFraction: GeminiUsageBucket._remainingFractionFromUsage(
               currentUsage,
               usageLimit,
             ),
             resetAt: defaultResetAt,
-            tokenType: 'REQUESTS',
+            tokenType: 'CREDITS',
             currentUsage: currentUsage,
             usageLimit: usageLimit,
-            unit: 'requests',
+            unit: 'credits',
           ),
         );
       }

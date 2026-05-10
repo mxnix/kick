@@ -10,7 +10,7 @@ class KiroUsageService {
   final KiroCodeAssistClient _client;
 
   Future<GeminiUsageSnapshot> fetchUsage(AccountProfile account) async {
-    final source = await loadKiroAuthSource(sourcePath: account.credentialSourcePath);
+    final source = await loadEffectiveKiroAuthSource(sourcePath: account.credentialSourcePath);
     if (source == null) {
       throw StateError('Kiro credentials for this account were not found.');
     }
@@ -25,7 +25,10 @@ class KiroUsageService {
         providerRegion: source.effectiveRegion,
         credentialSourceType: source.sourceType,
         credentialSourcePath: source.sourcePath,
-        providerProfileArn: source.profileArn ?? account.providerProfileArn,
+        providerProfileArn: resolveKiroProfileArn(
+          source.profileArn,
+          fallback: account.providerProfileArn,
+        ),
         googleSubjectId: account.googleSubjectId,
         avatarUrl: account.avatarUrl,
         enabled: account.enabled,

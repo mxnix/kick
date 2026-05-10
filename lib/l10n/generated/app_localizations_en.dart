@@ -1463,7 +1463,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kiroLinkAuthDialogMessage =>
-      'Open the link, sign in with AWS Builder ID, and confirm access for Kiro. The code is only for verification; you do not need to enter it. KiCk will wait for completion automatically.';
+      'Open the link, sign in to Kiro, and choose GitHub or Google. KiCk will wait for the browser callback automatically.';
 
   @override
   String get kiroLinkAuthUserCodeLabel => 'Verification code';

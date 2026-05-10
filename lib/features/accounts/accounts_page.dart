@@ -1390,8 +1390,7 @@ Future<String?> _authorizeKiroByLink(
   required String region,
 }) async {
   final service = ref.read(kiroLinkAuthServiceProvider);
-  final request = await service.startBuilderIdAuthorization(
-    startUrl: startUrl.trim().isEmpty ? defaultKiroBuilderIdStartUrl : startUrl.trim(),
+  final request = await service.startSocialAuthorization(
     region: region.trim().isEmpty ? defaultKiroRegion : region.trim(),
   );
   if (!context.mounted) {
@@ -1611,12 +1610,14 @@ class _KiroLinkAuthDialogState extends State<_KiroLinkAuthDialog> {
                     : formatUserFacingError(l10n, _error!),
               ),
               const SizedBox(height: 16),
-              _KiroAuthFactRow(
-                icon: Icons.password_rounded,
-                label: l10n.kiroLinkAuthUserCodeLabel,
-                value: widget.request.userCode,
-              ),
-              const SizedBox(height: 8),
+              if (widget.request.userCode.trim().isNotEmpty) ...[
+                _KiroAuthFactRow(
+                  icon: Icons.password_rounded,
+                  label: l10n.kiroLinkAuthUserCodeLabel,
+                  value: widget.request.userCode,
+                ),
+                const SizedBox(height: 8),
+              ],
               _KiroAuthFactRow(
                 icon: Icons.public_rounded,
                 label: l10n.kiroLinkAuthVerificationUrlLabel,
@@ -1679,10 +1680,16 @@ class _KiroLinkAuthDialogState extends State<_KiroLinkAuthDialog> {
   Future<void> _openLink() async {
     setState(() => _openingLink = true);
     try {
-      final opened = await launchUrl(
+      var opened = await launchUrl(
         Uri.parse(widget.request.verificationUriComplete),
-        mode: LaunchMode.externalApplication,
+        mode: Platform.isAndroid ? LaunchMode.inAppBrowserView : LaunchMode.externalApplication,
       );
+      if (!opened && Platform.isAndroid) {
+        opened = await launchUrl(
+          Uri.parse(widget.request.verificationUriComplete),
+          mode: LaunchMode.externalApplication,
+        );
+      }
       if (!mounted) {
         return;
       }

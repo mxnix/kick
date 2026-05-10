@@ -37,6 +37,7 @@ void main() {
     expect(models, isNot(contains('google/gemini-4-experimental-preview')));
     expect(catalog.contains('deepseek-3.2'), isTrue);
     expect(catalog.contains('kiro/qwen3-coder-next'), isTrue);
+    expect(catalog.contains('simple-task'), isTrue);
     expect(catalog.contains('gemini-2.5-flash'), isFalse);
     expect(resolved.provider, AccountProvider.kiro);
     expect(resolved.upstreamModel, 'deepseek-3.2');

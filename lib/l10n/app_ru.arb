@@ -672,7 +672,7 @@
     "blockedModelsLabel": "Недоступные модели",
     "blockedModelsHelperText": "По одному ID на строку, например google/... или kiro/...",
     "kiroLinkAuthDialogTitle": "Авторизация Kiro",
-    "kiroLinkAuthDialogMessage": "Откройте ссылку, войдите через AWS Builder ID и подтвердите вход для Kiro. Код нужен только для сверки. KiCk сам дождётся завершения.",
+    "kiroLinkAuthDialogMessage": "Откройте ссылку, войдите в Kiro через GitHub или Google. KiCk сам дождётся callback из браузера.",
     "kiroLinkAuthUserCodeLabel": "Код для сверки",
     "kiroLinkAuthVerificationUrlLabel": "Ссылка для входа",
     "kiroLinkAuthWaitingMessage": "Ждём, пока вы подтвердите вход в браузере...",

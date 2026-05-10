@@ -304,6 +304,7 @@ class ModelCatalog {
       AccountProvider.gemini => normalized.startsWith('gemini-'),
       AccountProvider.kiro =>
         normalized == 'auto' ||
+            normalized == 'simple-task' ||
             normalized.startsWith('claude-') ||
             normalized.startsWith('anthropic.') ||
             normalized.startsWith('deepseek-') ||

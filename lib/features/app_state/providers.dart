@@ -126,9 +126,6 @@ final accountUsageQueryProvider = FutureProvider.autoDispose.family<GeminiUsageS
   ref,
   accountId,
 ) async {
-  // Keep the provider alive until the current request completes. Popping the
-  // page while the fetch was still loading could otherwise dispose the
-  // provider mid-flight and surface a Riverpod StateError.
   final keepAliveLink = ref.keepAlive();
   try {
     final accounts = await ref.watch(accountsControllerProvider.future);
@@ -191,9 +188,7 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     unawaited(() async {
       try {
         await WindowBootstrap.refreshTitle();
-      } catch (_) {
-        // Best-effort update for the native window title.
-      }
+      } catch (_) {}
     }());
   }
 }
@@ -301,27 +296,12 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
     final reauthorization = existing != null;
     unawaited(bootstrap.analytics.trackAccountConnectStarted(reauthorization: reauthorization));
     try {
-      var source = await loadKiroAuthSource(sourcePath: credentialSourcePath);
+      var source = await loadEffectiveKiroAuthSource(sourcePath: credentialSourcePath);
       if (source == null) {
         throw StateError('Kiro credentials were not found at the configured path.');
       }
 
-      final existingManagedPath = existing?.credentialSourcePath?.trim();
-      if (source.sourceType == builderIdKiroCredentialSourceType &&
-          existingManagedPath != null &&
-          existingManagedPath.isNotEmpty &&
-          existingManagedPath != source.sourcePath &&
-          await isManagedKiroCredentialSourcePath(existingManagedPath)) {
-        final previousSourcePath = source.sourcePath;
-        source = await persistKiroAuthSourceSnapshot(source, outputPath: existingManagedPath);
-        if (previousSourcePath.trim() != source.sourcePath.trim()) {
-          try {
-            await deleteManagedKiroCredentialSource(previousSourcePath);
-          } catch (_) {
-            // Best-effort cleanup for the temporary Builder ID snapshot.
-          }
-        }
-      }
+      source = await _materializeKiroSourceForAccount(source, existing);
 
       final resolvedLabel = label?.trim().isNotEmpty == true
           ? label!.trim()
@@ -335,7 +315,10 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
         providerRegion: source.effectiveRegion,
         credentialSourceType: source.sourceType,
         credentialSourcePath: source.sourcePath,
-        providerProfileArn: source.profileArn ?? existing?.providerProfileArn,
+        providerProfileArn: resolveKiroProfileArn(
+          source.profileArn,
+          fallback: existing?.providerProfileArn,
+        ),
         enabled: true,
         priority: normalizeAccountPriority(priority),
         notSupportedModels: notSupportedModels,
@@ -715,6 +698,37 @@ class ProxyConfigurationSync extends ConsumerWidget {
     ref.watch(proxyConfigurationOrchestratorProvider);
     return child;
   }
+}
+
+Future<KiroAuthSourceSnapshot> _materializeKiroSourceForAccount(
+  KiroAuthSourceSnapshot source,
+  AccountProfile? existing,
+) async {
+  final sourcePath = source.sourcePath.trim();
+  final existingManagedPath = existing?.credentialSourcePath?.trim();
+  final canReuseExistingManagedPath =
+      existingManagedPath != null &&
+      existingManagedPath.isNotEmpty &&
+      existingManagedPath != sourcePath &&
+      await isManagedKiroCredentialSourcePath(existingManagedPath);
+  final shouldSnapshotMutableDefaultSource = isDefaultKiroCredentialSourcePath(sourcePath);
+  final shouldReplacePreviousManagedBuilderSource =
+      source.sourceType == builderIdKiroCredentialSourceType && canReuseExistingManagedPath;
+
+  if (!shouldSnapshotMutableDefaultSource && !shouldReplacePreviousManagedBuilderSource) {
+    return source;
+  }
+
+  final outputPath = canReuseExistingManagedPath ? existingManagedPath : null;
+  final previousSourcePath = sourcePath;
+  final persisted = await persistKiroAuthSourceSnapshot(source, outputPath: outputPath);
+  if (previousSourcePath != persisted.sourcePath &&
+      await isManagedKiroCredentialSourcePath(previousSourcePath)) {
+    try {
+      await deleteManagedKiroCredentialSource(previousSourcePath);
+    } catch (_) {}
+  }
+  return persisted;
 }
 
 String _analyticsErrorKind(Object error) {

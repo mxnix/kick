@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
@@ -16,6 +17,7 @@ import 'kiro_auth_source.dart';
 import 'kiro_embedded_system_prompt.dart';
 
 const defaultKiroRequestTimeout = Duration(seconds: 90);
+const _kiroIdeVersion = '0.12.155';
 
 typedef KiroManagedSourcePathChecker = Future<bool> Function(String? sourcePath);
 typedef KiroAuthSourceSnapshotPersister =
@@ -109,15 +111,54 @@ class KiroCodeAssistClient {
 
   Future<Map<String, Object?>> getUsageLimits({required ProxyRuntimeAccount account}) async {
     await _ensureFreshTokensForRequest(account);
-    final response = await _executeWithRetry(
-      () => _sendRetryable(
-        method: 'GET',
+    final uri = _usageLimitsUri(account);
+    final firstResponse = await _performUsageRequest(account: account, uri: uri);
+    final firstBody = firstResponse.body;
+    if (firstResponse.statusCode == 403 &&
+        _isInvalidTokenBody(firstBody) &&
+        account.tokens.refreshToken.trim().isNotEmpty) {
+      await _forceRefreshTokens(account);
+      final retryResponse = await _performUsageRequest(
+        account: account,
         uri: _usageLimitsUri(account),
-        headers: _usageHeaders(accessToken: account.tokens.accessToken),
-        timeoutLabel: 'Kiro usage limits request',
-      ),
+      );
+      if (retryResponse.statusCode >= 400) {
+        throw decodeKiroGatewayError(retryResponse.statusCode, retryResponse.body);
+      }
+      return _decodeUsageBody(retryResponse.body);
+    }
+    if (firstResponse.statusCode >= 400) {
+      throw decodeKiroGatewayError(firstResponse.statusCode, firstBody);
+    }
+    return _decodeUsageBody(firstBody);
+  }
+
+  Future<_KiroUsageHttpResult> _performUsageRequest({
+    required ProxyRuntimeAccount account,
+    required Uri uri,
+  }) async {
+    final headers = _usageHeaders(accessToken: account.tokens.accessToken);
+    final response = await _send(
+      method: 'GET',
+      uri: uri,
+      headers: headers,
+      timeoutLabel: 'Kiro usage limits request',
+      timeoutOverride: const Duration(seconds: 20),
     );
+    final statusCode = response.statusCode;
     final body = await response.stream.bytesToString();
+    return _KiroUsageHttpResult(statusCode: statusCode, body: body);
+  }
+
+  Future<void> _forceRefreshTokens(ProxyRuntimeAccount account) async {
+    if (account.tokens.refreshToken.trim().isEmpty) {
+      return;
+    }
+    final refreshed = await _refreshTokens(account);
+    account.tokens = refreshed;
+  }
+
+  Map<String, Object?> _decodeUsageBody(String body) {
     final decoded = _tryDecodeJsonMap(body);
     if (decoded.isNotEmpty || body.trim().isEmpty) {
       return decoded;
@@ -133,12 +174,20 @@ class KiroCodeAssistClient {
     );
   }
 
+  bool _isInvalidTokenBody(String body) {
+    final lower = body.toLowerCase();
+    return lower.contains('invalid token') ||
+        lower.contains('access denied') ||
+        lower.contains('expired token') ||
+        lower.contains('expiredtoken');
+  }
+
   Future<Map<String, Object?>> generateContent({
     required ProxyRuntimeAccount account,
     required UnifiedPromptRequest request,
     void Function(GeminiRetryEvent event)? onRetry,
   }) async {
-    final resolvedModel = ModelCatalog.normalizeModel(request.model);
+    final resolvedModel = resolveKiroUpstreamModel(request.model);
     final stream = await generateContentStream(
       account: account,
       request: request,
@@ -154,10 +203,7 @@ class KiroCodeAssistClient {
       return lastPayload;
     }
 
-    return _KiroResponseAccumulator(
-      model: resolvedModel,
-      includeReasoning: _shouldExposeReasoning(request),
-    ).toPayload(finalChunk: true);
+    return _KiroResponseAccumulator(model: resolvedModel).toPayload(finalChunk: true);
   }
 
   Future<Stream<Map<String, Object?>>> generateContentStream({
@@ -166,12 +212,9 @@ class KiroCodeAssistClient {
     void Function(GeminiRetryEvent event)? onRetry,
   }) async {
     await _ensureFreshTokensForRequest(account);
-    final resolvedModel = ModelCatalog.normalizeModel(request.model);
+    final resolvedModel = resolveKiroUpstreamModel(request.model);
     final requestBody = _buildRequestBody(account: account, request: request, model: resolvedModel);
-    final accumulator = _KiroResponseAccumulator(
-      model: resolvedModel,
-      includeReasoning: _shouldExposeReasoning(request),
-    );
+    final accumulator = _KiroResponseAccumulator(model: resolvedModel);
     final controller = StreamController<Map<String, Object?>>();
 
     unawaited(
@@ -193,7 +236,9 @@ class KiroCodeAssistClient {
             final events = parser.feed(chunk);
             for (final event in events) {
               accumulator.apply(event);
-              controller.add(accumulator.toPayload());
+              if (accumulator.hasEmittableOutput) {
+                controller.add(accumulator.toPayload());
+              }
             }
           }
           if (!accumulator.hasEmittableOutput) {
@@ -251,12 +296,13 @@ class KiroCodeAssistClient {
     required Map<String, String> headers,
     String? body,
     required String timeoutLabel,
+    Duration? timeoutOverride,
   }) async {
     final request = http.Request(method, uri)..headers.addAll(headers);
     if (body != null) {
       request.body = body;
     }
-    return _runWithTimeout(() => _http.send(request), timeoutLabel);
+    return _runWithTimeout(() => _http.send(request), timeoutLabel, timeout: timeoutOverride);
   }
 
   Future<T> _executeWithRetry<T>(
@@ -329,9 +375,14 @@ class KiroCodeAssistClient {
     throw decodeKiroGatewayError(response.statusCode, responseBody);
   }
 
-  Future<T> _runWithTimeout<T>(Future<T> Function() operation, String timeoutLabel) {
+  Future<T> _runWithTimeout<T>(
+    Future<T> Function() operation,
+    String timeoutLabel, {
+    Duration? timeout,
+  }) {
+    final effectiveTimeout = timeout ?? _requestTimeout;
     return operation().timeout(
-      _requestTimeout,
+      effectiveTimeout,
       onTimeout: () => throw GeminiGatewayException(
         provider: AccountProvider.kiro,
         kind: GeminiGatewayFailureKind.serviceUnavailable,
@@ -358,10 +409,9 @@ class KiroCodeAssistClient {
     return {
       HttpHeaders.authorizationHeader: 'Bearer $accessToken',
       HttpHeaders.contentTypeHeader: 'application/json',
-      HttpHeaders.acceptHeader: '*/*',
-      HttpHeaders.userAgentHeader: 'aws-sdk-js/1.0.27 KiroIDE-0.11.107-$_fingerprint',
-      'x-amz-user-agent': 'aws-sdk-js/1.0.27 KiroIDE-0.11.107-$_fingerprint',
-      'x-amzn-codewhisperer-optout': 'true',
+      HttpHeaders.userAgentHeader:
+          'aws-sdk-js/1.0.34 ua/2.1 os/win32#10.0.29580 lang/js md/nodejs#22.22.0 api/codewhispererstreaming#1.0.34 m/E KiroIDE-$_kiroIdeVersion-$_fingerprint',
+      'x-amz-user-agent': 'aws-sdk-js/1.0.34 KiroIDE-$_kiroIdeVersion-$_fingerprint',
       'x-amzn-kiro-agent-mode': 'vibe',
       'amz-sdk-invocation-id': _uuid.v4(),
       'amz-sdk-request': 'attempt=1; max=3',
@@ -370,7 +420,11 @@ class KiroCodeAssistClient {
 
   Map<String, String> _usageHeaders({required String accessToken}) {
     return {
-      ..._headers(accessToken: accessToken),
+      HttpHeaders.authorizationHeader: 'Bearer $accessToken',
+      HttpHeaders.userAgentHeader:
+          'aws-sdk-js/1.0.0 ua/2.1 os/win32#10.0.29580 lang/js md/nodejs#22.22.0 api/codewhispererruntime#1.0.0 m/N,E KiroIDE-$_kiroIdeVersion-$_fingerprint',
+      'x-amz-user-agent': 'aws-sdk-js/1.0.0 KiroIDE-$_kiroIdeVersion-$_fingerprint',
+      'amz-sdk-invocation-id': _uuid.v4(),
       'amz-sdk-request': 'attempt=1; max=1',
       HttpHeaders.connectionHeader: 'close',
     };
@@ -383,24 +437,21 @@ class KiroCodeAssistClient {
 
   Uri _listModelsUri(ProxyRuntimeAccount account, {String? nextToken}) {
     final region = (account.providerRegion ?? defaultKiroRegion).trim();
+    final profileArn = resolveKiroProfileArn(account.providerProfileArn);
     return Uri.https('q.$region.amazonaws.com', '/ListAvailableModels', {
       'origin': 'AI_EDITOR',
       if (nextToken?.trim().isNotEmpty == true) 'nextToken': nextToken!.trim(),
-      if (account.providerProfileArn?.trim().isNotEmpty == true)
-        'profileArn': account.providerProfileArn!.trim(),
+      if (profileArn?.isNotEmpty == true) 'profileArn': profileArn!,
     });
   }
 
   Uri _usageLimitsUri(ProxyRuntimeAccount account) {
     final region = (account.providerRegion ?? defaultKiroRegion).trim();
-    final profileArn = account.providerProfileArn?.trim();
-    return Uri.https('q.$region.amazonaws.com', '/getUsageLimits', {
-      'isEmailRequired': 'true',
+    final profileArn = resolveKiroProfileArn(account.providerProfileArn);
+    return Uri.https('q.$region.amazonaws.com', '/getUsageLimits', <String, String>{
       'origin': 'AI_EDITOR',
+      if (profileArn != null && profileArn.isNotEmpty) 'profileArn': profileArn,
       'resourceType': 'AGENTIC_REQUEST',
-      if (profileArn?.isNotEmpty == true &&
-          account.credentialSourceType != builderIdKiroCredentialSourceType)
-        'profileArn': profileArn!,
     });
   }
 
@@ -467,7 +518,7 @@ class KiroCodeAssistClient {
         if (history.isNotEmpty) 'history': history,
       },
       if (account.providerProfileArn?.trim().isNotEmpty == true)
-        'profileArn': account.providerProfileArn,
+        'profileArn': resolveKiroProfileArn(account.providerProfileArn),
     };
     return payload;
   }
@@ -686,41 +737,6 @@ class KiroCodeAssistClient {
     return images;
   }
 
-  bool _shouldExposeReasoning(UnifiedPromptRequest request) {
-    final reasoningEffort = request.reasoningEffort?.trim().toLowerCase();
-    if (reasoningEffort != null && reasoningEffort.isNotEmpty) {
-      return reasoningEffort != 'none' && reasoningEffort != 'minimal';
-    }
-
-    final thinkingConfig = request.googleThinkingConfig;
-    if (thinkingConfig == null) {
-      return false;
-    }
-
-    if (thinkingConfig['includeThoughts'] is bool) {
-      return thinkingConfig['includeThoughts'] as bool;
-    }
-    if (thinkingConfig['include_thoughts'] is bool) {
-      return thinkingConfig['include_thoughts'] as bool;
-    }
-
-    final budget =
-        _parseThinkingBudget(thinkingConfig['thinkingBudget']) ??
-        _parseThinkingBudget(thinkingConfig['thinking_budget']);
-    if (budget != null) {
-      return budget != 0;
-    }
-
-    final thinkingLevel =
-        (thinkingConfig['thinkingLevel'] as String?)?.trim().toUpperCase() ??
-        (thinkingConfig['thinking_level'] as String?)?.trim().toUpperCase();
-    if (thinkingLevel != null && thinkingLevel.isNotEmpty) {
-      return thinkingLevel != 'LOW' && thinkingLevel != 'MINIMAL';
-    }
-
-    return false;
-  }
-
   Map<String, Object?> _sanitizeSchema(Map<String, Object?> schema) {
     final result = <String, Object?>{};
     for (final entry in schema.entries) {
@@ -763,7 +779,7 @@ class KiroCodeAssistClient {
         uri: _refreshUri(account),
         headers: {
           HttpHeaders.contentTypeHeader: 'application/json',
-          HttpHeaders.userAgentHeader: 'KiroIDE-0.11.107-$_fingerprint',
+          HttpHeaders.userAgentHeader: 'KiroIDE-$_kiroIdeVersion-$_fingerprint',
         },
         body: jsonEncode({'refreshToken': account.tokens.refreshToken}),
         timeoutLabel: 'Kiro token refresh',
@@ -808,7 +824,7 @@ class KiroCodeAssistClient {
         uri: _builderIdRefreshUri(source.effectiveRegion),
         headers: {
           HttpHeaders.contentTypeHeader: 'application/json',
-          HttpHeaders.userAgentHeader: 'KiroIDE-0.11.107-$_fingerprint',
+          HttpHeaders.userAgentHeader: 'KiroIDE-$_kiroIdeVersion-$_fingerprint',
         },
         body: jsonEncode({
           'grantType': 'refresh_token',
@@ -839,8 +855,7 @@ class KiroCodeAssistClient {
     final sourcePath = account.credentialSourcePath?.trim().isNotEmpty == true
         ? account.credentialSourcePath!.trim()
         : source.sourcePath.trim();
-    // External Kiro credential sources are intentionally read-only.
-    if (sourcePath.isEmpty || !await _managedSourcePathChecker(sourcePath)) {
+    if (sourcePath.isEmpty || !await _shouldPersistRefreshedSource(sourcePath)) {
       return;
     }
 
@@ -854,6 +869,13 @@ class KiroCodeAssistClient {
       ),
       outputPath: sourcePath,
     );
+  }
+
+  Future<bool> _shouldPersistRefreshedSource(String sourcePath) async {
+    if (isDefaultKiroCredentialSourcePath(sourcePath)) {
+      return true;
+    }
+    return _managedSourcePathChecker(sourcePath);
   }
 
   OAuthTokens _tokensFromRefreshResponse({
@@ -877,7 +899,10 @@ class KiroCodeAssistClient {
       );
     }
 
-    account.providerProfileArn = profileArn ?? account.providerProfileArn ?? source?.profileArn;
+    account.providerProfileArn = resolveKiroProfileArn(
+      profileArn,
+      fallback: resolveKiroProfileArn(account.providerProfileArn, fallback: source?.profileArn),
+    );
     return OAuthTokens(
       accessToken: accessToken,
       refreshToken: refreshToken?.isNotEmpty == true ? refreshToken! : account.tokens.refreshToken,
@@ -1163,10 +1188,9 @@ class _KiroEventStreamParser {
 }
 
 class _KiroResponseAccumulator {
-  _KiroResponseAccumulator({required this.model, required this.includeReasoning});
+  _KiroResponseAccumulator({required this.model});
 
   final String model;
-  final bool includeReasoning;
   final StringBuffer _text = StringBuffer();
   final StringBuffer _reasoningText = StringBuffer();
   final List<Map<String, Object?>> _thoughts = <Map<String, Object?>>[];
@@ -1189,9 +1213,8 @@ class _KiroResponseAccumulator {
         if (text != null && text.isNotEmpty) {
           _reasoningText.write(text);
         }
-        if (includeReasoning &&
-            ((text != null && text.isNotEmpty) ||
-                (thoughtSignature != null && thoughtSignature.isNotEmpty))) {
+        if ((text != null && text.isNotEmpty) ||
+            (thoughtSignature != null && thoughtSignature.isNotEmpty)) {
           _thoughts.add({
             'thought': true,
             if (text != null && text.isNotEmpty) 'text': text,
@@ -1281,17 +1304,21 @@ class _KiroResponseAccumulator {
   }
 }
 
-int? _parseThinkingBudget(Object? value) {
-  if (value is int) {
-    return value;
-  }
-  if (value is num) {
-    return value.toInt();
-  }
-  if (value is String) {
-    return int.tryParse(value.trim());
-  }
-  return null;
+const Map<String, String> _kiroUpstreamModelAliases = <String, String>{
+  'auto': 'simple-task',
+  'claude-haiku-4-5': 'claude-haiku-4.5',
+  'claude-opus-4-7': 'claude-opus-4.7',
+  'claude-opus-4-6': 'claude-opus-4.6',
+  'claude-opus-4-5': 'claude-opus-4.5',
+  'claude-opus-4-5-20251101': 'claude-opus-4.5',
+  'claude-sonnet-4-6': 'claude-sonnet-4.6',
+  'claude-sonnet-4-5': 'claude-sonnet-4.5',
+  'claude-sonnet-4-5-20250929': 'claude-sonnet-4.5',
+};
+
+String resolveKiroUpstreamModel(String model) {
+  final normalized = ModelCatalog.normalizeModel(model);
+  return _kiroUpstreamModelAliases[normalized] ?? normalized;
 }
 
 const int _defaultKiroMaxInputTokens = 200000;
@@ -1307,13 +1334,16 @@ int _estimateKiroTokenCount(String text) {
 }
 
 int _maxInputTokensForModel(String model) {
-  final normalized = ModelCatalog.normalizeModel(model);
+  final normalized = resolveKiroUpstreamModel(model);
   return switch (normalized) {
     'claude-haiku-4.5' ||
     'claude-sonnet-4' ||
+    'claude-sonnet-4.6' ||
     'claude-sonnet-4.5' ||
+    'claude-opus-4.7' ||
+    'claude-opus-4.6' ||
     'claude-opus-4.5' ||
-    'auto' => _defaultKiroMaxInputTokens,
+    'simple-task' => _defaultKiroMaxInputTokens,
     _ => _defaultKiroMaxInputTokens,
   };
 }
@@ -1417,7 +1447,8 @@ String _buildMachineFingerprint() {
   final host = Platform.localHostname.trim();
   final user =
       Platform.environment['USERNAME']?.trim() ?? Platform.environment['USER']?.trim() ?? 'kick';
-  return '${host.isEmpty ? 'host' : host}-$user';
+  final value = '${host.isEmpty ? 'host' : host}-$user';
+  return sha256.convert(utf8.encode(value)).toString();
 }
 
 int _findMatchingBrace(String text, int startPos) {
@@ -1454,4 +1485,11 @@ int _findMatchingBrace(String text, int startPos) {
     }
   }
   return -1;
+}
+
+class _KiroUsageHttpResult {
+  const _KiroUsageHttpResult({required this.statusCode, required this.body});
+
+  final int statusCode;
+  final String body;
 }

@@ -261,7 +261,7 @@ class KickProxyController {
       if (account.provider == AccountProvider.kiro) {
         final KiroAuthSourceSnapshot? source;
         try {
-          source = await loadKiroAuthSource(sourcePath: account.credentialSourcePath);
+          source = await loadEffectiveKiroAuthSource(sourcePath: account.credentialSourcePath);
         } on FileSystemException {
           continue;
         } on FormatException {
@@ -277,7 +277,10 @@ class KickProxyController {
           providerRegion: source.effectiveRegion,
           credentialSourceType: source.sourceType,
           credentialSourcePath: source.sourcePath,
-          providerProfileArn: source.profileArn ?? account.providerProfileArn,
+          providerProfileArn: resolveKiroProfileArn(
+            source.profileArn,
+            fallback: account.providerProfileArn,
+          ),
           email: account.email.trim().isNotEmpty ? account.email : source.displayIdentity,
         );
       } else {

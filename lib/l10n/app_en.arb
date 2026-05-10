@@ -800,7 +800,7 @@
   "blockedModelsLabel": "Unavailable models",
   "blockedModelsHelperText": "One ID per line, for example google/... or kiro/...",
   "kiroLinkAuthDialogTitle": "Kiro authorization",
-  "kiroLinkAuthDialogMessage": "Open the link, sign in with AWS Builder ID, and confirm access for Kiro. The code is only for verification; you do not need to enter it. KiCk will wait for completion automatically.",
+  "kiroLinkAuthDialogMessage": "Open the link, sign in to Kiro, and choose GitHub or Google. KiCk will wait for the browser callback automatically.",
   "kiroLinkAuthUserCodeLabel": "Verification code",
   "kiroLinkAuthVerificationUrlLabel": "Sign-in link",
   "kiroLinkAuthWaitingMessage": "Waiting for you to confirm sign-in in the browser...",

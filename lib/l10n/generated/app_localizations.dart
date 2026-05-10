@@ -2706,7 +2706,7 @@ abstract class AppLocalizations {
   /// No description provided for @kiroLinkAuthDialogMessage.
   ///
   /// In en, this message translates to:
-  /// **'Open the link, sign in with AWS Builder ID, and confirm access for Kiro. The code is only for verification; you do not need to enter it. KiCk will wait for completion automatically.'**
+  /// **'Open the link, sign in to Kiro, and choose GitHub or Google. KiCk will wait for the browser callback automatically.'**
   String get kiroLinkAuthDialogMessage;
 
   /// No description provided for @kiroLinkAuthUserCodeLabel.

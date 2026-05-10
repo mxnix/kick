@@ -70,6 +70,45 @@ void main() {
     expect(reloaded.startUrl, defaultKiroBuilderIdStartUrl);
   });
 
+  test('persists social Kiro snapshot as an independent managed source', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_auth_social_store');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+
+    final saved = await persistKiroAuthSourceSnapshot(
+      KiroAuthSourceSnapshot(
+        sourcePath: r'C:\Users\demo\.aws\sso\cache\kiro-auth-token.json',
+        sourceType: defaultKiroCredentialSourceType,
+        accessToken: 'social-access-token',
+        refreshToken: 'social-refresh-token',
+        expiry: DateTime.parse('2026-04-01T12:00:00Z'),
+        region: 'us-east-1',
+        profileArn: defaultKiroSocialProfileArn,
+        authMethod: socialKiroAuthMethod,
+        provider: 'Github',
+      ),
+      supportDirectoryProvider: () async => tempDirectory,
+    );
+
+    expect(File(saved.sourcePath).existsSync(), isTrue);
+    expect(saved.sourcePath, isNot(r'C:\Users\demo\.aws\sso\cache\kiro-auth-token.json'));
+    expect(saved.sourceType, manualKiroCredentialSourceType);
+    expect(
+      await isManagedKiroCredentialSourcePath(
+        saved.sourcePath,
+        supportDirectoryProvider: () async => tempDirectory,
+      ),
+      isTrue,
+    );
+
+    final reloaded = await loadKiroAuthSource(sourcePath: saved.sourcePath);
+    expect(reloaded, isNotNull);
+    expect(reloaded!.sourceType, manualKiroCredentialSourceType);
+    expect(reloaded.authMethod, socialKiroAuthMethod);
+    expect(reloaded.provider, 'Github');
+    expect(reloaded.accessToken, 'social-access-token');
+    expect(reloaded.refreshToken, 'social-refresh-token');
+  });
+
   test('returns null for malformed Kiro source JSON', () async {
     final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_auth_malformed');
     addTearDown(() => tempDirectory.delete(recursive: true));
@@ -141,5 +180,124 @@ void main() {
       isFalse,
     );
     expect(externalFile.existsSync(), isTrue);
+  });
+
+  test('migrates away from the legacy Builder ID placeholder profile ARN', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_auth_legacy');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+    final sourceFile = File('${tempDirectory.path}${Platform.pathSeparator}legacy.json');
+    await sourceFile.writeAsString(
+      jsonEncode({
+        'accessToken': 'access-token',
+        'refreshToken': 'refresh-token',
+        'expiresAt': '2026-04-01T12:00:00Z',
+        'authMethod': 'builder-id',
+        'clientId': 'client-id',
+        'clientSecret': 'client-secret',
+        'idcRegion': 'us-east-1',
+        'profileArn': 'arn:aws:codewhisperer:us-east-1:638616132270:profile/AAAACCCCXXXX',
+      }),
+    );
+
+    final snapshot = await loadKiroAuthSource(sourcePath: sourceFile.path);
+
+    expect(snapshot, isNotNull);
+    expect(snapshot!.profileArn, defaultKiroBuilderIdProfileArn);
+    expect(isLegacyPlaceholderKiroProfileArn(snapshot.profileArn), isFalse);
+  });
+
+  test('resolveKiroProfileArn replaces placeholder and preserves real ARNs', () {
+    expect(
+      resolveKiroProfileArn('arn:aws:codewhisperer:us-east-1:638616132270:profile/AAAACCCCXXXX'),
+      defaultKiroBuilderIdProfileArn,
+    );
+    expect(
+      resolveKiroProfileArn(
+        'arn:aws:codewhisperer:us-east-1:638616132270:profile/AAAACCCCXXXX',
+        fallback: 'arn:aws:codewhisperer:us-east-1:123456789012:profile/ABC',
+      ),
+      'arn:aws:codewhisperer:us-east-1:123456789012:profile/ABC',
+    );
+    expect(
+      resolveKiroProfileArn('arn:aws:codewhisperer:us-east-1:123456789012:profile/ABC'),
+      'arn:aws:codewhisperer:us-east-1:123456789012:profile/ABC',
+    );
+    expect(
+      resolveKiroProfileArn(null, fallback: defaultKiroBuilderIdProfileArn),
+      defaultKiroBuilderIdProfileArn,
+    );
+    expect(resolveKiroProfileArn(null), isNull);
+  });
+
+  test('recognizes the default Kiro credential source path', () {
+    final defaultPath = resolveKiroCredentialSourcePath(null);
+
+    expect(defaultPath, isNotNull);
+    expect(isDefaultKiroCredentialSourcePath(defaultPath), isTrue);
+    expect(isDefaultKiroCredentialSourcePath('${defaultPath!}.backup'), isFalse);
+  });
+
+  test('uses configured builder id source when no default social source exists', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_effective_builder');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+    final sourceFile = File('${tempDirectory.path}${Platform.pathSeparator}builder.json');
+    await sourceFile.writeAsString(
+      jsonEncode({
+        'accessToken': 'access-token',
+        'refreshToken': 'refresh-token',
+        'expiresAt': '2026-04-01T12:00:00Z',
+        'authMethod': 'builder-id',
+        'clientId': 'client-id',
+        'clientSecret': 'client-secret',
+        'idcRegion': 'us-east-1',
+      }),
+    );
+
+    final snapshot = await loadEffectiveKiroAuthSource(
+      sourcePath: sourceFile.path,
+      defaultSourcePath: '${tempDirectory.path}${Platform.pathSeparator}missing.json',
+    );
+
+    expect(snapshot, isNotNull);
+    expect(snapshot!.sourcePath, sourceFile.path);
+    expect(snapshot.authMethod, builderIdKiroAuthMethod);
+  });
+
+  test('keeps configured builder id source instead of borrowing default social source', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_effective_isolated');
+    addTearDown(() => tempDirectory.delete(recursive: true));
+    final builderFile = File('${tempDirectory.path}${Platform.pathSeparator}builder.json');
+    final socialFile = File('${tempDirectory.path}${Platform.pathSeparator}kiro-auth-token.json');
+    await builderFile.writeAsString(
+      jsonEncode({
+        'accessToken': 'builder-access',
+        'refreshToken': 'builder-refresh',
+        'expiresAt': '2026-04-01T12:00:00Z',
+        'authMethod': 'builder-id',
+        'clientId': 'client-id',
+        'clientSecret': 'client-secret',
+        'idcRegion': 'us-east-1',
+      }),
+    );
+    await socialFile.writeAsString(
+      jsonEncode({
+        'accessToken': 'social-access',
+        'refreshToken': 'social-refresh',
+        'expiresAt': '2026-04-01T12:00:00Z',
+        'authMethod': 'social',
+        'provider': 'Github',
+        'profileArn': defaultKiroSocialProfileArn,
+      }),
+    );
+
+    final snapshot = await loadEffectiveKiroAuthSource(
+      sourcePath: builderFile.path,
+      defaultSourcePath: socialFile.path,
+    );
+
+    expect(snapshot, isNotNull);
+    expect(snapshot!.sourcePath, builderFile.path);
+    expect(snapshot.authMethod, builderIdKiroAuthMethod);
+    expect(snapshot.accessToken, 'builder-access');
   });
 }
