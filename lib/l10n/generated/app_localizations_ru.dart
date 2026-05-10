@@ -546,7 +546,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsModelsSectionSummary => 'Пользовательские ID моделей';
 
   @override
-  String get settingsGoogleSectionTitle => 'Поиск Google (только Gemini CLI)';
+  String get settingsGoogleSectionTitle => 'Google';
 
   @override
   String get settingsGoogleSectionSummary => 'Веб-поиск Google и параметры Gemini CLI';
@@ -667,6 +667,14 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get defaultGoogleWebSearchSubtitle =>
       'KiCk будет автоматически использовать Google Поиск, если клиент не задал свои параметры и в запросе нет вызовов функций';
+
+  @override
+  String get defaultGoogleVisibleReasoningTitle =>
+      'Запрашивать видимые рассуждения Gemini по умолчанию';
+
+  @override
+  String get defaultGoogleVisibleReasoningSubtitle =>
+      'Добавляет include_reasoning для запросов Gemini CLI, если клиент не задал рассуждения сам. Помогает клиентам показывать блок рассуждений.';
 
   @override
   String get renderGoogleGroundingInMessageTitle => 'Показывать цитаты и источники в ответе';

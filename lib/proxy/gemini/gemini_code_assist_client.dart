@@ -536,6 +536,17 @@ class GeminiCodeAssistClient {
             try {
               while (!canceled && await iterator.moveNext()) {
                 final rawPayload = iterator.current;
+                if (!_hasGeneratedOutput(rawPayload)) {
+                  if (lastPayload != null) {
+                    final mergedPayload = _withTerminalMetadata(lastPayload, rawPayload);
+                    lastPayload = mergedPayload;
+                    controller.add(mergedPayload);
+                  } else if (accumulatedText.isEmpty) {
+                    lastPayload = rawPayload;
+                    controller.add(rawPayload);
+                  }
+                  continue;
+                }
                 final generatedText = _extractGeneratedText(rawPayload);
                 final mergedText = pass == 0
                     ? generatedText
@@ -1697,6 +1708,36 @@ class GeminiCodeAssistClient {
     return requestBody;
   }
 
+  bool _hasGeneratedOutput(Map<String, Object?> payload) {
+    final response = ((payload['response'] as Map?) ?? payload).cast<String, Object?>();
+    final candidate = _firstCandidate(response);
+    final content = ((candidate['content'] as Map?) ?? const <String, Object?>{})
+        .cast<String, Object?>();
+    final parts = (content['parts'] as List?) ?? const [];
+    for (final rawPart in parts) {
+      if (rawPart is! Map) {
+        continue;
+      }
+      final part = rawPart.cast<String, Object?>();
+      final text = part['text'];
+      if (text is String && text.isNotEmpty) {
+        return true;
+      }
+      if (part['functionCall'] is Map) {
+        return true;
+      }
+      if (part['thought'] == true && _hasThoughtMetadata(part)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _hasThoughtMetadata(Map<String, Object?> part) {
+    final signature = part['thoughtSignature'] ?? part['thought_signature'];
+    return signature is String && signature.trim().isNotEmpty;
+  }
+
   String _extractGeneratedText(Map<String, Object?> payload) {
     final response = ((payload['response'] as Map?) ?? payload).cast<String, Object?>();
     final candidate = _firstCandidate(response);
@@ -1723,6 +1764,51 @@ class GeminiCodeAssistClient {
     final response = ((payload['response'] as Map?) ?? payload).cast<String, Object?>();
     final candidate = _firstCandidate(response);
     return candidate['finishReason'] as String?;
+  }
+
+  Map<String, Object?> _withTerminalMetadata(
+    Map<String, Object?> payload,
+    Map<String, Object?> terminalPayload,
+  ) {
+    final copy = _deepCopyJsonMap(payload);
+    final response = ((copy['response'] as Map?) ?? copy).cast<String, Object?>();
+    final candidate = _firstCandidate(response);
+    if (candidate.isEmpty) {
+      return copy;
+    }
+
+    final terminalResponse = ((terminalPayload['response'] as Map?) ?? terminalPayload)
+        .cast<String, Object?>();
+    final terminalCandidate = _firstCandidate(terminalResponse);
+    for (final key in const [
+      'finishReason',
+      'finishMessage',
+      'safetyRatings',
+      'citationMetadata',
+      'groundingMetadata',
+      'urlContextMetadata',
+    ]) {
+      if (terminalCandidate.containsKey(key)) {
+        candidate[key] = terminalCandidate[key];
+      }
+    }
+
+    final candidates = ((response['candidates'] as List?) ?? const []).toList(growable: true);
+    if (candidates.isNotEmpty) {
+      candidates[0] = candidate;
+      response['candidates'] = candidates;
+    }
+
+    for (final key in const ['usageMetadata', 'modelVersion', 'responseId', 'promptFeedback']) {
+      if (terminalResponse.containsKey(key)) {
+        response[key] = terminalResponse[key];
+      }
+    }
+
+    if (copy.containsKey('response')) {
+      copy['response'] = response;
+    }
+    return copy;
   }
 
   Map<String, Object?> _withAccumulatedText(Map<String, Object?> payload, String accumulatedText) {

@@ -149,6 +149,7 @@ class OpenAiRequestParser {
     final turns = <UnifiedTurn>[];
     final toolDeclarations = _parseTools(json['tools']);
     final toolCallNames = <String, String>{};
+    final shouldIgnoreReasoningPrefill = _isGeminiModel(model);
     var seenNonSystemMessage = false;
 
     for (final rawMessage in messages) {
@@ -171,6 +172,14 @@ class OpenAiRequestParser {
       }
 
       seenNonSystemMessage = true;
+
+      if (role == 'assistant' &&
+          shouldIgnoreReasoningPrefill &&
+          _isStandaloneReasoningPrefill(message['content']) &&
+          _extractMessageThoughtParts(message).isEmpty &&
+          message['tool_calls'] is! List) {
+        continue;
+      }
 
       if (role == 'tool') {
         final toolCallId =
@@ -671,6 +680,43 @@ class OpenAiRequestParser {
     return [UnifiedPart.thought(text: reasoningText ?? '', thoughtSignature: reasoningSignature)];
   }
 
+  static bool _isGeminiModel(String model) {
+    final normalized = model.trim().toLowerCase();
+    return normalized == 'gemini' ||
+        normalized.startsWith('gemini-') ||
+        normalized.startsWith('google/gemini') ||
+        normalized.contains('/gemini-') ||
+        normalized.contains('models/gemini-');
+  }
+
+  static bool _isStandaloneReasoningPrefill(Object? content) {
+    if (content is String) {
+      return _isReasoningOpenTag(content.trim());
+    }
+    if (content is! List || content.length != 1) {
+      return false;
+    }
+    final item = content.single;
+    if (item is! Map) {
+      return false;
+    }
+    final entry = _readRequiredMapValue(item, 'content[]');
+    final type = _readStringValue(entry['type'], 'content[].type')?.trim().toLowerCase();
+    final text = _readStringValue(entry['text'], 'content[].text')?.trim();
+    return (type == null || type == 'text' || type == 'output_text') &&
+        text != null &&
+        _isReasoningOpenTag(text);
+  }
+
+  static bool _isReasoningOpenTag(String value) {
+    final normalized = value.trim().toLowerCase();
+    return normalized == '<think>' ||
+        normalized == '<thinking>' ||
+        normalized == '<reasoning>' ||
+        normalized == '<thought>' ||
+        normalized == '<analysis>';
+  }
+
   static List<UnifiedPart> _extractReasoningParts(Map<String, Object?> item) {
     final explicitThoughts = _extractMessageThoughtParts(item);
     if (explicitThoughts.isNotEmpty) {
@@ -794,7 +840,12 @@ class OpenAiRequestParser {
 
     final reasoning = _readMapField(json, 'reasoning');
     final effort = _readStringValue(reasoning?['effort'], 'reasoning.effort')?.trim();
-    return effort == null || effort.isEmpty ? null : effort;
+    if (effort != null && effort.isNotEmpty) {
+      return effort;
+    }
+
+    final includeReasoning = _readBooleanFlag(json['include_reasoning']);
+    return includeReasoning == true ? 'auto' : null;
   }
 
   static Map<String, Object?>? _parseGoogleThinkingConfig(Map<String, Object?> json) {

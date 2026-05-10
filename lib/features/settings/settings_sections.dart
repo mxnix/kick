@@ -440,6 +440,13 @@ class SettingsGoogleSection extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           SettingToggleCard(
+            title: l10n.defaultGoogleVisibleReasoningTitle,
+            subtitle: l10n.defaultGoogleVisibleReasoningSubtitle,
+            value: controller.defaultGoogleVisibleReasoningEnabled,
+            onChanged: controller.setDefaultGoogleVisibleReasoningEnabled,
+          ),
+          const SizedBox(height: 18),
+          SettingToggleCard(
             title: l10n.renderGoogleGroundingInMessageTitle,
             subtitle: l10n.renderGoogleGroundingInMessageSubtitle,
             value: controller.renderGoogleGroundingInMessage,

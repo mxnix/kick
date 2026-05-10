@@ -264,7 +264,7 @@ void main() {
     expect(request.turns.last.parts.single.text, 'Hi there');
   });
 
-  test('preserves trailing system messages as user turns after assistant prefills', () {
+  test('ignores standalone Gemini reasoning prefills before trailing system messages', () {
     final request = OpenAiRequestParser.parseChatRequest({
       'model': 'gemini-3.1-pro-preview',
       'messages': [
@@ -276,13 +276,39 @@ void main() {
     }, requestId: 'req_trailing_system_after_assistant');
 
     expect(request.systemInstruction, 'You are a roleplay director.');
-    expect(request.turns, hasLength(3));
+    expect(request.turns, hasLength(2));
     expect(request.turns[0].role, 'assistant');
     expect(request.turns[0].parts.single.text, 'Previous character reply.');
+    expect(request.turns[1].role, 'user');
+    expect(request.turns[1].parts.single.text, 'Pause roleplay and write the memory book.');
+  });
+
+  test('preserves standalone reasoning prefills for non-Gemini models', () {
+    final request = OpenAiRequestParser.parseChatRequest({
+      'model': 'kiro/claude-sonnet-4',
+      'messages': [
+        {'role': 'user', 'content': 'Continue'},
+        {'role': 'assistant', 'content': '<think>'},
+      ],
+    }, requestId: 'req_non_gemini_reasoning_prefill');
+
+    expect(request.turns, hasLength(2));
+    expect(request.turns[0].role, 'user');
+    expect(request.turns[0].parts.single.text, 'Continue');
     expect(request.turns[1].role, 'assistant');
     expect(request.turns[1].parts.single.text, '<think>');
-    expect(request.turns[2].role, 'user');
-    expect(request.turns[2].parts.single.text, 'Pause roleplay and write the memory book.');
+  });
+
+  test('treats include_reasoning as automatic reasoning effort', () {
+    final request = OpenAiRequestParser.parseChatRequest({
+      'model': 'gemini-3-flash-preview',
+      'include_reasoning': true,
+      'messages': [
+        {'role': 'user', 'content': 'Hello'},
+      ],
+    }, requestId: 'req_include_reasoning');
+
+    expect(request.reasoningEffort, 'auto');
   });
 
   test('falls back to a user turn when chat contains only system messages', () {

@@ -544,7 +544,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsModelsSectionSummary => 'Custom model IDs';
 
   @override
-  String get settingsGoogleSectionTitle => 'Google Search (Gemini CLI only)';
+  String get settingsGoogleSectionTitle => 'Google';
 
   @override
   String get settingsGoogleSectionSummary => 'Google web search and Gemini CLI settings';
@@ -666,6 +666,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get defaultGoogleWebSearchSubtitle =>
       'KiCk will automatically use Google Search if the client did not explicitly override parameters and the request contains no function calls';
+
+  @override
+  String get defaultGoogleVisibleReasoningTitle => 'Request visible Gemini reasoning by default';
+
+  @override
+  String get defaultGoogleVisibleReasoningSubtitle =>
+      'Adds include_reasoning for Gemini CLI requests when the client did not set reasoning options. Helps Custom OpenAI-Compatible clients show reasoning blocks.';
 
   @override
   String get renderGoogleGroundingInMessageTitle => 'Show citations and sources in the response';

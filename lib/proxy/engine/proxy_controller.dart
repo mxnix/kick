@@ -312,6 +312,7 @@ class KickProxyController {
         'retry_429_delay_seconds': settings.retry429DelaySeconds,
         'mark_429_as_unhealthy': settings.mark429AsUnhealthy,
         'default_google_web_search_enabled': settings.defaultGoogleWebSearchEnabled,
+        'default_google_visible_reasoning_enabled': settings.defaultGoogleVisibleReasoningEnabled,
         'render_google_grounding_in_message': settings.renderGoogleGroundingInMessage,
       },
       'accounts': runtimeAccounts,

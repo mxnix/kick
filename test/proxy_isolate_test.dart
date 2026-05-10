@@ -73,6 +73,75 @@ void main() {
     expect(((normalized['extra_body'] as Map?)?['google'] as Map?)?['web_search'], isTrue);
   });
 
+  test('normalizeOpenAiCompatRequest applies default visible reasoning to Gemini requests', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'google/gemini-3.1-pro-preview',
+        'messages': [
+          {'role': 'user', 'content': 'Think visibly'},
+        ],
+      },
+      headers: const {},
+      defaultGoogleVisibleReasoningEnabled: true,
+    );
+
+    expect(normalized['include_reasoning'], isTrue);
+  });
+
+  test('normalizeOpenAiCompatRequest does not apply default visible reasoning to non-Gemini', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'kiro/claude-sonnet-4',
+        'messages': [
+          {'role': 'user', 'content': 'Think visibly'},
+        ],
+      },
+      headers: const {},
+      defaultGoogleVisibleReasoningEnabled: true,
+    );
+
+    expect(normalized.containsKey('include_reasoning'), isFalse);
+  });
+
+  test('normalizeOpenAiCompatRequest keeps explicit reasoning disabled', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'gemini-3.1-pro-preview',
+        'include_reasoning': false,
+        'messages': [
+          {'role': 'user', 'content': 'No visible thinking'},
+        ],
+      },
+      headers: const {},
+      defaultGoogleVisibleReasoningEnabled: true,
+    );
+
+    expect(normalized['include_reasoning'], isFalse);
+  });
+
+  test('normalizeOpenAiCompatRequest keeps explicit google thinking config', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'gemini-3.1-pro-preview',
+        'messages': [
+          {'role': 'user', 'content': 'No visible thinking'},
+        ],
+        'extra_body': {
+          'google': {
+            'thinking_config': {'include_thoughts': false},
+          },
+        },
+      },
+      headers: const {},
+      defaultGoogleVisibleReasoningEnabled: true,
+    );
+
+    expect(normalized.containsKey('include_reasoning'), isFalse);
+    expect(((normalized['extra_body'] as Map?)?['google'] as Map?)?['thinking_config'], {
+      'include_thoughts': false,
+    });
+  });
+
   test('normalizeOpenAiCompatRequest does not apply default search when tools are present', () {
     final normalized = normalizeOpenAiCompatRequest(
       body: {

@@ -13,6 +13,7 @@ void main() {
     expect(settings.mark429AsUnhealthy, isFalse);
     expect(settings.apiKeyRequired, isTrue);
     expect(settings.defaultGoogleWebSearchEnabled, isFalse);
+    expect(settings.defaultGoogleVisibleReasoningEnabled, isFalse);
     expect(settings.renderGoogleGroundingInMessage, isFalse);
     expect(settings.appLocale, isNull);
     expect(settings.useSystemFont, isFalse);
@@ -38,6 +39,7 @@ void main() {
       retry429DelaySeconds: 45,
       mark429AsUnhealthy: true,
       defaultGoogleWebSearchEnabled: true,
+      defaultGoogleVisibleReasoningEnabled: true,
       renderGoogleGroundingInMessage: true,
       loggingVerbosity: KickLogVerbosity.verbose,
       logRetentionCount: 2400,
@@ -58,6 +60,7 @@ void main() {
     expect(restored.retry429DelaySeconds, 45);
     expect(restored.mark429AsUnhealthy, isTrue);
     expect(restored.defaultGoogleWebSearchEnabled, isTrue);
+    expect(restored.defaultGoogleVisibleReasoningEnabled, isTrue);
     expect(restored.renderGoogleGroundingInMessage, isTrue);
     expect(restored.windowsLaunchAtStartup, isTrue);
     expect(restored.logRetentionCount, 2400);
@@ -84,6 +87,7 @@ void main() {
       retry429DelaySeconds: 90,
       mark429AsUnhealthy: true,
       defaultGoogleWebSearchEnabled: true,
+      defaultGoogleVisibleReasoningEnabled: true,
       renderGoogleGroundingInMessage: true,
       loggingVerbosity: KickLogVerbosity.verbose,
       logRetentionCount: 1200,
@@ -101,6 +105,7 @@ void main() {
     expect(restored.port, 4010);
     expect(restored.customModels, ['gemini-2.5-flash', 'gemini-2.5-pro']);
     expect(restored.loggingVerbosity, KickLogVerbosity.verbose);
+    expect(restored.defaultGoogleVisibleReasoningEnabled, isTrue);
   });
 
   test('normalizes wildcard host back to loopback when LAN is disabled', () {

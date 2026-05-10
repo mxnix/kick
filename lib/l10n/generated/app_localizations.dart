@@ -1068,7 +1068,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsGoogleSectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Google Search (Gemini CLI only)'**
+  /// **'Google'**
   String get settingsGoogleSectionTitle;
 
   /// No description provided for @settingsGoogleSectionSummary.
@@ -1286,6 +1286,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'KiCk will automatically use Google Search if the client did not explicitly override parameters and the request contains no function calls'**
   String get defaultGoogleWebSearchSubtitle;
+
+  /// No description provided for @defaultGoogleVisibleReasoningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request visible Gemini reasoning by default'**
+  String get defaultGoogleVisibleReasoningTitle;
+
+  /// No description provided for @defaultGoogleVisibleReasoningSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds include_reasoning for Gemini CLI requests when the client did not set reasoning options. Helps Custom OpenAI-Compatible clients show reasoning blocks.'**
+  String get defaultGoogleVisibleReasoningSubtitle;
 
   /// No description provided for @renderGoogleGroundingInMessageTitle.
   ///

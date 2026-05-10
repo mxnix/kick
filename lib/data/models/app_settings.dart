@@ -36,6 +36,7 @@ class AppSettings {
     'retry_429_delay_seconds',
     'mark_429_as_unhealthy',
     'default_google_web_search_enabled',
+    'default_google_visible_reasoning_enabled',
     'render_google_grounding_in_message',
     'logging_verbosity',
     'log_retention_count',
@@ -61,6 +62,7 @@ class AppSettings {
     required this.retry429DelaySeconds,
     required this.mark429AsUnhealthy,
     this.defaultGoogleWebSearchEnabled = false,
+    this.defaultGoogleVisibleReasoningEnabled = false,
     this.renderGoogleGroundingInMessage = false,
     required this.loggingVerbosity,
     required this.logRetentionCount,
@@ -85,6 +87,7 @@ class AppSettings {
   final int retry429DelaySeconds;
   final bool mark429AsUnhealthy;
   final bool defaultGoogleWebSearchEnabled;
+  final bool defaultGoogleVisibleReasoningEnabled;
   final bool renderGoogleGroundingInMessage;
   final KickLogVerbosity loggingVerbosity;
   final int logRetentionCount;
@@ -110,6 +113,7 @@ class AppSettings {
       retry429DelaySeconds: _defaultRetry429DelaySeconds,
       mark429AsUnhealthy: false,
       defaultGoogleWebSearchEnabled: false,
+      defaultGoogleVisibleReasoningEnabled: false,
       renderGoogleGroundingInMessage: false,
       loggingVerbosity: KickLogVerbosity.normal,
       logRetentionCount: defaultLogRetentionCount,
@@ -136,6 +140,7 @@ class AppSettings {
     int? retry429DelaySeconds,
     bool? mark429AsUnhealthy,
     bool? defaultGoogleWebSearchEnabled,
+    bool? defaultGoogleVisibleReasoningEnabled,
     bool? renderGoogleGroundingInMessage,
     KickLogVerbosity? loggingVerbosity,
     int? logRetentionCount,
@@ -166,6 +171,8 @@ class AppSettings {
       mark429AsUnhealthy: mark429AsUnhealthy ?? this.mark429AsUnhealthy,
       defaultGoogleWebSearchEnabled:
           defaultGoogleWebSearchEnabled ?? this.defaultGoogleWebSearchEnabled,
+      defaultGoogleVisibleReasoningEnabled:
+          defaultGoogleVisibleReasoningEnabled ?? this.defaultGoogleVisibleReasoningEnabled,
       renderGoogleGroundingInMessage:
           renderGoogleGroundingInMessage ?? this.renderGoogleGroundingInMessage,
       loggingVerbosity: loggingVerbosity ?? this.loggingVerbosity,
@@ -193,6 +200,7 @@ class AppSettings {
       'retry_429_delay_seconds': retry429DelaySeconds.toString(),
       'mark_429_as_unhealthy': mark429AsUnhealthy.toString(),
       'default_google_web_search_enabled': defaultGoogleWebSearchEnabled.toString(),
+      'default_google_visible_reasoning_enabled': defaultGoogleVisibleReasoningEnabled.toString(),
       'render_google_grounding_in_message': renderGoogleGroundingInMessage.toString(),
       'logging_verbosity': loggingVerbosity.name,
       'log_retention_count': logRetentionCount.toString(),
@@ -220,6 +228,7 @@ class AppSettings {
       'retry_429_delay_seconds': retry429DelaySeconds,
       'mark_429_as_unhealthy': mark429AsUnhealthy,
       'default_google_web_search_enabled': defaultGoogleWebSearchEnabled,
+      'default_google_visible_reasoning_enabled': defaultGoogleVisibleReasoningEnabled,
       'render_google_grounding_in_message': renderGoogleGroundingInMessage,
       'logging_verbosity': loggingVerbosity.name,
       'log_retention_count': logRetentionCount,
@@ -258,6 +267,10 @@ class AppSettings {
       mark429AsUnhealthy: _readBool(json['mark_429_as_unhealthy'], defaultValue: false),
       defaultGoogleWebSearchEnabled: _readBool(
         json['default_google_web_search_enabled'],
+        defaultValue: false,
+      ),
+      defaultGoogleVisibleReasoningEnabled: _readBool(
+        json['default_google_visible_reasoning_enabled'],
         defaultValue: false,
       ),
       renderGoogleGroundingInMessage: _readBool(
@@ -301,6 +314,8 @@ class AppSettings {
       ),
       mark429AsUnhealthy: values['mark_429_as_unhealthy'] == 'true',
       defaultGoogleWebSearchEnabled: values['default_google_web_search_enabled'] == 'true',
+      defaultGoogleVisibleReasoningEnabled:
+          values['default_google_visible_reasoning_enabled'] == 'true',
       renderGoogleGroundingInMessage: values['render_google_grounding_in_message'] == 'true',
       loggingVerbosity: KickLogVerbosity.values.firstWhere(
         (value) => value.name == values['logging_verbosity'],

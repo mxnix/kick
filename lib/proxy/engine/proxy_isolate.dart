@@ -66,6 +66,7 @@ Map<String, Object?> normalizeOpenAiCompatRequest({
   required Map<String, Object?> body,
   required Map<String, String> headers,
   bool defaultGoogleWebSearchEnabled = false,
+  bool defaultGoogleVisibleReasoningEnabled = false,
 }) {
   final normalized = Map<String, Object?>.from(body);
   final bodyFlag = _readGoogleWebSearchFlagFromJson(normalized);
@@ -78,16 +79,46 @@ Map<String, Object?> normalizeOpenAiCompatRequest({
               !_requestUsesControlledGeneration(normalized)
           ? true
           : null);
-  if (effectiveFlag == null) {
-    return normalized;
+  if (effectiveFlag != null) {
+    final extraBody =
+        _readRequestMap(normalized['extra_body'], 'extra_body') ?? <String, Object?>{};
+    final google = _readRequestMap(extraBody['google'], 'extra_body.google') ?? <String, Object?>{};
+    google.putIfAbsent('web_search', () => effectiveFlag);
+    extraBody['google'] = google;
+    normalized['extra_body'] = extraBody;
   }
 
-  final extraBody = _readRequestMap(normalized['extra_body'], 'extra_body') ?? <String, Object?>{};
-  final google = _readRequestMap(extraBody['google'], 'extra_body.google') ?? <String, Object?>{};
-  google.putIfAbsent('web_search', () => effectiveFlag);
-  extraBody['google'] = google;
-  normalized['extra_body'] = extraBody;
+  if (defaultGoogleVisibleReasoningEnabled &&
+      _isGeminiRequestModel(normalized['model']) &&
+      !_requestHasExplicitReasoning(normalized)) {
+    normalized['include_reasoning'] = true;
+  }
   return normalized;
+}
+
+bool _isGeminiRequestModel(Object? rawModel) {
+  if (rawModel is! String) {
+    return false;
+  }
+  final normalized = rawModel.trim().toLowerCase();
+  return normalized == 'gemini' ||
+      normalized.startsWith('gemini-') ||
+      normalized.startsWith('google/gemini') ||
+      normalized.contains('/gemini-') ||
+      normalized.contains('models/gemini-');
+}
+
+bool _requestHasExplicitReasoning(Map<String, Object?> body) {
+  if (body.containsKey('include_reasoning') ||
+      body.containsKey('reasoning_effort') ||
+      body.containsKey('reasoning')) {
+    return true;
+  }
+
+  final extraBody = _readRequestMap(body['extra_body'], 'extra_body');
+  final google = _readRequestMap(extraBody?['google'], 'extra_body.google');
+  return google?.containsKey('thinking_config') == true ||
+      google?.containsKey('thinkingConfig') == true;
 }
 
 bool _requestDeclaresTools(Map<String, Object?> body) {
@@ -366,6 +397,8 @@ class _ProxyIsolateHost {
   int get _configuredPort => _runtimePortFromSettings(_settings);
   bool get _defaultGoogleWebSearchEnabled =>
       _settings?['default_google_web_search_enabled'] == true;
+  bool get _defaultGoogleVisibleReasoningEnabled =>
+      _settings?['default_google_visible_reasoning_enabled'] == true;
   bool get _renderGoogleGroundingInMessage =>
       _settings?['render_google_grounding_in_message'] == true;
 
@@ -512,6 +545,7 @@ class _ProxyIsolateHost {
         body: rawBody,
         headers: request.headers,
         defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
+        defaultGoogleVisibleReasoningEnabled: _defaultGoogleVisibleReasoningEnabled,
       );
       _thoughtSignatures.enrichChatRequest(body);
       final resolvedPrompt = prompt = OpenAiRequestParser.parseChatRequest(
@@ -713,6 +747,7 @@ class _ProxyIsolateHost {
         body: rawBody,
         headers: request.headers,
         defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
+        defaultGoogleVisibleReasoningEnabled: _defaultGoogleVisibleReasoningEnabled,
       );
       _thoughtSignatures.enrichResponsesRequest(body);
       final resolvedPrompt = prompt = OpenAiRequestParser.parseResponsesRequest(

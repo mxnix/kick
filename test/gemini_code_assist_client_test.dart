@@ -2095,10 +2095,11 @@ void main() {
     expect((requestMap['systemInstruction'] as Map)['parts'], [
       {'text': 'You are a roleplay director.'},
     ]);
-    expect(contents.map((entry) => entry['role']).toList(), ['model', 'user', 'model', 'user']);
-    expect((contents.last['parts'] as List).single, {
-      'text': 'Pause roleplay and write the memory book.',
-    });
+    expect(contents.map((entry) => entry['role']).toList(), ['model', 'user']);
+    final lastUserParts = (contents.last['parts'] as List).cast<Map>();
+    expect(lastUserParts, hasLength(2));
+    expect(lastUserParts.first, {'text': 'Привет!'});
+    expect(lastUserParts.last, {'text': 'Pause roleplay and write the memory book.'});
   });
 
   test('defaults short Gemini 3 flash text-only requests to high thinking', () async {
@@ -2708,6 +2709,69 @@ void main() {
     expect(OpenAiResponseMapper.currentText(payloads[0]), 'Hello');
     expect(OpenAiResponseMapper.currentReasoningText(payloads[1]), 'Continuing.');
     expect(OpenAiResponseMapper.currentText(payloads[1]), 'Hello world');
+  });
+
+  test('streaming keeps empty terminal Gemini frames out of visible text', () async {
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          return http.StreamedResponse(
+            Stream.fromIterable([
+              utf8.encode(
+                'data: {"response":{"candidates":[{"content":{"parts":[{"text":"Hello"}]}}]}}\n\n',
+              ),
+              utf8.encode(
+                'data: {"response":{"candidates":[{"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":7,"candidatesTokenCount":3,"totalTokenCount":10}}}\n\n',
+              ),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final payloads = await (await client.generateContentStream(
+      account: sampleAccount(),
+      request: sampleRequest(stream: true),
+    )).toList();
+
+    expect(payloads, hasLength(2));
+    expect(OpenAiResponseMapper.currentText(payloads.first), 'Hello');
+    expect(OpenAiResponseMapper.currentText(payloads.last), 'Hello');
+    expect(OpenAiResponseMapper.currentFinishReason(payloads.last), 'stop');
+    expect(OpenAiResponseMapper.currentPromptTokenCount(payloads.last), 7);
+    expect(OpenAiResponseMapper.currentCompletionTokenCount(payloads.last), 3);
+  });
+
+  test('streaming still surfaces genuinely empty prompt-blocked Gemini payloads', () async {
+    final client = GeminiCodeAssistClient(
+      onTokensUpdated: (account, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode(
+                'data: {"response":{"promptFeedback":{"blockReason":"SAFETY","blockReasonMessage":"Prompt blocked."}}}\n\n',
+              ),
+            ),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final payloads = await (await client.generateContentStream(
+      account: sampleAccount(),
+      request: sampleRequest(stream: true),
+    )).toList();
+
+    expect(payloads, hasLength(1));
+    expect(
+      OpenAiResponseMapper.currentText(payloads.single),
+      '[Upstream blocked the prompt before generating a response. Prompt blocked.]',
+    );
+    expect(OpenAiResponseMapper.currentFinishReason(payloads.single), 'content_filter');
   });
 
   test('stream continuation emits cumulative text instead of restarted prefixes', () async {

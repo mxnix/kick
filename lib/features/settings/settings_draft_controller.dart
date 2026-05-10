@@ -47,6 +47,7 @@ class SettingsDraftController extends ChangeNotifier {
   bool _windowsLaunchAtStartup = false;
   bool _unsafeRawLoggingEnabled = false;
   bool _defaultGoogleWebSearchEnabled = false;
+  bool _defaultGoogleVisibleReasoningEnabled = false;
   bool _renderGoogleGroundingInMessage = false;
   bool _mark429AsUnhealthy = false;
   bool _initialized = false;
@@ -72,6 +73,7 @@ class SettingsDraftController extends ChangeNotifier {
   bool get windowsLaunchAtStartup => _windowsLaunchAtStartup;
   bool get unsafeRawLoggingEnabled => _unsafeRawLoggingEnabled;
   bool get defaultGoogleWebSearchEnabled => _defaultGoogleWebSearchEnabled;
+  bool get defaultGoogleVisibleReasoningEnabled => _defaultGoogleVisibleReasoningEnabled;
   bool get renderGoogleGroundingInMessage => _renderGoogleGroundingInMessage;
   bool get mark429AsUnhealthy => _mark429AsUnhealthy;
   bool get showSaveStatus => _showSaveStatus;
@@ -193,6 +195,15 @@ class SettingsDraftController extends ChangeNotifier {
       return;
     }
     _defaultGoogleWebSearchEnabled = value;
+    notifyListeners();
+    saveImmediately();
+  }
+
+  void setDefaultGoogleVisibleReasoningEnabled(bool value) {
+    if (_defaultGoogleVisibleReasoningEnabled == value) {
+      return;
+    }
+    _defaultGoogleVisibleReasoningEnabled = value;
     notifyListeners();
     saveImmediately();
   }
@@ -324,6 +335,7 @@ class SettingsDraftController extends ChangeNotifier {
     _mark429AsUnhealthy = settings.mark429AsUnhealthy;
     _unsafeRawLoggingEnabled = settings.unsafeRawLoggingEnabled;
     _defaultGoogleWebSearchEnabled = settings.defaultGoogleWebSearchEnabled;
+    _defaultGoogleVisibleReasoningEnabled = settings.defaultGoogleVisibleReasoningEnabled;
     _renderGoogleGroundingInMessage = settings.renderGoogleGroundingInMessage;
     _saveState = SettingsDraftSaveState.saved;
     _saveError = null;
@@ -374,6 +386,7 @@ class SettingsDraftController extends ChangeNotifier {
       logRetentionCount: int.parse(logRetentionController.text.trim()),
       mark429AsUnhealthy: _mark429AsUnhealthy,
       defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
+      defaultGoogleVisibleReasoningEnabled: _defaultGoogleVisibleReasoningEnabled,
       renderGoogleGroundingInMessage: _renderGoogleGroundingInMessage,
       loggingVerbosity: _verbosity,
       unsafeRawLoggingEnabled: _unsafeRawLoggingEnabled,
@@ -484,6 +497,7 @@ class SettingsDraftController extends ChangeNotifier {
         left.retry429DelaySeconds == right.retry429DelaySeconds &&
         left.mark429AsUnhealthy == right.mark429AsUnhealthy &&
         left.defaultGoogleWebSearchEnabled == right.defaultGoogleWebSearchEnabled &&
+        left.defaultGoogleVisibleReasoningEnabled == right.defaultGoogleVisibleReasoningEnabled &&
         left.renderGoogleGroundingInMessage == right.renderGoogleGroundingInMessage &&
         left.loggingVerbosity == right.loggingVerbosity &&
         left.logRetentionCount == right.logRetentionCount &&
