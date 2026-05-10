@@ -10,7 +10,7 @@ import 'package:kick/proxy/kiro/kiro_link_auth_service.dart';
 import 'support/real_http_client.dart';
 
 void main() {
-  test('starts and completes Kiro portal social authorization', () async {
+  test('starts and completes Kiro portal social authorization through IPv4 loopback', () async {
     final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_portal_auth');
     addTearDown(() => tempDirectory.delete(recursive: true));
 
@@ -41,6 +41,7 @@ void main() {
 
     final completion = service.completeBuilderIdAuthorization(request);
     final callbackUri = Uri.parse(request.redirectUri!).replace(
+      host: InternetAddress.loopbackIPv4.address,
       path: '/oauth/callback',
       queryParameters: {'login_option': 'github', 'state': request.state!, 'code': 'portal-code'},
     );

@@ -42,10 +42,10 @@ class KiroLinkAuthRequest {
     this.redirectUri,
     String? codeVerifier,
     Future<Object?>? callbackFuture,
-    HttpServer? callbackServer,
+    List<HttpServer>? callbackServers,
   }) : _codeVerifier = codeVerifier,
        _callbackFuture = callbackFuture,
-       _callbackServer = callbackServer;
+       _callbackServers = callbackServers;
 
   final String clientId;
   final String clientSecret;
@@ -62,7 +62,7 @@ class KiroLinkAuthRequest {
   final String? redirectUri;
   final String? _codeVerifier;
   final Future<Object?>? _callbackFuture;
-  final HttpServer? _callbackServer;
+  final List<HttpServer>? _callbackServers;
 }
 
 class KiroLinkAuthService {
@@ -88,9 +88,9 @@ class KiroLinkAuthService {
     final state = _randomToken(16);
     final codeVerifier = _randomToken(32);
     final codeChallenge = _codeChallenge(codeVerifier);
-    final HttpServer callbackServer;
+    final List<HttpServer> callbackServers;
     try {
-      callbackServer = await HttpServer.bind(_kiroPortalCallbackHost, _kiroPortalCallbackPort);
+      callbackServers = await _bindKiroPortalCallbackServers();
     } on SocketException catch (error) {
       throw StateError(
         'Kiro sign-in callback port $_kiroPortalCallbackPort is already in use. '
@@ -98,29 +98,31 @@ class KiroLinkAuthService {
         'Details: ${error.message}',
       );
     }
-    final redirectUri = 'http://$_kiroPortalCallbackHost:${callbackServer.port}';
+    final redirectUri = 'http://$_kiroPortalCallbackHost:${callbackServers.first.port}';
     final callbackCompleter = Completer<Object?>();
 
-    callbackServer.listen(
-      (request) async {
-        try {
-          await _handlePortalCallback(
-            request,
-            expectedState: state,
-            callbackCompleter: callbackCompleter,
-          );
-        } catch (error) {
+    for (final callbackServer in callbackServers) {
+      callbackServer.listen(
+        (request) async {
+          try {
+            await _handlePortalCallback(
+              request,
+              expectedState: state,
+              callbackCompleter: callbackCompleter,
+            );
+          } catch (error) {
+            if (!callbackCompleter.isCompleted) {
+              callbackCompleter.completeError(error);
+            }
+          }
+        },
+        onError: (Object error) {
           if (!callbackCompleter.isCompleted) {
             callbackCompleter.completeError(error);
           }
-        }
-      },
-      onError: (Object error) {
-        if (!callbackCompleter.isCompleted) {
-          callbackCompleter.completeError(error);
-        }
-      },
-    );
+        },
+      );
+    }
 
     final portalUrl = Uri.parse('$_kiroPortalUrl/signin').replace(
       queryParameters: {
@@ -148,7 +150,7 @@ class KiroLinkAuthService {
       redirectUri: redirectUri,
       codeVerifier: codeVerifier,
       callbackFuture: callbackCompleter.future,
-      callbackServer: callbackServer,
+      callbackServers: callbackServers,
     );
   }
 
@@ -305,14 +307,43 @@ class KiroLinkAuthService {
     _http.close();
   }
 
+  Future<List<HttpServer>> _bindKiroPortalCallbackServers() async {
+    final servers = <HttpServer>[];
+    try {
+      final ipv4Server = await HttpServer.bind(
+        InternetAddress.loopbackIPv4,
+        _kiroPortalCallbackPort,
+      );
+      servers.add(ipv4Server);
+
+      try {
+        final ipv6Server = await HttpServer.bind(
+          InternetAddress.loopbackIPv6,
+          _kiroPortalCallbackPort,
+          v6Only: true,
+        );
+        servers.add(ipv6Server);
+      } on SocketException catch (error) {
+        if (!_isLoopbackAddressUnsupported(error)) {
+          rethrow;
+        }
+      }
+
+      return servers;
+    } catch (_) {
+      await _closeKiroPortalCallbackServers(servers);
+      rethrow;
+    }
+  }
+
   Future<KiroAuthSourceSnapshot> _completeSocialAuthorization(
     KiroLinkAuthRequest request, {
     bool Function()? isCancelled,
   }) async {
     final callbackFuture = request._callbackFuture;
-    final callbackServer = request._callbackServer;
+    final callbackServers = request._callbackServers;
     final codeVerifier = request._codeVerifier;
-    if (callbackFuture == null || callbackServer == null || codeVerifier == null) {
+    if (callbackFuture == null || callbackServers == null || codeVerifier == null) {
       throw StateError('Kiro portal authorization was not started.');
     }
 
@@ -366,7 +397,7 @@ class KiroLinkAuthService {
         supportDirectoryProvider: _supportDirectoryProvider,
       );
     } finally {
-      await callbackServer.close(force: true);
+      await _closeKiroPortalCallbackServers(callbackServers);
     }
   }
 
@@ -535,6 +566,18 @@ Future<void> _defaultWait(Duration delay) {
     return Future<void>.value();
   }
   return Future<void>.delayed(delay);
+}
+
+Future<void> _closeKiroPortalCallbackServers(Iterable<HttpServer> servers) async {
+  await Future.wait(servers.map((server) => server.close(force: true)));
+}
+
+bool _isLoopbackAddressUnsupported(SocketException error) {
+  final message = '${error.message} ${error.osError?.message ?? ''}'.toLowerCase();
+  return message.contains('address not available') ||
+      message.contains('cannot assign requested address') ||
+      message.contains('address family not supported') ||
+      message.contains('protocol family not supported');
 }
 
 final Random _secureRandom = Random.secure();
