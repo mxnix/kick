@@ -546,7 +546,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsModelsSectionSummary => 'Пользовательские ID моделей';
 
   @override
-  String get settingsGoogleSectionTitle => 'Google';
+  String get settingsGoogleSectionTitle => 'Gemini CLI';
 
   @override
   String get settingsGoogleSectionSummary => 'Веб-поиск Google и параметры Gemini CLI';

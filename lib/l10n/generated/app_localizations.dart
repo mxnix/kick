@@ -1068,7 +1068,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsGoogleSectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Google'**
+  /// **'Gemini CLI'**
   String get settingsGoogleSectionTitle;
 
   /// No description provided for @settingsGoogleSectionSummary.

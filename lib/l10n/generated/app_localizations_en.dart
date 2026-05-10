@@ -544,7 +544,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsModelsSectionSummary => 'Custom model IDs';
 
   @override
-  String get settingsGoogleSectionTitle => 'Google';
+  String get settingsGoogleSectionTitle => 'Gemini CLI';
 
   @override
   String get settingsGoogleSectionSummary => 'Google web search and Gemini CLI settings';
