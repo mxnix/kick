@@ -597,7 +597,7 @@ class _AccountCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      account.displayIdentity,
+                      _accountSubtitle(account),
                       style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1572,6 +1572,31 @@ String _kiroSourceChipValue(AccountProfile account) {
     defaultKiroCredentialSourceType => 'Kiro local session',
     _ => defaultKiroRegion,
   };
+}
+
+String _accountSubtitle(AccountProfile account) {
+  final identity = account.displayIdentity;
+  if (account.provider != AccountProvider.kiro) {
+    return identity;
+  }
+
+  final trimmed = identity.trim();
+  if (trimmed.isEmpty) {
+    return identity;
+  }
+
+  final lower = trimmed.toLowerCase();
+  final alreadyQualified =
+      lower == 'kiro' ||
+      lower.startsWith('kiro ') ||
+      lower.startsWith('kiro•') ||
+      lower.startsWith('kiro •') ||
+      trimmed.contains(' • ');
+  if (alreadyQualified) {
+    return identity;
+  }
+
+  return 'Kiro • $trimmed';
 }
 
 Future<void> _openErrorAction(BuildContext context, String url) async {
