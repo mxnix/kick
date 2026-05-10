@@ -307,10 +307,7 @@ void main() {
       deleteTokens: (_) async {},
       supportDirectoryProvider: () async => restoreSupportDirectory,
       pickFileCallback: ({String? dialogTitle}) async {
-        return ConfigurationBackupPickedFile(
-          fileName: 'kick-restore.json',
-          bytes: exportedBytes,
-        );
+        return ConfigurationBackupPickedFile(fileName: 'kick-restore.json', bytes: exportedBytes);
       },
     );
 

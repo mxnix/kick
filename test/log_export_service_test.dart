@@ -245,20 +245,17 @@ void main() {
       useNativeSaveDialog: false,
     );
 
-    final contents = service.format(
-      [
-        AppLogEntry(
-          id: '1',
-          timestamp: DateTime.utc(2026, 3, 15, 17),
-          level: AppLogLevel.info,
-          category: 'proxy',
-          route: null,
-          message: 'Proxy started',
-          maskedPayload: null,
-        ),
-      ],
-      metadata: const LogExportMetadata(locale: 'system'),
-    );
+    final contents = service.format([
+      AppLogEntry(
+        id: '1',
+        timestamp: DateTime.utc(2026, 3, 15, 17),
+        level: AppLogLevel.info,
+        category: 'proxy',
+        route: null,
+        message: 'Proxy started',
+        maskedPayload: null,
+      ),
+    ], metadata: const LogExportMetadata(locale: 'system'));
 
     expect(contents, contains('KiCk log export'));
     expect(contents, contains('Environment'));
