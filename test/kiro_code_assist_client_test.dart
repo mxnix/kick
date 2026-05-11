@@ -48,6 +48,8 @@ void main() {
     String? reasoningEffort,
     Map<String, Object?>? googleThinkingConfig,
     List<UnifiedTurn>? turns,
+    List<UnifiedToolDeclaration>? tools,
+    int? maxOutputTokens,
   }) {
     return UnifiedPromptRequest(
       requestId: 'req-1',
@@ -59,12 +61,12 @@ void main() {
           [
             const UnifiedTurn(role: 'user', parts: [UnifiedPart.text('Hello')]),
           ],
-      tools: [],
+      tools: tools ?? [],
       systemInstruction: systemInstruction,
       toolChoice: null,
       temperature: null,
       topP: null,
-      maxOutputTokens: null,
+      maxOutputTokens: maxOutputTokens,
       stopSequences: null,
       reasoningEffort: reasoningEffort,
       googleThinkingConfig: googleThinkingConfig,
@@ -611,6 +613,235 @@ void main() {
     );
     expect(OpenAiResponseMapper.currentCachedTokenCount(response), 0);
     expect(OpenAiResponseMapper.currentReasoningTokenCount(response), 0);
+    expect(OpenAiResponseMapper.currentFinishReason(response), 'stop');
+  });
+
+  test('marks Kiro content-only streams as length-truncated', () async {
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/generateAssistantResponse');
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('{"content":"Partial Kiro output"}')),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final response = await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(),
+    );
+
+    expect(OpenAiResponseMapper.currentText(response), 'Partial Kiro output');
+    expect(OpenAiResponseMapper.currentFinishReason(response), 'length');
+    final metadata = (response['kiroMetadata'] as Map).cast<String, Object?>();
+    expect(metadata['stream_completed_normally'], isFalse);
+    expect(metadata['content_truncated'], isTrue);
+  });
+
+  test('uses Kiro usage events as normal stream completion signals', () async {
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/generateAssistantResponse');
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"content":"Done."}'),
+              utf8.encode('\u0000\u0000{"followupPrompt":"next?"}'),
+              utf8.encode('\u0000\u0000{"usage":{"credits":1}}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final response = await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(),
+    );
+
+    expect(OpenAiResponseMapper.currentText(response), 'Done.');
+    expect(OpenAiResponseMapper.currentFinishReason(response), 'stop');
+    final metadata = (response['kiroMetadata'] as Map).cast<String, Object?>();
+    expect(metadata['usage_seen'], isTrue);
+    expect(metadata['followup_prompt_seen'], isTrue);
+    expect(metadata['content_truncated'], isFalse);
+  });
+
+  test('trims oversized Kiro history payloads before sending upstream', () async {
+    late String capturedBody;
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          final typedRequest = request as http.Request;
+          capturedBody = typedRequest.body;
+          expect(utf8.encode(capturedBody).length, lessThanOrEqualTo(600000));
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('{"content":"Trimmed."}'),
+              utf8.encode('{"contextUsagePercentage":1}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+    final largeText = List.filled(20000, 'x').join();
+    final turns = <UnifiedTurn>[
+      for (var index = 0; index < 70; index += 1)
+        UnifiedTurn(
+          role: index.isEven ? 'user' : 'assistant',
+          parts: [UnifiedPart.text('history-$index $largeText')],
+        ),
+      const UnifiedTurn(role: 'user', parts: [UnifiedPart.text('current')]),
+    ];
+
+    final response = await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(model: 'kiro/deepseek-3.2', turns: turns),
+    );
+
+    final decoded = (jsonDecode(capturedBody) as Map).cast<String, Object?>();
+    final conversationState = (decoded['conversationState'] as Map).cast<String, Object?>();
+    final history = (conversationState['history'] as List?) ?? const [];
+    expect(history.length, lessThan(turns.length - 1));
+    expect(OpenAiResponseMapper.currentText(response), 'Trimmed.');
+  });
+
+  test('inlines orphaned Kiro tool results instead of sending structured toolResults', () async {
+    late Map<String, Object?> capturedBody;
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          final typedRequest = request as http.Request;
+          capturedBody = (jsonDecode(typedRequest.body) as Map).cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('{"content":"OK"}'),
+              utf8.encode('{"contextUsagePercentage":1}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+    const tools = [
+      UnifiedToolDeclaration(name: 'lookup', description: '', parameters: {'type': 'object'}),
+    ];
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        tools: tools,
+        turns: const [
+          UnifiedTurn(
+            role: 'user',
+            parts: [
+              UnifiedPart.functionResponse(
+                callId: 'missing-call',
+                name: 'lookup',
+                arguments: {'result': 'orphaned'},
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final conversationState = (capturedBody['conversationState'] as Map).cast<String, Object?>();
+    final currentMessage = (conversationState['currentMessage'] as Map).cast<String, Object?>();
+    final userInputMessage = (currentMessage['userInputMessage'] as Map).cast<String, Object?>();
+    final context = (userInputMessage['userInputMessageContext'] as Map).cast<String, Object?>();
+
+    expect(userInputMessage['content'], contains('[Tool Result: lookup]'));
+    expect(userInputMessage['content'], contains('orphaned'));
+    expect(context['tools'], isA<List>());
+    expect(context.containsKey('toolResults'), isFalse);
+  });
+
+  test('keeps paired Kiro tool results structured', () async {
+    late Map<String, Object?> capturedBody;
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          final typedRequest = request as http.Request;
+          capturedBody = (jsonDecode(typedRequest.body) as Map).cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('{"content":"OK"}'),
+              utf8.encode('{"contextUsagePercentage":1}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+    const tools = [
+      UnifiedToolDeclaration(name: 'lookup', description: '', parameters: {'type': 'object'}),
+    ];
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        tools: tools,
+        turns: const [
+          UnifiedTurn(
+            role: 'assistant',
+            parts: [
+              UnifiedPart.functionCall(callId: 'call-1', name: 'lookup', arguments: {'q': 'x'}),
+            ],
+          ),
+          UnifiedTurn(
+            role: 'user',
+            parts: [
+              UnifiedPart.functionResponse(
+                callId: 'call-1',
+                name: 'lookup',
+                arguments: {'result': 'paired'},
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final conversationState = (capturedBody['conversationState'] as Map).cast<String, Object?>();
+    final currentMessage = (conversationState['currentMessage'] as Map).cast<String, Object?>();
+    final userInputMessage = (currentMessage['userInputMessage'] as Map).cast<String, Object?>();
+    final context = (userInputMessage['userInputMessageContext'] as Map).cast<String, Object?>();
+    final toolResults = (context['toolResults'] as List).cast<Map>();
+
+    expect(userInputMessage['content'], isNot(contains('[Tool Result: lookup]')));
+    expect(toolResults.single['toolUseId'], 'call-1');
+  });
+
+  test('rejects Kiro tool declarations with names longer than Kiro accepts', () async {
+    final client = KiroCodeAssistClient(httpClient: QueueHttpClient([]));
+    final longName = List.filled(65, 'a').join();
+
+    await expectLater(
+      client.generateContent(
+        account: sampleAccount(),
+        request: sampleRequest(
+          tools: [
+            UnifiedToolDeclaration(
+              name: longName,
+              description: '',
+              parameters: const {'type': 'object'},
+            ),
+          ],
+        ),
+      ),
+      throwsA(
+        isA<GeminiGatewayException>()
+            .having((error) => error.provider, 'provider', AccountProvider.kiro)
+            .having((error) => error.kind, 'kind', GeminiGatewayFailureKind.invalidRequest)
+            .having((error) => error.statusCode, 'statusCode', 400),
+      ),
+    );
   });
 
   test('exposes Kiro reasoning output separately from response text', () async {

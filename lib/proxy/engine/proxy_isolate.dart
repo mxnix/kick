@@ -1625,6 +1625,7 @@ class _ProxyIsolateHost {
       return;
     }
 
+    final provider = _catalog.resolve(prompt.model).provider;
     _sendPort.send({
       'type': 'log',
       'payload': {
@@ -1641,7 +1642,11 @@ class _ProxyIsolateHost {
           'google_web_search': prompt.googleWebSearchEnabled,
           'has_system_instruction': prompt.systemInstruction != null,
           'requested_max_output_tokens': prompt.maxOutputTokens,
-          'effective_max_output_tokens': prompt.maxOutputTokens ?? defaultGeminiMaxOutputTokens,
+          if (provider == AccountProvider.kiro) ...{
+            'kiro_output_limit_control': 'upstream',
+            'requested_max_output_tokens_forwarded': false,
+          } else
+            'effective_max_output_tokens': prompt.maxOutputTokens ?? defaultGeminiMaxOutputTokens,
           'stop_sequences': prompt.stopSequences,
           'json_mode': prompt.jsonMode,
         }),
@@ -1882,6 +1887,7 @@ class _ProxyIsolateHost {
     final totalTokens = OpenAiResponseMapper.currentTotalTokenCount(payload);
     final cachedTokens = OpenAiResponseMapper.currentCachedTokenCount(payload);
     final reasoningTokens = OpenAiResponseMapper.currentReasoningTokenCount(payload);
+    final kiroMetadata = (payload['kiroMetadata'] as Map?)?.cast<String, Object?>();
     return {
       'finish_reason': finishReason,
       ...?_optionalMapEntry('trace_id', traceId),
@@ -1892,6 +1898,17 @@ class _ProxyIsolateHost {
       ...?_optionalMapEntry('total_tokens', totalTokens),
       ...?_optionalMapEntry('cached_tokens', cachedTokens),
       ...?_optionalMapEntry('reasoning_tokens', reasoningTokens),
+      ...?_optionalMapEntry(
+        'kiro_stream_completed_normally',
+        kiroMetadata?['stream_completed_normally'],
+      ),
+      ...?_optionalMapEntry('kiro_usage_seen', kiroMetadata?['usage_seen']),
+      ...?_optionalMapEntry('kiro_context_usage_seen', kiroMetadata?['context_usage_seen']),
+      ...?_optionalMapEntry('kiro_content_truncated', kiroMetadata?['content_truncated']),
+      ...?_optionalMapEntry(
+        'kiro_context_usage_percentage',
+        kiroMetadata?['context_usage_percentage'],
+      ),
       if (preview.isNotEmpty) 'output_text_chars': preview.length,
       if (reasoningText.isNotEmpty) 'reasoning_text_chars': reasoningText.length,
       if (toolCallCount > 0) 'tool_call_count': toolCallCount,
