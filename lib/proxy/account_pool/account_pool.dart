@@ -50,6 +50,10 @@ class ProxyRuntimeAccount {
   final String tokenRef;
   OAuthTokens tokens;
 
+  Set<String>? _normalizedNotSupportedModels;
+  Set<String> get normalizedNotSupportedModels =>
+      _normalizedNotSupportedModels ??= notSupportedModels.map(ModelCatalog.normalizeModel).toSet();
+
   bool get isCoolingDown => cooldownUntil != null && cooldownUntil!.isAfter(DateTime.now());
 
   AccountProfile toProfile() {
@@ -155,7 +159,7 @@ class ProxyAccountPool {
               account.enabled &&
               !blockedIds.contains(account.id) &&
               !account.isCoolingDown &&
-              !account.notSupportedModels.map(_normalizeModel).contains(normalizedModel);
+              !account.normalizedNotSupportedModels.contains(normalizedModel);
         })
         .toList(growable: false);
 
@@ -223,7 +227,7 @@ class ProxyAccountPool {
 
   void markUnsupportedModel(ProxyRuntimeAccount account, String model) {
     final normalized = _normalizeModel(model);
-    if (!account.notSupportedModels.map(_normalizeModel).contains(normalized)) {
+    if (account.normalizedNotSupportedModels.add(normalized)) {
       account.notSupportedModels.add(normalized);
     }
     account.errorCount += 1;

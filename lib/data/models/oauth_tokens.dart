@@ -1,3 +1,5 @@
+const Object _scopeUnset = Object();
+
 class OAuthTokens {
   const OAuthTokens({
     required this.accessToken,
@@ -20,14 +22,14 @@ class OAuthTokens {
     String? refreshToken,
     DateTime? expiry,
     String? tokenType,
-    String? scope,
+    Object? scope = _scopeUnset,
   }) {
     return OAuthTokens(
       accessToken: accessToken ?? this.accessToken,
       refreshToken: refreshToken ?? this.refreshToken,
       expiry: expiry ?? this.expiry,
       tokenType: tokenType ?? this.tokenType,
-      scope: scope ?? this.scope,
+      scope: identical(scope, _scopeUnset) ? this.scope : scope as String?,
     );
   }
 

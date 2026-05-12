@@ -281,7 +281,7 @@ bool _looksLikeGoogleProjectAccessError(String message) {
       message.contains('api has not been used') ||
       message.contains('access not configured') ||
       message.contains('service disabled') ||
-      message.contains('project id');
+      (message.contains('project id') && message.contains('invalid'));
 }
 
 bool _looksLikeReasoningConfigError(String message) {

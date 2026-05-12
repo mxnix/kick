@@ -168,15 +168,26 @@ class AccountProfile {
 
   Map<String, Object?> toRuntimeJson({OAuthTokens? tokens}) {
     return {
-      ...toDatabaseMap(),
+      'id': id,
+      'label': label,
       'email': email,
+      'project_id': projectId,
       'provider': provider.name,
-      'enabled': enabled,
+      'provider_region': providerRegion,
+      'credential_source_type': credentialSourceType,
+      'credential_source_path': credentialSourcePath,
+      'provider_profile_arn': providerProfileArn,
       'google_subject_id': googleSubjectId,
       'avatar_url': avatarUrl,
+      'enabled': enabled,
+      'priority': priority,
       'not_supported_models': List<String>.from(effectiveNotSupportedModels),
       'last_used_at': lastUsedAt?.toIso8601String(),
+      'usage_count': usageCount,
+      'error_count': errorCount,
       'cooldown_until': cooldownUntil?.toIso8601String(),
+      'last_quota_snapshot': lastQuotaSnapshot,
+      'token_ref': tokenRef,
       'tokens': tokens?.toJson(),
     };
   }

@@ -587,6 +587,7 @@ class KickProxyController {
       startPending: false,
       boundHost: settings.allowLan ? '0.0.0.0' : settings.host,
       port: settings.port,
+      startedAt: _currentState.startedAt ?? DateTime.now(),
       activeAccounts: payload['active_accounts'] as int? ?? 0,
       healthyAccounts: payload['healthy_accounts'] as int? ?? 0,
       clearLastError: true,

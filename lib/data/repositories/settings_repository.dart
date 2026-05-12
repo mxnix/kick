@@ -49,10 +49,11 @@ class SettingsRepository {
 
   Future<void> writeSettings(AppSettings settings) async {
     await _database.transaction(() async {
-      final keys = settings.toStorageMap().keys.toList(growable: false);
+      final storageMap = settings.toStorageMap();
+      final keys = storageMap.keys.toList(growable: false);
       final placeholders = List.generate(keys.length, (index) => '?${index + 1}').join(', ');
       await _database.customStatement('DELETE FROM settings WHERE key IN ($placeholders)', keys);
-      for (final entry in settings.toStorageMap().entries) {
+      for (final entry in storageMap.entries) {
         await _database.customInsert(
           'INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)',
           variables: [Variable<String>(entry.key), Variable<String>(entry.value)],

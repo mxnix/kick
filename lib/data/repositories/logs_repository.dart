@@ -128,48 +128,52 @@ class LogsRepository {
   }
 
   Future<void> scrubSensitiveEntries({required bool clearRawPayload}) async {
-    final entries = await readAll(limit: null);
-    if (entries.isEmpty) {
-      return;
-    }
-
-    await _database.transaction(() async {
-      for (final entry in entries) {
-        final sanitizedMessage = LogSanitizer.sanitizeText(entry.message);
-        final sanitizedMaskedPayload = LogSanitizer.sanitizeSerializedPayload(entry.maskedPayload);
-        final nextRawPayload = clearRawPayload ? '' : (entry.rawPayload ?? '');
-        final currentRawPayload = entry.rawPayload ?? '';
-        final nextMaskedPayload = sanitizedMaskedPayload ?? '';
-        final currentMaskedPayload = entry.maskedPayload ?? '';
-
-        if (sanitizedMessage == entry.message &&
-            nextMaskedPayload == currentMaskedPayload &&
-            nextRawPayload == currentRawPayload) {
-          continue;
-        }
-
-        await _database.customStatement(
-          'UPDATE logs SET message = ?1, masked_payload = ?2, raw_payload = ?3 WHERE id = ?4',
-          [sanitizedMessage, nextMaskedPayload, nextRawPayload, entry.id],
-        );
+    const batchSize = 500;
+    var offset = 0;
+    while (true) {
+      final entries = await readAll(limit: batchSize, offset: offset);
+      if (entries.isEmpty) {
+        break;
       }
-    });
+
+      await _database.transaction(() async {
+        for (final entry in entries) {
+          final sanitizedMessage = LogSanitizer.sanitizeText(entry.message);
+          final sanitizedMaskedPayload = LogSanitizer.sanitizeSerializedPayload(entry.maskedPayload);
+          final nextRawPayload = clearRawPayload ? '' : (entry.rawPayload ?? '');
+          final currentRawPayload = entry.rawPayload ?? '';
+          final nextMaskedPayload = sanitizedMaskedPayload ?? '';
+          final currentMaskedPayload = entry.maskedPayload ?? '';
+
+          if (sanitizedMessage == entry.message &&
+              nextMaskedPayload == currentMaskedPayload &&
+              nextRawPayload == currentRawPayload) {
+            continue;
+          }
+
+          await _database.customStatement(
+            'UPDATE logs SET message = ?1, masked_payload = ?2, raw_payload = ?3 WHERE id = ?4',
+            [sanitizedMessage, nextMaskedPayload, nextRawPayload, entry.id],
+          );
+        }
+      });
+
+      if (entries.length < batchSize) {
+        break;
+      }
+      offset += batchSize;
+    }
   }
 
   Future<void> _pruneToRetentionLimit() async {
-    final rows = await _database
-        .customSelect(
-          'SELECT id FROM logs ORDER BY timestamp DESC LIMIT -1 OFFSET ?1',
-          variables: [Variable<int>(_retentionLimit)],
-        )
-        .get();
-    final idsToDelete = rows.map((row) => row.read<String>('id')).toList(growable: false);
-    if (idsToDelete.isEmpty) {
-      return;
-    }
-
-    final placeholders = List.generate(idsToDelete.length, (index) => '?${index + 1}').join(', ');
-    await _database.customStatement('DELETE FROM logs WHERE id IN ($placeholders)', idsToDelete);
+    await _database.customStatement(
+      '''
+      DELETE FROM logs WHERE id NOT IN (
+        SELECT id FROM logs ORDER BY timestamp DESC LIMIT ?1
+      )
+      ''',
+      [_retentionLimit],
+    );
   }
 
   _LogQueryParts _buildQueryParts({

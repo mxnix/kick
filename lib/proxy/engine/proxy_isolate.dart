@@ -184,7 +184,7 @@ int _runtimePortFromSettings(Map<String, Object?>? settings) {
     final num value => value.toInt(),
     _ => defaultProxyRuntimePort,
   };
-  if (port < 0 || port > 65535) {
+  if (port < 1 || port > 65535) {
     return defaultProxyRuntimePort;
   }
   return port;
