@@ -48,6 +48,7 @@ class WindowBootstrap {
       if (Platform.isWindows) {
         await windowManager.setAsFrameless();
         await windowManager.setHasShadow(false);
+        await windowManager.setSkipTaskbar(false);
       }
     });
   }
