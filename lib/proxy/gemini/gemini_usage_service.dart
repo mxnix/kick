@@ -79,7 +79,16 @@ class GeminiUsageService {
       throw StateError('Unexpected Gemini usage response shape.');
     }
 
-    return GeminiUsageSnapshot.fromApi(decoded.cast<String, Object?>(), fetchedAt: DateTime.now());
+    final payload = decoded.cast<String, Object?>();
+    if (payload['error'] is Map) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
+    final ineligibleTiers = ((payload['ineligibleTiers'] as List?) ?? const []).whereType<Map>();
+    if (ineligibleTiers.any((tier) => tier['reasonCode'] == 'VALIDATION_REQUIRED')) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
+
+    return GeminiUsageSnapshot.fromApi(payload, fetchedAt: DateTime.now());
   }
 
   Future<OAuthTokens> _refreshAndPersist(String tokenRef, OAuthTokens tokens) async {

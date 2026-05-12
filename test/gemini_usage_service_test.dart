@@ -250,6 +250,50 @@ void main() {
     expect(refreshCalls, 0);
     expect(seenTokens, ['Bearer active-token']);
   });
+
+  test('surfaces 200-level ineligible tier validation responses as auth failures', () async {
+    var refreshCalls = 0;
+
+    final service = GeminiUsageService(
+      readTokens: (_) async => activeTokens(accessToken: 'active-token'),
+      refreshTokens: (tokens) async {
+        refreshCalls += 1;
+        return activeTokens(accessToken: 'unexpected-refresh');
+      },
+      persistTokens: (_, tokens) async {},
+      httpClient: QueueHttpClient([
+        (request) async {
+          return http.Response(
+            jsonEncode({
+              'ineligibleTiers': [
+                {
+                  'reasonCode': 'VALIDATION_REQUIRED',
+                  'validationUrl': 'https://example.com/verify',
+                },
+              ],
+            }),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await expectLater(
+      service.fetchUsage(sampleAccount()),
+      throwsA(
+        isA<GeminiGatewayException>()
+            .having((error) => error.kind, 'kind', GeminiGatewayFailureKind.auth)
+            .having(
+              (error) => error.detail,
+              'detail',
+              GeminiGatewayFailureDetail.accountVerificationRequired,
+            )
+            .having((error) => error.actionUrl, 'actionUrl', 'https://example.com/verify'),
+      ),
+    );
+
+    expect(refreshCalls, 0);
+  });
 }
 
 class QueueHttpClient extends http.BaseClient {
