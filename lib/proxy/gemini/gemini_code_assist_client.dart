@@ -193,14 +193,29 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
   final help = _typedDetail(details, 'type.googleapis.com/google.rpc.Help');
   final retryInfo = _typedDetail(details, 'type.googleapis.com/google.rpc.RetryInfo');
   final quotaFailure = _typedDetail(details, 'type.googleapis.com/google.rpc.QuotaFailure');
-  final errorReason = errorInfo?['reason'] as String?;
+  String? errorReason = errorInfo?['reason'] as String?;
   final errorStatus = (error['status'] as String?)?.trim().toUpperCase();
-  final errorDomain = _sanitizeDomain(errorInfo?['domain'] as String?);
+  String? errorDomain = _sanitizeDomain(errorInfo?['domain'] as String?);
   final errorMetadata = ((errorInfo?['metadata'] as Map?) ?? const <String, Object?>{})
       .cast<String, Object?>();
   final lower = message.toLowerCase();
   final quotaSnapshot = decoded['quota']?.toString();
-  final actionUrl = _gatewayActionUrl(errorMetadata, help);
+  String? actionUrl = _gatewayActionUrl(errorMetadata, help);
+
+  final ineligibleTiers = ((decoded['ineligibleTiers'] as List?) ?? const [])
+      .whereType<Map>()
+      .map((t) => t.cast<String, Object?>())
+      .toList(growable: false);
+  final validationTier = ineligibleTiers
+      .where((t) => t['reasonCode'] == 'VALIDATION_REQUIRED')
+      .firstOrNull;
+
+  if (validationTier != null) {
+    errorReason ??= 'VALIDATION_REQUIRED';
+    errorDomain ??= 'cloudcode-pa.googleapis.com';
+    actionUrl ??= (validationTier['validationUrl'] as String?)?.trim();
+  }
+
   final isProjectIdMissing = _looksLikeMissingProjectIdError(lower);
   final isTermsOfServiceViolation = statusCode == 403 && errorReason == 'TOS_VIOLATION';
 
@@ -218,7 +233,7 @@ GeminiGatewayException decodeGeminiGatewayError(int statusCode, String body) {
   }
 
   final isAccountVerificationRequired =
-      statusCode == 403 &&
+      (statusCode == 403 || validationTier != null) &&
       errorReason == 'VALIDATION_REQUIRED' &&
       errorDomain != null &&
       _cloudCodeDomains.contains(errorDomain);
@@ -1231,6 +1246,13 @@ class GeminiCodeAssistClient {
     }
     final decoded = _decodeJsonObjectResponse(rawBody);
     if (decoded != null) {
+      if (decoded['error'] is Map) {
+        throw decodeGeminiGatewayError(response.statusCode, rawBody);
+      }
+      final ineligibleTiers = ((decoded['ineligibleTiers'] as List?) ?? const []).whereType<Map>();
+      if (ineligibleTiers.any((t) => t['reasonCode'] == 'VALIDATION_REQUIRED')) {
+        throw decodeGeminiGatewayError(response.statusCode, rawBody);
+      }
       return decoded;
     }
     throw GeminiGatewayException(
@@ -1260,6 +1282,9 @@ class GeminiCodeAssistClient {
       if (projectId.isNotEmpty) {
         return projectId;
       }
+      if (response['done'] == true) {
+        return '';
+      }
     }
 
     return '';
@@ -1280,6 +1305,13 @@ class GeminiCodeAssistClient {
     }
     final decoded = _decodeJsonObjectResponse(rawBody);
     if (decoded != null) {
+      if (decoded['error'] is Map) {
+        throw decodeGeminiGatewayError(response.statusCode, rawBody);
+      }
+      final ineligibleTiers = ((decoded['ineligibleTiers'] as List?) ?? const []).whereType<Map>();
+      if (ineligibleTiers.any((t) => t['reasonCode'] == 'VALIDATION_REQUIRED')) {
+        throw decodeGeminiGatewayError(response.statusCode, rawBody);
+      }
       return decoded;
     }
     throw GeminiGatewayException(

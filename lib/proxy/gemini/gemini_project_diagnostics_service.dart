@@ -120,6 +120,13 @@ class GeminiProjectDiagnosticsService {
     }
 
     final payload = decoded.cast<String, Object?>();
+    if (payload['error'] is Map) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
+    final ineligibleTiers = ((payload['ineligibleTiers'] as List?) ?? const []).whereType<Map>();
+    if (ineligibleTiers.any((t) => t['reasonCode'] == 'VALIDATION_REQUIRED')) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
 
     return GeminiProjectDiagnosticSnapshot(
       checkedAt: DateTime.now(),
@@ -255,7 +262,15 @@ class GeminiProjectDiagnosticsService {
     if (decoded is! Map<String, dynamic>) {
       throw StateError('Unexpected Gemini project diagnostics response shape.');
     }
-    return decoded.cast<String, Object?>();
+    final payload = decoded.cast<String, Object?>();
+    if (payload['error'] is Map) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
+    final ineligibleTiers = ((payload['ineligibleTiers'] as List?) ?? const []).whereType<Map>();
+    if (ineligibleTiers.any((t) => t['reasonCode'] == 'VALIDATION_REQUIRED')) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
+    return payload;
   }
 
   Future<String> _pollOperationProjectId(
@@ -273,6 +288,9 @@ class GeminiProjectDiagnosticsService {
       final projectId = _extractOnboardedProjectId(response);
       if (projectId.isNotEmpty) {
         return projectId;
+      }
+      if (response['done'] == true) {
+        return '';
       }
     }
     return '';
@@ -302,7 +320,15 @@ class GeminiProjectDiagnosticsService {
     if (decoded is! Map<String, dynamic>) {
       throw StateError('Unexpected Gemini project diagnostics response shape.');
     }
-    return decoded.cast<String, Object?>();
+    final payload = decoded.cast<String, Object?>();
+    if (payload['error'] is Map) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
+    final ineligibleTiers = ((payload['ineligibleTiers'] as List?) ?? const []).whereType<Map>();
+    if (ineligibleTiers.any((t) => t['reasonCode'] == 'VALIDATION_REQUIRED')) {
+      throw decodeGeminiGatewayError(response.statusCode, response.body);
+    }
+    return payload;
   }
 
   Future<String> _resolvePrivilegedUserId() async {
