@@ -117,7 +117,7 @@ curl http://127.0.0.1:3000/v1/chat/completions \
 | --- | --- |
 | Windows | Установщик в [Releases](https://github.com/mxnix/kick/releases/latest). |
 | Linux | AppImage, `.deb`, `.rpm`, `.pkg.tar.zst`, `.tar.gz`, APT/RPM/Pacman-репозитории или [AUR](https://aur.archlinux.org/packages/kick-bin). |
-| Android | APK в [Releases](https://github.com/mxnix/kick/releases/latest). |
+| Android | APK в [Releases](https://github.com/mxnix/kick/releases/latest) или [Obtainium](http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/mxnix/kick). |
 
 <details>
 <summary><strong>Linux-репозитории</strong></summary>

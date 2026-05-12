@@ -117,7 +117,7 @@ If API key protection is disabled, remove the `Authorization` header.
 | --- | --- |
 | Windows | Download the installer from [Releases](https://github.com/mxnix/kick/releases/latest). |
 | Linux | Use AppImage, `.deb`, `.rpm`, `.pkg.tar.zst`, `.tar.gz`, APT/RPM/Pacman repositories, or [AUR](https://aur.archlinux.org/packages/kick-bin). |
-| Android | Download the APK from [Releases](https://github.com/mxnix/kick/releases/latest). |
+| Android | Download the APK from [Releases](https://github.com/mxnix/kick/releases/latest) or [Obtainium](http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/mxnix/kick). |
 
 <details>
 <summary><strong>Linux repositories</strong></summary>
