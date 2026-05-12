@@ -479,8 +479,7 @@ class ConfigurationBackupService {
   Future<_KiroManagedCredentialBackupState?> _readKiroManagedCredentialState(
     AccountProfile account,
   ) async {
-    if (account.provider != AccountProvider.kiro ||
-        account.credentialSourceType != builderIdKiroCredentialSourceType) {
+    if (account.provider != AccountProvider.kiro) {
       return null;
     }
 
@@ -507,7 +506,22 @@ class ConfigurationBackupService {
     for (final entry in accounts) {
       final providerState = entry.kiroManagedCredentialState;
       if (entry.profile.provider != AccountProvider.kiro || providerState == null) {
-        restoredAccounts.add(entry);
+        var profile = entry.profile;
+        if (profile.provider == AccountProvider.kiro &&
+            profile.credentialSourceType == defaultKiroCredentialSourceType) {
+          final defaultPath = resolveKiroCredentialSourcePath(null);
+          profile = profile.copyWith(
+            credentialSourcePath: defaultPath,
+            clearCredentialSourcePath: defaultPath == null,
+          );
+        }
+        restoredAccounts.add(
+          _ConfigurationBackupAccount(
+            profile: profile,
+            tokens: entry.tokens,
+            kiroManagedCredentialState: entry.kiroManagedCredentialState,
+          ),
+        );
         continue;
       }
 
