@@ -139,7 +139,9 @@ class LogsRepository {
       await _database.transaction(() async {
         for (final entry in entries) {
           final sanitizedMessage = LogSanitizer.sanitizeText(entry.message);
-          final sanitizedMaskedPayload = LogSanitizer.sanitizeSerializedPayload(entry.maskedPayload);
+          final sanitizedMaskedPayload = LogSanitizer.sanitizeSerializedPayload(
+            entry.maskedPayload,
+          );
           final nextRawPayload = clearRawPayload ? '' : (entry.rawPayload ?? '');
           final currentRawPayload = entry.rawPayload ?? '';
           final nextMaskedPayload = sanitizedMaskedPayload ?? '';
