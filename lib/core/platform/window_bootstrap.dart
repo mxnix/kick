@@ -41,8 +41,8 @@ class WindowBootstrap {
       center: true,
       title: lookupKickLocalizations().appTitle,
       backgroundColor: Colors.transparent,
-      titleBarStyle: Platform.isWindows ? TitleBarStyle.hidden : TitleBarStyle.normal,
-      windowButtonVisibility: !Platform.isWindows,
+      titleBarStyle: TitleBarStyle.hidden,
+      windowButtonVisibility: false,
     );
     await windowManager.waitUntilReadyToShow(options, () async {
       if (Platform.isWindows) {

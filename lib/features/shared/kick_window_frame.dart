@@ -23,12 +23,15 @@ class KickWindowFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isWindowsDesktop = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
-    if (!isWindowsDesktop) {
+    final usesKickDesktopFrame =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux);
+    if (!usesKickDesktopFrame) {
       return child;
     }
 
-    return _WindowsWindowFrame(
+    return _DesktopWindowFrame(
       statusLabelOverride: statusLabelOverride,
       statusColorOverride: statusColorOverride,
       child: child,
@@ -36,8 +39,8 @@ class KickWindowFrame extends StatelessWidget {
   }
 }
 
-class _WindowsWindowFrame extends ConsumerStatefulWidget {
-  const _WindowsWindowFrame({
+class _DesktopWindowFrame extends ConsumerStatefulWidget {
+  const _DesktopWindowFrame({
     required this.child,
     this.statusLabelOverride,
     this.statusColorOverride,
@@ -48,12 +51,13 @@ class _WindowsWindowFrame extends ConsumerStatefulWidget {
   final Color? statusColorOverride;
 
   @override
-  ConsumerState<_WindowsWindowFrame> createState() => _WindowsWindowFrameState();
+  ConsumerState<_DesktopWindowFrame> createState() => _DesktopWindowFrameState();
 }
 
-class _WindowsWindowFrameState extends ConsumerState<_WindowsWindowFrame> with WindowListener {
+class _DesktopWindowFrameState extends ConsumerState<_DesktopWindowFrame> with WindowListener {
   bool _isFocused = true;
   bool _isMaximized = false;
+  bool _isFullScreen = false;
   bool _isAlwaysOnTop = false;
 
   @override
@@ -72,6 +76,7 @@ class _WindowsWindowFrameState extends ConsumerState<_WindowsWindowFrame> with W
   Future<void> _syncWindowState() async {
     final isFocused = await windowManager.isFocused();
     final isMaximized = await windowManager.isMaximized();
+    final isFullScreen = await windowManager.isFullScreen();
     final isAlwaysOnTop = await windowManager.isAlwaysOnTop();
 
     if (!mounted) {
@@ -81,6 +86,7 @@ class _WindowsWindowFrameState extends ConsumerState<_WindowsWindowFrame> with W
     setState(() {
       _isFocused = isFocused;
       _isMaximized = isMaximized;
+      _isFullScreen = isFullScreen;
       _isAlwaysOnTop = isAlwaysOnTop;
     });
   }
@@ -123,6 +129,16 @@ class _WindowsWindowFrameState extends ConsumerState<_WindowsWindowFrame> with W
   }
 
   @override
+  void onWindowEnterFullScreen() {
+    setState(() => _isFullScreen = true);
+  }
+
+  @override
+  void onWindowLeaveFullScreen() {
+    setState(() => _isFullScreen = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final hasOverrides = widget.statusLabelOverride != null || widget.statusColorOverride != null;
@@ -131,7 +147,7 @@ class _WindowsWindowFrameState extends ConsumerState<_WindowsWindowFrame> with W
         : (ref.watch(proxyStatusProvider).asData?.value ??
               ref.watch(proxyControllerProvider).currentState);
     final isProxyRunning = proxyStatus?.running ?? false;
-    final radius = _isMaximized ? 0.0 : 20.0;
+    final radius = _isMaximized || _isFullScreen ? 0.0 : 20.0;
     final statusLabel =
         widget.statusLabelOverride ??
         (isProxyRunning ? context.l10n.proxyRunningStatus : context.l10n.proxyStoppedStatus);
@@ -139,14 +155,18 @@ class _WindowsWindowFrameState extends ConsumerState<_WindowsWindowFrame> with W
         widget.statusColorOverride ??
         (isProxyRunning ? scheme.primary : scheme.onSurfaceVariant.withValues(alpha: 0.72));
 
-    return VirtualWindowFrame(
+    return _DesktopVirtualFrame(
+      isFocused: _isFocused,
+      isMaximized: _isMaximized,
+      isFullScreen: _isFullScreen,
+      radius: radius,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
         child: ColoredBox(
           color: scheme.surface,
           child: Column(
             children: [
-              _WindowsTitleBar(
+              _DesktopTitleBar(
                 statusLabel: statusLabel,
                 statusColor: statusColor,
                 isFocused: _isFocused,
@@ -163,8 +183,50 @@ class _WindowsWindowFrameState extends ConsumerState<_WindowsWindowFrame> with W
   }
 }
 
-class _WindowsTitleBar extends StatelessWidget {
-  const _WindowsTitleBar({
+class _DesktopVirtualFrame extends StatelessWidget {
+  const _DesktopVirtualFrame({
+    required this.child,
+    required this.isFocused,
+    required this.isMaximized,
+    required this.isFullScreen,
+    required this.radius,
+  });
+
+  final Widget child;
+  final bool isFocused;
+  final bool isMaximized;
+  final bool isFullScreen;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isWindowChromeExpanded = isMaximized || isFullScreen;
+    final enableResizeEdges = isWindowChromeExpanded
+        ? const <ResizeEdge>[]
+        : defaultTargetPlatform == TargetPlatform.windows
+        ? const <ResizeEdge>[ResizeEdge.topLeft, ResizeEdge.top, ResizeEdge.topRight]
+        : null;
+
+    return DragToResizeArea(
+      enableResizeEdges: enableResizeEdges,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: isFocused ? 0.20 : 0.12),
+            width: isWindowChromeExpanded ? 0 : 1,
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _DesktopTitleBar extends StatelessWidget {
+  const _DesktopTitleBar({
     required this.statusLabel,
     required this.statusColor,
     required this.isFocused,

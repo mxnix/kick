@@ -288,6 +288,39 @@ void main() {
     }
   });
 
+  testWidgets('hides inline proxy status on Linux desktop layouts', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    tester.view.physicalSize = const Size(430, 860);
+    tester.view.devicePixelRatio = 1;
+
+    AppBootstrap? bootstrap;
+    try {
+      bootstrap = await _createBootstrap();
+
+      await tester.pumpWidget(
+        _TestApp(
+          bootstrap: bootstrap,
+          updateInfo: const AppUpdateInfo(
+            currentVersion: '1.0.2',
+            latestVersion: '1.0.2',
+            releaseUrl: 'https://example.com/releases/tag/v1.0.2',
+            hasUpdate: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(enL10n.proxyStoppedStatus), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await bootstrap?.dispose();
+    }
+  });
+
   testWidgets('primary action elides long labels in narrow layouts', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

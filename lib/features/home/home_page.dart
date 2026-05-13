@@ -817,7 +817,8 @@ bool _showInlineStatusForCurrentPlatform() {
   if (kIsWeb) {
     return true;
   }
-  return defaultTargetPlatform != TargetPlatform.windows;
+  return defaultTargetPlatform != TargetPlatform.windows &&
+      defaultTargetPlatform != TargetPlatform.linux;
 }
 
 class _QuickAccessTile extends StatelessWidget {
