@@ -357,6 +357,7 @@ Locale? _normalizeAppLocale(Locale? value) {
   return switch (languageCode) {
     'en' => const Locale('en'),
     'ru' => const Locale('ru'),
+    'uk' => const Locale('uk'),
     _ => null,
   };
 }

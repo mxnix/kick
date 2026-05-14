@@ -1,0 +1,950 @@
+{
+  "@@locale": "uk",
+  "appTitle": "KiCk",
+  "shellSubtitle": "Локальний проксі для Gemini CLI та Kiro",
+  "connectGoogleAccountTitle": "Підключити Google-акаунт",
+  "homeTitle": "Головна",
+  "proxyRunningStatus": "Запущено",
+  "proxyStoppedStatus": "Зупинено",
+  "embeddedProxyTitle": "Проксі-сервер",
+  "proxyAddress": "Адреса: {host}:{port}",
+  "@proxyAddress": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "proxyEndpointTitle": "Адреса проксі",
+  "activeAccounts": "Активних акаунтів: {count}",
+  "@activeAccounts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stopProxyButton": "Зупинити",
+  "startProxyButton": "Запустити",
+  "openAccountsButton": "Відкрити вікно з акаунтами",
+  "connectAccountShortButton": "Підключити акаунт",
+  "uptimeTitle": "Час роботи",
+  "uptimeNotStarted": "Ще не запускався",
+  "uptimeValue": "{hours} год {minutes} хв {seconds} с",
+  "@uptimeValue": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "versionTitle": "Версія",
+  "apiKeyTitle": "API-ключ",
+  "apiKeyDisabledValue": "Не потрібен",
+  "changeApiKeyLinkLabel": "Змінити API-ключ",
+  "loadingValue": "Завантаження...",
+  "lastErrorTitle": "Остання помилка",
+  "openLogsButton": "Відкрити логи",
+  "accountsTitle": "Акаунти",
+  "accountsSubtitle": "Підключайте акаунти Gemini CLI і Kiro та керуйте ними",
+  "accountsSearchHint": "Пошук за іменем, поштою або ID проєкту",
+  "accountsSortLabel": "Сортування",
+  "accountsSortAttention": "За попередженнями",
+  "accountsSortPriority": "За пріоритетом",
+  "accountsSortAlphabetical": "За іменем",
+  "accountsSortRecentActivity": "За останньою активністю",
+  "addButton": "Додати",
+  "accountsEmptyTitle": "Акаунтів поки немає",
+  "accountsEmptyMessage": "Підключіть хоча б один акаунт Gemini CLI або Kiro.",
+  "connectAccountButton": "Підключити акаунт",
+  "connectAccountDialogTitle": "Підключити акаунт",
+  "connectAccountProviderPickerTitle": "Виберіть провайдера",
+  "accountsLoadErrorTitle": "Не вдалося завантажити акаунти",
+  "accountsTotalCount": "Усього: {count}",
+  "@accountsTotalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountsFilteredCount": "Показано: {count}",
+  "@accountsFilteredCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountsFilteredEmptyTitle": "За запитом нічого не знайдено",
+  "accountsFilteredEmptyMessage": "Спробуйте інше ім'я, пошту або ID проєкту.",
+  "accountAvatarOpenTooltip": "Відкрити аватар",
+  "accountAvatarDialogTitle": "Аватар акаунта",
+  "accountAvatarDiceBearTitle": "DiceBear Identicon",
+  "accountAvatarStandardAvatarsTitle": "Стандартні аватари",
+  "accountAvatarApplyButton": "Застосувати",
+  "accountAvatarDiceBearLicense": "DiceBear Identicon CC0 1.0.",
+  "accountAvatarChooseFileButton": "Свій файл",
+  "accountAvatarResetButton": "Скинути",
+  "accountAvatarResetToDiceBearButton": "Повернути DiceBear",
+  "accountProviderLabel": "Тип акаунта",
+  "accountProviderGemini": "Gemini CLI",
+  "accountProviderGeminiCli": "Gemini CLI",
+  "accountProviderKiro": "Kiro",
+  "kiroBuilderIdStartUrlLabel": "Посилання Builder ID",
+  "kiroBuilderIdStartUrlHelperText": "Зазвичай змінювати не потрібно",
+  "kiroRegionLabel": "Регіон AWS",
+  "kiroRegionHelperText": "Зазвичай us-east-1",
+  "kiroCredentialSourceChip": "Джерело: {value}",
+  "@kiroCredentialSourceChip": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "projectIdChip": "ID проєкту: {projectId}",
+  "@projectIdChip": {
+    "placeholders": {
+      "projectId": {
+        "type": "String"
+      }
+    }
+  },
+  "projectIdAutoChip": "ID проєкту: auto",
+  "priorityChip": "Пріоритет: {priorityLabel}",
+  "@priorityChip": {
+    "placeholders": {
+      "priorityLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "accountCoolingDownStatus": "На паузі",
+  "accountReadyStatus": "Готовий",
+  "accountDisabledStatus": "Вимкнений",
+  "unsupportedModelsList": "Не використовувати для моделей: {models}",
+  "@unsupportedModelsList": {
+    "placeholders": {
+      "models": {
+        "type": "String"
+      }
+    }
+  },
+  "editAccountTitle": "Змінити акаунт",
+  "editButton": "Змінити",
+  "reauthorizeAccountTitle": "Перепідключити акаунт",
+  "reauthorizeButton": "Перепідключити",
+  "accountProjectCheckButton": "Перевірити доступ до проєкту",
+  "accountProjectCheckInProgressMessage": "Перевіряємо...",
+  "accountProjectCheckSuccessTitle": "Доступ до проєкту підтверджено",
+  "accountProjectCheckSuccessMessage": "KiCk успішно виконав тестовий запит до Google для цього акаунта і проєкту.",
+  "accountProjectCheckModelValue": "Модель: {model}",
+  "@accountProjectCheckModelValue": {
+    "description": "Shown in the successful project diagnostics dialog after the project check completes.",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "accountProjectCheckTraceIdValue": "ID трасування: {traceId}",
+  "@accountProjectCheckTraceIdValue": {
+    "description": "Shown in the successful project diagnostics dialog when Google returns a trace identifier.",
+    "placeholders": {
+      "traceId": {
+        "type": "String"
+      }
+    }
+  },
+  "accountProjectCheckFailureTitle": "Перевірка не вдалася",
+  "resetCooldownTooltip": "Скинути стан",
+  "clearCooldownAction": "Зняти паузу",
+  "deleteTooltip": "Видалити",
+  "accountUsageOpenTooltip": "Ліміти",
+  "moreButton": "Ще",
+  "deleteAccountDialogTitle": "Видалити акаунт?",
+  "deleteAccountDialogMessage": "Акаунт {label} буде видалено з KiCk. За потреби його можна підключити знову пізніше.",
+  "@deleteAccountDialogMessage": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAccountConfirmButton": "Видалити акаунт",
+  "accountUsageTitle": "Ліміти акаунта",
+  "accountUsageProviderLabel": "Авторизація Gemini CLI (OAuth)",
+  "accountUsageRefreshTooltip": "Оновити",
+  "accountUsageStatusHealthy": "Доступний",
+  "accountUsageStatusCoolingDown": "Обмежений",
+  "accountUsageStatusLowQuota": "Ліміт закінчується",
+  "accountUsageStatusDisabled": "Вимкнений",
+  "accountQuotaWarningStatus": "Ліміт закінчується",
+  "accountBanCheckPendingStatus": "Перевіряємо блокування",
+  "accountBanCheckPendingMessage": "Google повернув RESOURCE_EXHAUSTED без часу скидання.",
+  "accountTermsOfServiceStatus": "Блокування підтверджено",
+  "accountTermsOfServiceMessage": "Google підтвердив блокування цього акаунта за порушення умов використання. Акаунт виведено з ротації.",
+  "accountUsageLoadErrorTitle": "Не вдалося завантажити дані щодо лімітів",
+  "accountUsageRetryButton": "Повторити",
+  "accountUsageVerifyAccountButton": "Підтвердити в Google",
+  "accountSubmitAppealButton": "Подати апеляцію",
+  "openGoogleCloudButton": "Відкрити Google Cloud",
+  "accountUsageVerificationOpenFailedMessage": "Не вдалося відкрити сторінку підтвердження в Google.",
+  "accountErrorActionOpenFailedMessage": "Не вдалося відкрити сторінку Google.",
+  "accountUsageEmptyTitle": "Дані щодо лімітів недоступні",
+  "accountUsageEmptyMessage": "Провайдер не повернув дані щодо лімітів для цього акаунта.",
+  "accountUsageUnavailableTitle": "Ліміти для цього акаунта недоступні",
+  "accountUsageUnavailableMessage": "Сторінка лімітів працює лише для акаунтів Gemini CLI і Kiro.",
+  "accountUsageMissingTitle": "Акаунт не знайдено",
+  "accountUsageMissingSubtitle": "Інформація щодо лімітів",
+  "accountUsageMissingMessage": "Можливо, акаунт уже видалено або список ще не встиг оновитися.",
+  "accountUsageResetsAt": "Скинеться {time}",
+  "@accountUsageResetsAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "accountUsageResetUnknown": "Час наступного скидання невідомий.",
+  "accountUsageLastUpdated": "Дані оновлено: {time}",
+  "@accountUsageLastUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "accountUsageModelCount": "Моделей: {count}",
+  "@accountUsageModelCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountUsageAttentionCount": "Низький залишок: {count}",
+  "@accountUsageAttentionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountUsageCriticalCount": "Майже закінчилось: {count}",
+  "@accountUsageCriticalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountUsageHealthyCount": "У нормі: {count}",
+  "@accountUsageHealthyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountUsageTokenType": "Тип ліміту: {value}",
+  "@accountUsageTokenType": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "accountUsageUsedPercent": "Використано {value}%",
+  "@accountUsageUsedPercent": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "accountUsageUsedOfLimit": "Використано {used} з {limit}",
+  "@accountUsageUsedOfLimit": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "accountUsageBucketHealthy": "Достатньо",
+  "accountUsageBucketLow": "Закінчується",
+  "accountUsageBucketCritical": "Майже закінчилось",
+  "accountUsageKiroAllModelsLimit": "Ліміт на всі моделі",
+  "settingsTitle": "Налаштування",
+  "settingsSubtitle": "Мережа, оформлення, API-ключ і робота проксі",
+  "languageLabel": "Мова",
+  "languageHelperText": "«Системна» використовує мову пристрою",
+  "languageOptionSystem": "Системна",
+  "languageOptionEnglish": "English",
+  "languageOptionRussian": "Русский",
+  "languageOptionUkrainian": "Українська",
+  "themeLabel": "Тема",
+  "themeModeSystem": "Системна",
+  "themeModeSystemShort": "Авто",
+  "themeModeLight": "Світла",
+  "themeModeDark": "Темна",
+  "fontLabel": "Шрифт",
+  "fontOptionGoogleSans": "Google Sans",
+  "fontOptionSystem": "Системний",
+  "dynamicThemeTitle": "Динамічна тема",
+  "dynamicThemeSubtitle": "Використовувати динамічні кольори системи",
+  "settingsAppearanceSectionTitle": "Оформлення та поведінка",
+  "settingsAppearanceSectionSummary": "Мова, тема, логи та поведінка застосунку",
+  "settingsNetworkSectionTitle": "Мережа",
+  "settingsNetworkSectionSummary": "Хост, порт і доступ із локальної мережі",
+  "settingsReliabilitySectionTitle": "Повтори та ліміти",
+  "settingsReliabilitySectionSummary": "Автоповтори та реакція на обмеження API",
+  "settingsAccessSectionTitle": "Доступ і запуск",
+  "settingsAccessSectionSummary": "API-ключ і запуск застосунку",
+  "apiKeyRequiredTitle": "Вимагати API-ключ",
+  "apiKeyRequiredSubtitle": "Якщо вимкнути, запити прийматимуться без Bearer-токена",
+  "windowsTrayTitle": "Згортати в трей",
+  "windowsTraySubtitle": "При закритті вікна KiCk продовжить працювати в системному треї",
+  "windowsLaunchAtStartupTitle": "Запускати при вході в систему",
+  "windowsLaunchAtStartupSubtitle": "KiCk автоматично запускатиметься при вході в систему",
+  "windowsTrayNotificationTitle": "KiCk продовжує працювати",
+  "windowsTrayNotificationBody": "Застосунок згорнуто в системний трей",
+  "settingsModelsSectionTitle": "Моделі",
+  "settingsModelsSectionSummary": "Користувацькі ID моделей",
+  "settingsGoogleSectionTitle": "Можливості провайдерів",
+  "settingsGoogleSectionSummary": "Веб-пошук і параметри конкретних провайдерів",
+  "settingsBackupSectionTitle": "Резервна копія та відновлення",
+  "settingsBackupSectionSummary": "Перенос налаштувань і акаунтів між пристроями",
+  "settingsBackupInfoTitle": "У резервну копію потраплять налаштування, API-ключ і OAuth-токени",
+  "settingsBackupInfoSubtitle": "Зберігайте файл у безпечному місці. Після відновлення поточні налаштування та список акаунтів буде повністю замінено.",
+  "hostLabel": "Хост",
+  "hostHelperText": "Зазвичай localhost",
+  "hostRequiredError": "Вкажіть адресу хоста",
+  "hostInvalidError": "Адреса не повинна містити пробілів",
+  "hostLanDisabledError": "Щоб використати 0.0.0.0, увімкніть доступ із локальної мережі",
+  "portLabel": "Порт",
+  "portHelperText": "За замовчуванням 3000",
+  "portInvalidError": "Вкажіть порт від 1 до 65535",
+  "allowLanTitle": "Доступ із локальної мережі та Docker",
+  "allowLanSubtitle": "Проксі слухатиме 0.0.0.0 і стане доступним із локальної мережі та контейнерів",
+  "androidBackgroundRuntimeTitle": "Робота у фоні на Android",
+  "androidBackgroundRuntimeSubtitle": "Потрібно, щоб проксі не зупинявся при згортанні застосунку",
+  "requestRetriesLabel": "Кількість повторів запитів до Google",
+  "requestRetriesHelperText": "Скільки разів KiCk повторить запит після тимчасової помилки",
+  "requestRetriesInvalidError": "Вкажіть число від 0 до 20",
+  "retry429DelayLabel": "Інтервал повтору при 429",
+  "retry429DelayHelperText": "Інтервал, з яким проксі повторює запит після помилки 429",
+  "retry429DelayInvalidError": "Вкажіть число від 1 до 3600",
+  "mark429AsUnhealthyTitle": "Виводити акаунт із ротації при помилці 429",
+  "mark429AsUnhealthySubtitle": "Після помилки 429 KiCk позначить акаунт як тимчасово недоступний і переключиться на інший",
+  "loggingLabel": "Логування",
+  "loggingQuiet": "Мінімальне",
+  "loggingNormal": "Стандартне",
+  "loggingVerbose": "Докладне",
+  "logRetentionLabel": "Ліміт записів логу",
+  "logRetentionHelperText": "При досягненні ліміту найстаріші записи автоматично видаляються",
+  "logRetentionInvalidError": "Вкажіть число від {min} до {max}",
+  "@logRetentionInvalidError": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "unsafeRawLoggingTitle": "Сирі логи зневадження",
+  "unsafeRawLoggingSubtitle": "Зберігає вміст запитів і відповідей. Вмикайте лише для зневадження.",
+  "defaultGoogleWebSearchTitle": "Вмикати веб-пошук за замовчуванням",
+  "defaultGoogleWebSearchSubtitle": "KiCk автоматично використовуватиме Google Пошук, якщо клієнт не задав свої параметри і в запиті немає викликів функцій",
+  "defaultGoogleVisibleReasoningTitle": "Запитувати видимі міркування Gemini за замовчуванням",
+  "defaultGoogleVisibleReasoningSubtitle": "Додає include_reasoning для запитів Gemini CLI, якщо клієнт сам не задав міркування. Допомагає клієнтам показувати блок міркувань.",
+  "renderGoogleGroundingInMessageTitle": "Показувати цитати та джерела у відповіді",
+  "renderGoogleGroundingInMessageSubtitle": "Якщо вимкнути, посилання на джерела залишаться в метаданих і не додаватимуться до тексту відповіді",
+  "settingsGeminiSubsectionTitle": "Gemini CLI",
+  "settingsKiroSubsectionTitle": "Kiro",
+  "defaultKiroServerToolsTitle": "Вмикати серверні інструменти Kiro за замовчуванням",
+  "defaultKiroServerToolsSubtitle": "Додає інструмент веб-пошуку Kiro до запитів, якщо клієнт не задав свої інструменти. Кожен виклик витрачає додаткові кредити Kiro.",
+  "customModelsLabel": "Користувацькі ID моделей",
+  "customModelsHelperText": "По одному ID на рядок, наприклад google/... або kiro/...",
+  "settingsSavingStatus": "Зберігаємо зміни...",
+  "settingsSavedStatus": "Зміни збережено",
+  "settingsValidationStatus": "Перевірте поля з помилками",
+  "settingsSaveFailedStatus": "Не вдалося зберегти зміни",
+  "settingsBackupExportButton": "Зберегти резервну копію",
+  "settingsBackupImportButton": "Відновити з резервної копії",
+  "settingsBackupExportOptionsDialogTitle": "Експорт резервної копії",
+  "settingsBackupExportDialogTitle": "Куди зберегти резервну копію?",
+  "settingsBackupImportDialogTitle": "Виберіть файл резервної копії",
+  "settingsBackupExportConfirmButton": "Продовжити",
+  "settingsBackupProtectWithPasswordLabel": "Захистити файл паролем (рекомендовано)",
+  "settingsBackupProtectWithPasswordSubtitle": "Шифрує резервну копію, щоб токени та ключі не можна було прочитати без пароля",
+  "settingsBackupPasswordLabel": "Пароль",
+  "settingsBackupPasswordConfirmLabel": "Підтвердьте пароль",
+  "settingsBackupPasswordHelperText": "Запам'ятайте цей пароль: без нього зашифровану копію не вдасться відновити.",
+  "settingsBackupPasswordsDoNotMatch": "Паролі не збігаються",
+  "settingsBackupUnprotectedWarning": "Ваші токени та ключі буде збережено у відкритому вигляді. Будь-хто, у кого опиниться цей файл, отримає доступ до ваших даних.",
+  "settingsBackupRestoreDialogTitle": "Відновити конфігурацію?",
+  "settingsBackupRestoreDialogMessage": "Поточні налаштування, API-ключ і список акаунтів буде замінено даними з цієї резервної копії. Цю дію неможливо скасувати.",
+  "settingsBackupRestoreConfirmButton": "Відновити",
+  "settingsBackupPasswordDialogTitle": "Введіть пароль резервної копії",
+  "settingsBackupPasswordDialogMessage": "Файл {fileName} захищений паролем. Введіть пароль, щоб продовжити відновлення.",
+  "@settingsBackupPasswordDialogMessage": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupPasswordDialogInvalidMessage": "Не вдалося розшифрувати файл {fileName}. Перевірте пароль і спробуйте ще раз.",
+  "@settingsBackupPasswordDialogInvalidMessage": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupPasswordConfirmButton": "Розшифрувати",
+  "settingsBackupExportedMessage": "Резервну копію збережено у файл {fileName}",
+  "@settingsBackupExportedMessage": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupRestoredMessage": "Конфігурацію відновлено. Акаунтів: {accountCount}",
+  "@settingsBackupRestoredMessage": {
+    "placeholders": {
+      "accountCount": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsBackupRestoredMissingTokensMessage": "Конфігурацію відновлено. Акаунтів: {accountCount}, без токенів: {missingCount}",
+  "@settingsBackupRestoredMissingTokensMessage": {
+    "placeholders": {
+      "accountCount": {
+        "type": "int"
+      },
+      "missingCount": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsBackupExportFailedMessage": "Не вдалося зберегти резервну копію: {error}",
+  "@settingsBackupExportFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupRestoreFailedMessage": "Не вдалося відновити з резервної копії: {error}",
+  "@settingsBackupRestoreFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupInvalidMessage": "Файл резервної копії пошкоджений або має непідтримуваний формат",
+  "settingsBackupUnsupportedVersionMessage": "Цю резервну копію створено в новішій версії KiCk і поки що не підтримується",
+  "settingsBackupReadFailedMessage": "Не вдалося прочитати вибрану резервну копію",
+  "settingsBackupPasswordRequiredMessage": "Для цієї резервної копії потрібен пароль",
+  "settingsLoadErrorTitle": "Не вдалося завантажити налаштування",
+  "aboutTitle": "Про програму",
+  "aboutMenuSubtitle": "Версія, оновлення та аналітика",
+  "aboutDescription": "Локальний OpenAI-сумісний проксі для Gemini CLI та Kiro у нативному застосунку Flutter",
+  "aboutUpdatesTitle": "Оновлення",
+  "aboutUpdatesChecking": "Перевіряємо оновлення на GitHub...",
+  "aboutUpdateAvailableTitle": "Доступне оновлення",
+  "aboutUpdateAvailableMessage": "Доступна версія {latestVersion}. Зараз у вас встановлено {currentVersion}.",
+  "@aboutUpdateAvailableMessage": {
+    "placeholders": {
+      "latestVersion": {
+        "type": "String"
+      },
+      "currentVersion": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutUpToDateTitle": "Оновлень немає",
+  "aboutUpToDateMessage": "У вас встановлено актуальну версію: {currentVersion}.",
+  "@aboutUpToDateMessage": {
+    "placeholders": {
+      "currentVersion": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutUpdateCheckFailedTitle": "Не вдалося перевірити оновлення",
+  "aboutUpdateCheckFailedMessage": "Не вдалося отримати інформацію про релізи з GitHub.",
+  "aboutDownloadUpdateButton": "Завантажити оновлення",
+  "aboutDownloadAndInstallButton": "Завантажити та встановити",
+  "aboutInstallOnRestartButton": "Встановити при перезапуску",
+  "aboutInstallUpdateButton": "Встановити оновлення",
+  "aboutAllowUnknownSourcesButton": "Дозволити це джерело",
+  "aboutPreparingUpdateButton": "Готуємо оновлення...",
+  "aboutUpdateDownloadingProgress": "Завантажуємо оновлення у фоні: {progress}",
+  "@aboutUpdateDownloadingProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutUpdateDownloadingIndeterminate": "Завантажуємо оновлення у фоні...",
+  "aboutUpdateVerifyingMessage": "Перевіряємо завантажений файл за SHA-256...",
+  "aboutUpdateReadyVerifiedMessage": "Оновлення завантажено, перевірено й готове до встановлення.",
+  "aboutUpdateReadyUnverifiedMessage": "Оновлення завантажено й готове до встановлення. Для цього релізу не було надано контрольну суму.",
+  "aboutUpdateUnknownSourcesMessage": "Дозвольте встановлення з цього джерела в налаштуваннях Android, потім поверніться і знову натисніть «Встановити оновлення».",
+  "aboutUpdateOperationFailedMessage": "Не вдалося підготувати оновлення: {error}",
+  "@aboutUpdateOperationFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutOpenReleaseButton": "Відкрити реліз",
+  "aboutRetryUpdateCheckButton": "Перевірити ще раз",
+  "aboutAnalyticsTitle": "Аналітика",
+  "aboutAnalyticsSubtitle": "Анонімна статистика використання допомагає покращувати KiCk.",
+  "aboutLicenseTitle": "Ліцензія",
+  "aboutLicenseMessage": "KiCk поширюється як проєкт із відкритим вихідним кодом.",
+  "aboutOpenLicenseButton": "Відкрити ліцензію",
+  "aboutPrivacyTitle": "Приватність",
+  "aboutPrivacyMessage": "KiCk зберігає акаунти, токени та налаштування локально.",
+  "aboutOpenPrivacyButton": "Відкрити нотатку про приватність",
+  "aboutDisclaimerTitle": "Відмова від відповідальності",
+  "aboutDisclaimerMessage": "KiCk не пов'язаний з Google, AWS, Kiro або SillyTavern.",
+  "aboutCreditsTitle": "Подяки",
+  "aboutCreditsMessage": "Зібрано на Flutter і Material Symbols. DiceBear Identicon CC0 1.0.",
+  "aboutOpenLinkFailedMessage": "Не вдалося відкрити посилання",
+  "copyProxyEndpointTooltip": "Скопіювати адресу проксі",
+  "proxyEndpointCopiedMessage": "Адресу проксі скопійовано",
+  "copyApiKeyTooltip": "Скопіювати API-ключ",
+  "apiKeyCopiedMessage": "API-ключ скопійовано",
+  "pushSillyTavernButton": "У SillyTavern",
+  "pushSillyTavernDialogTitle": "Надіслати в запущений SillyTavern",
+  "pushSillyTavernDialogMessage": "KiCk додасть профіль і вибере його в менеджері з'єднань.",
+  "pushSillyTavernUrlLabel": "URL SillyTavern",
+  "pushSillyTavernProfileNameLabel": "Ім'я профілю",
+  "pushSillyTavernModelLabel": "Модель",
+  "pushSillyTavernConfirmButton": "Додати профіль",
+  "pushSillyTavernSuccessMessage": "Профіль \"{profileName}\" додано в SillyTavern.",
+  "@pushSillyTavernSuccessMessage": {
+    "placeholders": {
+      "profileName": {
+        "type": "String"
+      }
+    }
+  },
+  "pushSillyTavernFailedMessage": "Не вдалося надіслати профіль у SillyTavern: {error}",
+  "@pushSillyTavernFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pushSillyTavernErrorInvalidUrl": "Вкажіть повний URL SillyTavern, наприклад http://127.0.0.1:8000.",
+  "pushSillyTavernErrorMissingCsrf": "SillyTavern не повернув CSRF-токен.",
+  "pushSillyTavernErrorHttp": "SillyTavern повернув HTTP {statusCode} для {path}.",
+  "@pushSillyTavernErrorHttp": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "pushSillyTavernErrorInvalidJson": "SillyTavern повернув некоректну JSON-відповідь.",
+  "homeOnboardingTitle": "З чого почати",
+  "homeOnboardingSubtitle": "Коротка підказка для першого запуску",
+  "homeOnboardingAccountsTitle": "Підключіть акаунт",
+  "homeOnboardingAccountsMessage": "KiCk не зможе обробляти запити без активного акаунта Gemini CLI або Kiro.",
+  "homeOnboardingEndpointTitle": "Перевірте адресу проксі",
+  "homeOnboardingEndpointMessage": "Коли все буде готово, використовуйте адресу {endpoint} у своєму клієнті.",
+  "@homeOnboardingEndpointMessage": {
+    "placeholders": {
+      "endpoint": {
+        "type": "String"
+      }
+    }
+  },
+  "homeOnboardingStartTitle": "Запустіть проксі",
+  "homeOnboardingStartMessage": "Після запуску KiCk почне приймати запити на цьому пристрої.",
+  "homeOnboardingFooter": "Якщо акаунт уже підключено, просто увімкніть його на екрані акаунтів і поверніться сюди.",
+  "apiKeyRegeneratedMessage": "Новий API-ключ збережено",
+  "regenerateApiKeyAction": "Створити новий API-ключ",
+  "regenerateApiKeyDialogTitle": "Створити новий API-ключ?",
+  "regenerateApiKeyDialogMessage": "Старий ключ буде одразу відкликано. Усім підключеним клієнтам знадобиться новий ключ, щоб продовжити роботу.",
+  "regenerateApiKeyConfirmButton": "Згенерувати",
+  "trayOpenWindowAction": "Відкрити вікно",
+  "trayHideToTrayAction": "Згорнути в трей",
+  "trayExitAction": "Вийти",
+  "noActiveAccountsWarning": "Немає активних акаунтів. Проксі запуститься, але не зможе обробляти запити, поки ви не додасте чи не увімкнете хоча б один акаунт.",
+  "pinWindowTooltip": "Закріпити вікно поверх інших",
+  "unpinWindowTooltip": "Зняти закріплення вікна",
+  "welcomeTitle": "Ласкаво просимо в KiCk",
+  "welcomeSubtitle": "KiCk допомагає запустити локальний проксі для Gemini CLI та Kiro без терміналу й зайвих налаштувань.",
+  "welcomeStepAccountsTitle": "Підключіть акаунт",
+  "welcomeStepAccountsMessage": "Зробіть це на екрані акаунтів. Можна підключити Gemini CLI або Kiro.",
+  "welcomeStepHomeTitle": "Відкрийте головну",
+  "welcomeStepHomeMessage": "На головній завжди видно адресу проксі, API-ключ і кнопку запуску.",
+  "welcomeUsageTitle": "Важливо знати",
+  "welcomeUsageMessage": "KiCk створено для особистого, навчального та дослідницького використання.",
+  "welcomeAnalyticsTitle": "Анонімна аналітика",
+  "welcomeAnalyticsSubtitle": "Допомагає зрозуміти, де KiCk працює добре, а де його можна покращити.",
+  "welcomeRepositoryLinkLabel": "Детальніше про проєкт",
+  "logsTitle": "Логи",
+  "logsSubtitle": "Історія запитів і помилок",
+  "logsSearchHint": "Пошук за маршрутом або повідомленням",
+  "logsRefreshButton": "Оновити",
+  "logsClearButton": "Очистити",
+  "logsClearDialogTitle": "Очистити логи?",
+  "logsClearDialogMessage": "Усі записи буде видалено з KiCk. Цю дію неможливо скасувати.",
+  "logsClearConfirmButton": "Очистити",
+  "logsLevelAll": "Усі рівні",
+  "logsLevelInfo": "Інфо",
+  "logsLevelWarning": "Попередження",
+  "logsLevelError": "Помилки",
+  "logsCategoryAll": "Усі категорії",
+  "logsCategoryFilterTitle": "Категорії",
+  "logsPayloadShowButton": "Показати payload",
+  "logsPayloadHideButton": "Сховати payload",
+  "logsCopyEntryButton": "Копіювати",
+  "logsCopiedMessage": "Запис логу скопійовано",
+  "logsFilteredEmptyTitle": "За поточними фільтрами нічого не знайдено",
+  "logsFilteredEmptyMessage": "Спробуйте прибрати частину фільтрів або змінити пошук.",
+  "logsEntryLevelInfo": "Інфо",
+  "logsEntryLevelWarning": "Попередження",
+  "logsEntryLevelError": "Помилка",
+  "logsTotalCount": "Усього: {count}",
+  "@logsTotalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsFilteredCount": "Після фільтра: {count}",
+  "@logsFilteredCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsRequestGroupTitle": "Запит {requestLabel}",
+  "@logsRequestGroupTitle": {
+    "placeholders": {
+      "requestLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "logsRequestStatusCount": "Статусів: {count}",
+  "@logsRequestStatusCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsRequestRetryCount": "Повторів: {count}",
+  "@logsRequestRetryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsRequestKiroCredits": "Кредитів: {credits}",
+  "@logsRequestKiroCredits": {
+    "placeholders": {
+      "credits": {
+        "type": "String"
+      }
+    }
+  },
+  "logsRequestDetailsShowButton": "Показати статуси",
+  "logsRequestDetailsHideButton": "Сховати статуси",
+  "logsLoadedCount": "Завантажено: {count}",
+  "@logsLoadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsEmptyTitle": "Логи порожні",
+  "logsLoadErrorTitle": "Не вдалося завантажити логи",
+  "logsExportTooltip": "Зберегти всі логи за поточними фільтрами",
+  "logsExportDialogTitle": "Куди зберегти логи?",
+  "logsShareTooltip": "Поділитися всіма логами за поточними фільтрами",
+  "logsLoadMoreButton": "Завантажити ще",
+  "logsNothingToExportMessage": "Немає логів для збереження.",
+  "logsExportedMessage": "Логи збережено у файл {fileName}",
+  "@logsExportedMessage": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "logsExportFailedMessage": "Не вдалося зберегти логи: {error}",
+  "@logsExportFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsShareFailedMessage": "Не вдалося поділитися логами: {error}",
+  "@logsShareFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsExportFileTitle": "Експорт логів KiCk",
+  "logsExportShareSubject": "Логи KiCk",
+  "logsExportGeneratedAtLabel": "Згенеровано",
+  "logsExportEntriesCount": "Записів: {count}",
+  "@logsExportEntriesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsExportSectionEnvironment": "Середовище",
+  "logsExportAppLabel": "Застосунок",
+  "logsExportFiltersLabel": "Фільтри",
+  "logsExportScopeLabel": "Область",
+  "logsExportRuntimeSettingsLabel": "Налаштування під час роботи",
+  "logsExportNoneValue": "немає",
+  "logsExportNoneDetectedValue": "не виявлено",
+  "logsExportSectionDiagnostics": "Зведення діагностики",
+  "logsExportTimeRangeLabel": "Часовий діапазон",
+  "logsExportLevelsLabel": "Рівні",
+  "logsExportCategoriesLabel": "Категорії",
+  "logsExportRoutesLabel": "Маршрути",
+  "logsExportModelsLabel": "Моделі",
+  "logsExportStatusCodesLabel": "Коди статусу",
+  "logsExportErrorDetailsLabel": "Подробиці помилок",
+  "logsExportUpstreamReasonsLabel": "Причини від провайдера",
+  "logsExportRetriedRequestsLabel": "Повторів запитів",
+  "logsExportTokensLabel": "Токени",
+  "logsExportKiroCreditsLabel": "Кредити Kiro",
+  "logsExportAndroidBackgroundSessionsLabel": "Фонові сесії Android",
+  "logsExportTimestampLabel": "Час",
+  "logsExportLevelLabel": "Рівень",
+  "logsExportCategoryLabel": "Категорія",
+  "logsExportRouteLabel": "Маршрут",
+  "logsExportMessageLabel": "Повідомлення",
+  "logsExportMaskedPayloadLabel": "Payload (замаскований)",
+  "logsExportRawPayloadLabel": "Payload (без маскування)",
+  "logMessageRequestReceived": "Запит отримано",
+  "logMessageParsedRequest": "Запит розібрано",
+  "logMessageResponseCompleted": "Відповідь завершено",
+  "logMessageStreamClientAborted": "Потокову відповідь перервано клієнтом",
+  "logMessageRetryScheduled": "Заплановано повтор після збою запиту",
+  "logMessageRetryWithAnotherAccount": "Повторюємо запит з іншим акаунтом після збою",
+  "logMessageRequestSucceededAfterRetries": "Запит виконано після повторних спроб",
+  "logMessageRequestFailedAfterRetries": "Запит не вдався після повторних спроб",
+  "logMessageDispatchingStreamingRequest": "Надсилаємо потоковий запит провайдеру",
+  "logMessageDispatchingRequest": "Надсилаємо запит провайдеру",
+  "logMessageUpstreamPayloadReturned": "Провайдер повернув відповідь",
+  "logMessageMappedChatCompletion": "Відповідь провайдера перетворено у формат OpenAI Chat Completion",
+  "logMessageUsingAccountForModel": "Використовуємо акаунт {account} для {model}",
+  "@logMessageUsingAccountForModel": {
+    "placeholders": {
+      "account": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "logMessageProxySessionSummary": "Зведення по сесії проксі",
+  "logMessageAndroidBackgroundSessionStarted": "Фонова сесія Android розпочалась",
+  "logMessageAndroidBackgroundSessionEnded": "Фонова сесія Android завершилась",
+  "logMessageAndroidBackgroundSessionRecovered": "Фонову сесію Android відновлено після перезапуску процесу",
+  "accountDialogTitle": "Акаунт",
+  "accountDialogBasicsTitle": "Основне",
+  "accountDialogBasicsSubtitle": "Поля для підключення вибраного типу акаунта",
+  "accountDialogAdvancedTitle": "Розширені налаштування",
+  "accountDialogAdvancedSubtitle": "Пріоритет та обмеження по моделях",
+  "accountDialogAdvancedHint": "Якщо не хочете налаштовувати вручну, цей блок можна залишити як є.",
+  "projectIdLabel": "ID проєкту",
+  "projectIdHint": "my-google-cloud-project",
+  "projectIdOptionalHelperText": "Необов'язково. Якщо залишити порожнім, KiCk спробує визначити його автоматично.",
+  "projectIdConsoleLinkLabel": "Де подивитися ID проєкту",
+  "projectIdRequiredError": "Вкажіть ID проєкту",
+  "projectIdLookupFailedMessage": "Не вдалося відкрити Google Cloud Console.",
+  "accountNameLabel": "Назва акаунта",
+  "accountNameHint": "Наприклад, основний акаунт",
+  "accountNameHelperText": "Якщо залишити поле порожнім, KiCk підставить ім'я акаунта.",
+  "priorityLabel": "Пріоритет",
+  "priorityHelperText": "Спочатку використовуються основні акаунти. Акаунти з однаковим пріоритетом чергуються.",
+  "priorityLevelPrimary": "Основний",
+  "priorityLevelNormal": "Звичайний",
+  "priorityLevelReserve": "Резервний",
+  "blockedModelsLabel": "Недоступні моделі",
+  "blockedModelsHelperText": "По одному ID на рядок, наприклад google/... або kiro/...",
+  "kiroLinkAuthDialogTitle": "Авторизація Kiro",
+  "kiroLinkAuthDialogMessage": "Відкрийте посилання та увійдіть у Kiro через GitHub або Google. KiCk сам дочекається відповіді з браузера.",
+  "kiroLinkAuthUserCodeLabel": "Код для звірки",
+  "kiroLinkAuthVerificationUrlLabel": "Посилання для входу",
+  "kiroLinkAuthWaitingMessage": "Чекаємо підтвердження входу в браузері...",
+  "kiroLinkAuthOpenLinkButton": "Відкрити посилання",
+  "kiroLinkAuthOpenLinkAgainButton": "Відкрити знову",
+  "kiroLinkAuthOpenLinkFailedMessage": "Не вдалося відкрити посилання для входу в Kiro.",
+  "cancelButton": "Скасувати",
+  "continueButton": "Продовжити",
+  "navHome": "Головна",
+  "navAccounts": "Акаунти",
+  "navSettings": "Налаштування",
+  "navLogs": "Логи",
+  "runtimeChannelName": "Проксі KiCk у фоні",
+  "runtimeChannelDescription": "Підтримує роботу проксі у фоновому режимі",
+  "runtimeNotificationTitle": "Проксі KiCk запущено",
+  "runtimeNotificationReturn": "Натисніть, щоб повернутися в застосунок",
+  "runtimeNotificationManage": "Натисніть, щоб відкрити акаунти та налаштування",
+  "runtimeNotificationActive": "Проксі активне",
+  "oauthPageTitleError": "Помилка авторизації",
+  "oauthPageTitleSuccess": "Успішна авторизація",
+  "oauthPageStateMismatchMessage": "Стани не збігаються. Можна закрити цю вкладку.",
+  "oauthPageGoogleErrorMessage": "Google повернув помилку. Можна закрити цю вкладку.",
+  "oauthPageCodeMissingMessage": "Код не отримано. Можна закрити цю вкладку.",
+  "oauthPageCloseTabMessage": "Вкладку можна закрити.",
+  "accountDisplayNameFallbackGoogle": "Google-акаунт",
+  "errorNetworkUnavailable": "Не вдалося зв'язатися із серверами Google. Перевірте інтернет і спробуйте ще раз.",
+  "errorGoogleServiceUnavailable": "Google тимчасово недоступний. Спробуйте пізніше.",
+  "errorInvalidServiceResponse": "Сервер повернув несподівану відповідь. Спробуйте ще раз.",
+  "errorGoogleAuthFailed": "Не вдалося увійти в Google. Спробуйте ще раз.",
+  "errorGoogleAuthTimedOut": "Вхід у Google не завершився вчасно. Поверніться в застосунок і спробуйте ще раз. Якщо це повторюється на Android, вимкніть для KiCk обмеження батареї.",
+  "errorGoogleAuthBrowserOpenFailed": "Не вдалося відкрити браузер для входу в Google. Спробуйте ще раз.",
+  "errorUnknown": "Щось пішло не так. Спробуйте ще раз.",
+  "errorOauthTokensMissing": "Токени авторизації для цього акаунта не знайдено. Перепідключіть акаунт.",
+  "errorAccountNotFound": "Акаунт не знайдено. Можливо, його вже видалено.",
+  "errorPortAlreadyInUse": "Цей порт уже зайнятий іншим застосунком. Виберіть інший порт у налаштуваннях.",
+  "errorPermissionDenied": "Не вистачає системних дозволів для запуску. Перевірте налаштування застосунку та спробуйте ще раз.",
+  "errorGoogleRateLimitedRetry": "Google тимчасово обмежив запити для цього акаунта. Спробуйте знову через {retryHint}.",
+  "@errorGoogleRateLimitedRetry": {
+    "placeholders": {
+      "retryHint": {
+        "type": "String"
+      }
+    }
+  },
+  "errorGoogleRateLimitedLater": "Google тимчасово обмежив запити для цього акаунта. Спробуйте пізніше.",
+  "errorKiroAuthExpired": "Сесія Kiro минула. Увійдіть знову та спробуйте ще раз.",
+  "errorKiroAuthStartFailed": "Не вдалося розпочати вхід у Kiro. Спробуйте пізніше.",
+  "errorKiroAuthCancelled": "Вхід у Kiro було скасовано.",
+  "errorKiroAuthTimedOut": "Час очікування входу в Kiro минув. Спробуйте ще раз.",
+  "errorKiroAuthRejected": "Kiro відхилив вхід. Спробуйте розпочати знову.",
+  "errorKiroRateLimitedRetry": "Kiro тимчасово обмежив запити. Спробуйте знову через {retryHint}.",
+  "@errorKiroRateLimitedRetry": {
+    "placeholders": {
+      "retryHint": {
+        "type": "String"
+      }
+    }
+  },
+  "errorKiroRateLimitedLater": "Kiro тимчасово обмежив запити. Спробуйте пізніше.",
+  "errorKiroServiceUnavailable": "Kiro тимчасово недоступний. Спробуйте пізніше.",
+  "errorGoogleAccountVerificationRequired": "Google просить підтвердити цей акаунт. Відкрийте сторінку підтвердження та увійдіть під тим самим Google-акаунтом.",
+  "errorGoogleProjectIdMissing": "Google не зміг визначити коректний ID проєкту для цього акаунта або запиту. Перевірте ID проєкту в налаштуваннях акаунта і за потреби перепідключіть його.",
+  "errorGoogleProjectApiDisabled": "Gemini for Google Cloud API вимкнено для цього проєкту. Відкрийте Google Cloud, увімкніть API для потрібного ID проєкту та повторіть перевірку.",
+  "errorGoogleProjectInvalid": "Google відхилив цей ID проєкту. Переконайтеся, що вказано існуючий проєкт і в акаунта є до нього доступ.",
+  "errorGoogleProjectAccessDenied": "Google відхилив запит для цього проєкту або акаунта. Перевірте ID проєкту, обраний акаунт і переконайтеся, що Gemini Code Assist увімкнено саме для цього проєкту.",
+  "errorAuthExpired": "Термін дії авторизації минув або вона більше не дійсна. Перепідключіть акаунт і спробуйте ще раз.",
+  "errorGoogleCapacity": "Сервери Google тимчасово перевантажені. Спробуйте трохи пізніше.",
+  "errorUnsupportedModel": "Вибрана модель зараз недоступна для цього акаунта.",
+  "errorInvalidJson": "Запит містить некоректний JSON.",
+  "errorUnexpectedResponse": "Сервіс повернув несподівану відповідь. Спробуйте ще раз.",
+  "errorQuotaExhausted": "Ліміт цього акаунта вичерпано. Дочекайтеся скидання або використайте інший акаунт.",
+  "errorQuotaExhaustedRetry": "Ліміт цього акаунта вичерпано. Спробуйте знову через {retryHint} або використайте інший акаунт.",
+  "@errorQuotaExhaustedRetry": {
+    "placeholders": {
+      "retryHint": {
+        "type": "String"
+      }
+    }
+  },
+  "errorQuotaExhaustedNoResetHint": "Google повернув RESOURCE_EXHAUSTED без часу скидання. KiCk окремо перевірить цей акаунт. Якщо помилка повториться, використайте інший акаунт.",
+  "errorGoogleTermsOfServiceViolation": "Google вимкнув цей акаунт за порушення умов використання. Подайте апеляцію або використайте інший акаунт.",
+  "errorInvalidRequestRejected": "У запиту неправильний формат, тому його було відхилено.",
+  "errorReasoningConfigRejected": "Google відхилив параметри reasoning/thinking для цієї моделі. Увімкніть автоматичний режим міркувань (reasoning).",
+  "durationFewSeconds": "кілька секунд",
+  "durationSeconds": "{seconds} с",
+  "@durationSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "durationMinutes": "{minutes} хв",
+  "@durationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "durationMinutesSeconds": "{minutes} хв {seconds} с",
+  "@durationMinutesSeconds": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "durationHours": "{hours} год",
+  "@durationHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "durationHoursMinutes": "{hours} год {minutes} хв",
+  "@durationHoursMinutes": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  }
+}

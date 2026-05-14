@@ -166,6 +166,7 @@ String _settingsLanguageLabel(KickLocalizations l10n, Locale locale) {
   return switch (locale.languageCode) {
     'ru' => l10n.languageOptionRussian,
     'en' => l10n.languageOptionEnglish,
+    'uk' => l10n.languageOptionUkrainian,
     _ => locale.toLanguageTag(),
   };
 }

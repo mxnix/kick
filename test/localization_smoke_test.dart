@@ -22,7 +22,7 @@ import 'package:kick/proxy/engine/proxy_controller.dart';
 import 'package:kick/proxy/gemini/gemini_oauth_service.dart';
 
 void main() {
-  for (final locale in const <Locale>[Locale('en'), Locale('ru')]) {
+  for (final locale in const <Locale>[Locale('en'), Locale('ru'), Locale('uk')]) {
     testWidgets('renders key screens with locale ${locale.languageCode}', (tester) async {
       final bootstrap = await _createBootstrap();
       addTearDown(() async {

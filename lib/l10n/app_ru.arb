@@ -32,7 +32,7 @@
     "openAccountsButton": "Открыть окно с аккаунтами",
     "connectAccountShortButton": "Подключить аккаунт",
     "uptimeTitle": "Время работы",
-    "uptimeNotStarted": "Еще не запущен",
+    "uptimeNotStarted": "Ещё не запускался",
     "uptimeValue": "{hours} ч {minutes} мин {seconds} сек",
     "@uptimeValue": {
         "placeholders": {
@@ -138,9 +138,9 @@
     "clearCooldownAction": "Снять паузу",
     "deleteTooltip": "Удалить",
     "accountUsageOpenTooltip": "Лимиты",
-    "moreButton": "Еще",
+    "moreButton": "Ещё",
     "deleteAccountDialogTitle": "Удалить аккаунт?",
-    "deleteAccountDialogMessage": "Аккаунт {label} будет удален из KiCk. При необходимости его можно подключить снова позже.",
+    "deleteAccountDialogMessage": "Аккаунт {label} будет удалён из KiCk. При необходимости его можно подключить снова позже.",
     "@deleteAccountDialogMessage": {
         "placeholders": {
             "label": {
@@ -174,7 +174,7 @@
     "accountUsageUnavailableMessage": "Страница лимитов работает только для аккаунтов Gemini CLI и Kiro.",
     "accountUsageMissingTitle": "Аккаунт не найден",
     "accountUsageMissingSubtitle": "Информация по лимитам",
-    "accountUsageMissingMessage": "Возможно, аккаунт уже удален или список еще не успел обновиться.",
+    "accountUsageMissingMessage": "Возможно, аккаунт уже удалён или список ещё не успел обновиться.",
     "accountUsageResetsAt": "Сбросится {time}",
     "@accountUsageResetsAt": {
         "placeholders": {
@@ -282,7 +282,7 @@
     "windowsLaunchAtStartupTitle": "Запускать при входе в систему",
     "windowsLaunchAtStartupSubtitle": "KiCk будет автоматически запускаться при входе в систему",
     "windowsTrayNotificationTitle": "KiCk продолжает работать",
-    "windowsTrayNotificationBody": "Приложение свернуто в системный трей",
+    "windowsTrayNotificationBody": "Приложение свёрнуто в системный трей",
     "settingsModelsSectionTitle": "Модели",
     "settingsModelsSectionSummary": "Пользовательские ID моделей",
     "settingsGoogleSectionTitle": "Возможности провайдеров",
@@ -356,14 +356,14 @@
     "settingsBackupProtectWithPasswordSubtitle": "Шифрует резервную копию, чтобы токены и ключи нельзя было прочитать без пароля",
     "settingsBackupPasswordLabel": "Пароль",
     "settingsBackupPasswordConfirmLabel": "Подтвердите пароль",
-    "settingsBackupPasswordHelperText": "Запомните этот пароль: без него восстановить зашифрованную копию не получится",
+    "settingsBackupPasswordHelperText": "Запомните этот пароль: без него зашифрованную копию не получится восстановить.",
     "settingsBackupPasswordsDoNotMatch": "Пароли не совпадают",
-    "settingsBackupUnprotectedWarning": "Ваши токены и ключи будут сохранены в открытом виде. Любой, кто получит этот файл, получит доступ к вашим данным.",
+    "settingsBackupUnprotectedWarning": "Ваши токены и ключи будут сохранены в открытом виде. Любой, у кого окажется этот файл, получит доступ к вашим данным.",
     "settingsBackupRestoreDialogTitle": "Восстановить конфигурацию?",
     "settingsBackupRestoreDialogMessage": "Текущие настройки, API-ключ и список аккаунтов будут заменены данными из этой резервной копии. Это действие нельзя отменить.",
     "settingsBackupRestoreConfirmButton": "Восстановить",
     "settingsBackupPasswordDialogTitle": "Введите пароль резервной копии",
-    "settingsBackupPasswordDialogMessage": "Файл {fileName} защищен паролем. Введите пароль, чтобы продолжить восстановление.",
+    "settingsBackupPasswordDialogMessage": "Файл {fileName} защищён паролем. Введите пароль, чтобы продолжить восстановление.",
     "@settingsBackupPasswordDialogMessage": {
         "placeholders": {
             "fileName": {
@@ -423,7 +423,7 @@
             }
         }
     },
-    "settingsBackupInvalidMessage": "Файл резервной копии поврежден или имеет неподдерживаемый формат",
+    "settingsBackupInvalidMessage": "Файл резервной копии повреждён или имеет неподдерживаемый формат",
     "settingsBackupUnsupportedVersionMessage": "Эта резервная копия создана в более новой версии KiCk и пока не поддерживается",
     "settingsBackupReadFailedMessage": "Не удалось прочитать выбранную резервную копию",
     "settingsBackupPasswordRequiredMessage": "Для этой резервной копии нужен пароль",
@@ -458,7 +458,7 @@
     "aboutUpdateCheckFailedMessage": "Не удалось получить информацию о релизах с GitHub.",
     "aboutDownloadAndInstallButton": "Скачать и установить",
     "aboutOpenReleaseButton": "Открыть релиз",
-    "aboutRetryUpdateCheckButton": "Проверить еще раз",
+    "aboutRetryUpdateCheckButton": "Проверить ещё раз",
     "aboutAnalyticsTitle": "Аналитика",
     "aboutAnalyticsSubtitle": "Анонимная статистика использования помогает улучшать KiCk.",
     "aboutLicenseTitle": "Лицензия",
@@ -470,7 +470,7 @@
     "aboutDisclaimerTitle": "Отказ от ответственности",
     "aboutDisclaimerMessage": "KiCk не связан с Google, AWS, Kiro или SillyTavern.",
     "aboutCreditsTitle": "Благодарности",
-    "aboutCreditsMessage": "Собрано на Flutter. DiceBear Identicon CC0 1.0.",
+    "aboutCreditsMessage": "Собрано на Flutter и Material Symbols. DiceBear Identicon CC0 1.0.",
     "aboutOpenLinkFailedMessage": "Не удалось открыть ссылку",
     "copyProxyEndpointTooltip": "Скопировать адрес прокси",
     "proxyEndpointCopiedMessage": "Адрес прокси скопирован",
@@ -516,7 +516,7 @@
     "homeOnboardingTitle": "С чего начать",
     "homeOnboardingSubtitle": "Короткая подсказка для первого запуска",
     "homeOnboardingAccountsTitle": "Подключите аккаунт",
-    "homeOnboardingAccountsMessage": "Без активного аккаунта Gemini CLI или Kiro KiCk не сможет обрабатывать запросы.",
+    "homeOnboardingAccountsMessage": "KiCk не сможет обрабатывать запросы без активного аккаунта Gemini CLI или Kiro.",
     "homeOnboardingEndpointTitle": "Посмотрите адрес прокси",
     "homeOnboardingEndpointMessage": "Когда все будет готово, используйте адрес {endpoint} в своем клиенте.",
     "@homeOnboardingEndpointMessage": {
@@ -527,12 +527,12 @@
         }
     },
     "homeOnboardingStartTitle": "Запустите прокси",
-    "homeOnboardingStartMessage": "После запуска KiCk начнет принимать запросы на этом устройстве.",
-    "homeOnboardingFooter": "Если аккаунт уже подключен, просто включите его на экране аккаунтов и вернитесь сюда.",
-    "apiKeyRegeneratedMessage": "Новый API-ключ сохранен",
+    "homeOnboardingStartMessage": "После запуска KiCk начнёт принимать запросы на этом устройстве.",
+    "homeOnboardingFooter": "Если аккаунт уже подключён, просто включите его на экране аккаунтов и вернитесь сюда.",
+    "apiKeyRegeneratedMessage": "Новый API-ключ сохранён",
     "regenerateApiKeyAction": "Создать новый API-ключ",
     "regenerateApiKeyDialogTitle": "Создать новый API-ключ?",
-    "regenerateApiKeyDialogMessage": "Старый ключ будет сразу отозван. Всем подключенным клиентам понадобится новый ключ, чтобы продолжить работу.",
+    "regenerateApiKeyDialogMessage": "Старый ключ будет сразу отозван. Всем подключённым клиентам понадобится новый ключ, чтобы продолжить работу.",
     "regenerateApiKeyConfirmButton": "Сгенерировать",
     "trayOpenWindowAction": "Открыть окно",
     "trayHideToTrayAction": "Свернуть в трей",
@@ -547,9 +547,9 @@
     "welcomeStepHomeTitle": "Откройте главную",
     "welcomeStepHomeMessage": "На главной всегда видны адрес прокси, API-ключ и кнопка запуска.",
     "welcomeUsageTitle": "Важно знать",
-    "welcomeUsageMessage": "KiCk предназначен для личного, учебного и исследовательского использования.",
+    "welcomeUsageMessage": "KiCk создан для личного, учебного и исследовательского использования.",
     "welcomeAnalyticsTitle": "Анонимная аналитика",
-    "welcomeAnalyticsSubtitle": "Помогает понять, где KiCk работает хорошо, а где его стоит улучшить.",
+    "welcomeAnalyticsSubtitle": "Помогает понять, где KiCk работает хорошо, а где его можно улучшить.",
     "welcomeRepositoryLinkLabel": "Подробнее о проекте",
     "logsTitle": "Логи",
     "logsSubtitle": "История запросов и ошибок",
@@ -614,7 +614,7 @@
             }
         }
     },
-    "logsRequestKiroCredits": "Кредиты: {credits}",
+    "logsRequestKiroCredits": "Кредитов: {credits}",
     "@logsRequestKiroCredits": {
         "placeholders": {
             "credits": {
@@ -637,7 +637,7 @@
     "logsExportTooltip": "Сохранить все логи по текущим фильтрам",
     "logsExportDialogTitle": "Куда сохранить логи?",
     "logsShareTooltip": "Поделиться всеми логами по текущим фильтрам",
-    "logsLoadMoreButton": "Загрузить еще",
+    "logsLoadMoreButton": "Загрузить ещё",
     "logsNothingToExportMessage": "Нет логов для сохранения.",
     "logsExportedMessage": "Логи сохранены в файл {fileName}",
     "@logsExportedMessage": {
@@ -720,7 +720,7 @@
     "errorGoogleAuthBrowserOpenFailed": "Не удалось открыть браузер для входа в Google. Попробуйте снова.",
     "errorUnknown": "Что-то пошло не так. Попробуйте снова.",
     "errorOauthTokensMissing": "Токены авторизации для этого аккаунта не найдены. Переподключите аккаунт.",
-    "errorAccountNotFound": "Аккаунт не найден. Возможно, он уже удален.",
+    "errorAccountNotFound": "Аккаунт не найден. Возможно, он уже удалён.",
     "errorPortAlreadyInUse": "Этот порт уже занят другим приложением. Выберите другой порт в настройках.",
     "errorPermissionDenied": "Не хватает системных разрешений для запуска. Проверьте настройки приложения и попробуйте снова.",
     "errorGoogleRateLimitedRetry": "Google временно ограничил запросы для этого аккаунта. Попробуйте снова через {retryHint}.",
@@ -734,7 +734,7 @@
     "errorGoogleRateLimitedLater": "Google временно ограничил запросы для этого аккаунта. Попробуйте позже.",
     "errorKiroAuthExpired": "Сессия Kiro истекла. Войдите заново и попробуйте снова.",
     "errorKiroAuthStartFailed": "Не удалось начать вход в Kiro. Попробуйте позже.",
-    "errorKiroAuthCancelled": "Вход в Kiro был отменен.",
+    "errorKiroAuthCancelled": "Вход в Kiro был отменён.",
     "errorKiroAuthTimedOut": "Время ожидания входа в Kiro истекло. Попробуйте снова.",
     "errorKiroAuthRejected": "Kiro отклонил вход. Попробуйте начать заново.",
     "errorKiroRateLimitedRetry": "Kiro временно ограничил запросы. Попробуйте снова через {retryHint}.",
@@ -751,8 +751,8 @@
     "errorGoogleProjectIdMissing": "Google не смог определить корректный ID проекта для этого аккаунта или запроса. Проверьте ID проекта в настройках аккаунта и при необходимости переподключите его.",
     "errorGoogleProjectApiDisabled": "Gemini for Google Cloud API выключен для этого проекта. Откройте Google Cloud, включите API для нужного ID проекта и повторите проверку.",
     "errorGoogleProjectInvalid": "Google отклонил этот ID проекта. Убедитесь, что указан существующий проект и у аккаунта есть к нему доступ.",
-    "errorGoogleProjectAccessDenied": "Google отклонил запрос для этого проекта или аккаунта. Проверьте ID проекта, выбранный аккаунт и убедитесь, что Gemini Code Assist включен именно для этого проекта.",
-    "errorAuthExpired": "Срок действия авторизации истек или она больше не действительна. Переподключите аккаунт и попробуйте снова.",
+    "errorGoogleProjectAccessDenied": "Google отклонил запрос для этого проекта или аккаунта. Проверьте ID проекта, выбранный аккаунт и убедитесь, что Gemini Code Assist включён именно для этого проекта.",
+    "errorAuthExpired": "Срок действия авторизации истёк или она больше недействительна. Переподключите аккаунт и попробуйте снова.",
     "errorGoogleCapacity": "Серверы Google временно перегружены. Попробуйте чуть позже.",
     "errorUnsupportedModel": "Выбранная модель сейчас недоступна для этого аккаунта.",
     "errorInvalidJson": "Запрос содержит некорректный JSON.",
@@ -768,7 +768,7 @@
     },
     "errorQuotaExhaustedNoResetHint": "Google вернул RESOURCE_EXHAUSTED без времени сброса. KiCk отдельно проверит этот аккаунт. Если ошибка повторится, используйте другой аккаунт.",
     "errorGoogleTermsOfServiceViolation": "Google отключил этот аккаунт за нарушение условий использования. Подайте апелляцию или используйте другой аккаунт.",
-    "errorInvalidRequestRejected": "Запрос имеет неверный формат и был отклонен.",
+    "errorInvalidRequestRejected": "У запроса неверный формат, поэтому он был отклонён.",
     "errorReasoningConfigRejected": "Google отклонил параметры reasoning/thinking для этой модели. Включите автоматический режим рассуждений (reasoning).",
     "durationFewSeconds": "несколько секунд",
     "durationSeconds": "{seconds} сек",
@@ -822,6 +822,7 @@
     "languageOptionSystem": "Системный",
     "languageOptionEnglish": "English",
     "languageOptionRussian": "Русский",
+    "languageOptionUkrainian": "Украинский",
     "logsExportFileTitle": "Экспорт логов KiCk",
     "logsExportShareSubject": "Логи KiCk",
     "logsExportGeneratedAtLabel": "Сгенерировано",
@@ -861,7 +862,7 @@
     "logsExportRawPayloadLabel": "Payload (без маскировки)",
     "logMessageRequestReceived": "Запрос получен",
     "logMessageParsedRequest": "Запрос разобран",
-    "logMessageResponseCompleted": "Ответ завершен",
+    "logMessageResponseCompleted": "Ответ завершён",
     "logMessageStreamClientAborted": "Потоковый ответ прерван клиентом",
     "logMessageRetryScheduled": "Запланирован повтор после сбоя запроса",
     "logMessageRetryWithAnotherAccount": "Повторяем запрос с другим аккаунтом после сбоя",
@@ -921,7 +922,7 @@
     "accountAvatarResetButton": "Сбросить",
     "accountAvatarResetToDiceBearButton": "Вернуть DiceBear",
     "aboutDownloadUpdateButton": "Скачать обновление",
-    "aboutInstallOnRestartButton": "Установить на перезапуске",
+    "aboutInstallOnRestartButton": "Установить при перезапуске",
     "aboutInstallUpdateButton": "Установить обновление",
     "aboutAllowUnknownSourcesButton": "Разрешить этот источник",
     "aboutPreparingUpdateButton": "Готовим обновление...",
@@ -937,7 +938,7 @@
     "aboutUpdateVerifyingMessage": "Проверяем скачанный файл по SHA-256...",
     "aboutUpdateReadyVerifiedMessage": "Обновление скачано, проверено и готово к установке.",
     "aboutUpdateReadyUnverifiedMessage": "Обновление скачано и готово к установке. Для этого релиза не была предоставлена контрольная сумма.",
-    "aboutUpdateUnknownSourcesMessage": "Разрешите установку из этого источника в настройках Android, затем вернитесь сюда и снова нажмите «Установить обновление».",
+    "aboutUpdateUnknownSourcesMessage": "Разрешите установку из этого источника в настройках Android, затем вернитесь и снова нажмите «Установить обновление».",
     "aboutUpdateOperationFailedMessage": "Не удалось подготовить обновление: {error}",
     "@aboutUpdateOperationFailedMessage": {
         "placeholders": {

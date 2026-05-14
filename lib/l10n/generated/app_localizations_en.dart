@@ -459,6 +459,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageOptionRussian => 'Russian';
 
   @override
+  String get languageOptionUkrainian => 'Ukrainian';
+
+  @override
   String get themeLabel => 'Theme';
 
   @override
