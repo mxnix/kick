@@ -87,28 +87,37 @@ class AndroidForegroundRuntime {
       return;
     }
 
-    final l10n = lookupKickLocalizations();
-    await ensurePermissions();
-    if (await FlutterForegroundTask.checkNotificationPermission() !=
-        NotificationPermission.granted) {
-      return;
-    }
-    await _setNotificationState(mode: _notificationModeProxy);
-    if (await isRunning()) {
-      await FlutterForegroundTask.updateService(
-        notificationTitle: l10n.runtimeNotificationTitle,
-        notificationText: l10n.runtimeNotificationReturn,
-      );
-      return;
-    }
+    try {
+      final l10n = lookupKickLocalizations();
+      await ensurePermissions();
+      if (await FlutterForegroundTask.checkNotificationPermission() !=
+          NotificationPermission.granted) {
+        return;
+      }
+      await _setNotificationState(mode: _notificationModeProxy);
+      if (await isRunning()) {
+        await FlutterForegroundTask.updateService(
+          notificationTitle: l10n.runtimeNotificationTitle,
+          notificationText: l10n.runtimeNotificationReturn,
+        );
+        return;
+      }
 
-    await FlutterForegroundTask.startService(
-      serviceId: 701,
-      notificationTitle: l10n.runtimeNotificationTitle,
-      notificationText: l10n.runtimeNotificationManage,
-      notificationInitialRoute: '/home',
-      callback: startForegroundRuntimeCallback,
-    );
+      await FlutterForegroundTask.startService(
+        serviceId: 701,
+        notificationTitle: l10n.runtimeNotificationTitle,
+        notificationText: l10n.runtimeNotificationManage,
+        notificationInitialRoute: '/home',
+        callback: startForegroundRuntimeCallback,
+      );
+    } on PlatformException {
+      // Platform channel may not be available if the engine is still
+      // recovering after a background/foreground transition. The proxy can
+      // continue without the foreground service — it will be retried on the
+      // next start cycle.
+    } on StateError {
+      // BackgroundIsolateBinaryMessenger may not be ready yet.
+    }
   }
 
   static Future<bool> ensureTemporaryRunning({String? notificationTitle}) async {
@@ -162,11 +171,17 @@ class AndroidForegroundRuntime {
       return;
     }
 
-    if (await isRunning()) {
-      await FlutterForegroundTask.stopService();
+    try {
+      if (await isRunning()) {
+        await FlutterForegroundTask.stopService();
+      }
+      await FlutterForegroundTask.removeData(key: _notificationModeStorageKey);
+      await FlutterForegroundTask.removeData(key: _notificationTitleStorageKey);
+    } on PlatformException {
+      // Platform channel may be unavailable during background transitions.
+    } on StateError {
+      // BackgroundIsolateBinaryMessenger may not be ready.
     }
-    await FlutterForegroundTask.removeData(key: _notificationModeStorageKey);
-    await FlutterForegroundTask.removeData(key: _notificationTitleStorageKey);
   }
 
   static Future<void> _setNotificationState({

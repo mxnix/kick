@@ -26,9 +26,10 @@ import 'proxy_cors.dart';
 
 const _maxRequestBodyBytes = 20 * 1024 * 1024;
 const _proxyBindRetryDelays = <Duration>[
-  Duration(milliseconds: 100),
   Duration(milliseconds: 200),
-  Duration(milliseconds: 400),
+  Duration(milliseconds: 500),
+  Duration(milliseconds: 1000),
+  Duration(milliseconds: 2000),
 ];
 const _modelCatalogRefreshInterval = Duration(minutes: 30);
 const defaultProxyRuntimeHost = '127.0.0.1';

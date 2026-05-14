@@ -29,9 +29,11 @@ typedef AndroidRuntimeRunningCheck = Future<bool> Function();
 typedef AndroidRuntimeEffect = Future<void> Function();
 typedef AndroidLocalNetworkPermissionRequest = Future<bool> Function();
 
-/// Short grace period after stopping the Android foreground runtime before the
+/// Grace period after stopping the Android foreground runtime before the
 /// isolate binds a new socket. Gives the OS time to release the previous port.
-const _androidRuntimeStopGracePeriod = Duration(milliseconds: 250);
+/// Android may take longer to release sockets when transitioning between
+/// foreground and background states, so this needs to be generous.
+const _androidRuntimeStopGracePeriod = Duration(milliseconds: 800);
 
 class ProxyRuntimeState {
   const ProxyRuntimeState({
