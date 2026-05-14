@@ -394,4 +394,41 @@ void main() {
     expect(request.googleWebSearchEnabled, isTrue);
     expect(request.tools.single.name, 'lookupWeather');
   });
+
+  test('parses kiro server tools opt-in from extra_body', () {
+    final request = OpenAiRequestParser.parseChatRequest({
+      'model': 'kiro/claude-sonnet-4',
+      'messages': [
+        {'role': 'user', 'content': 'Search the latest changelog'},
+      ],
+      'extra_body': {
+        'kiro': {'server_tools': true},
+      },
+    }, requestId: 'req_kiro_tools');
+
+    expect(request.kiroServerToolsEnabled, isTrue);
+  });
+
+  test('parses kiro server tools opt-in from top-level kiro key', () {
+    final request = OpenAiRequestParser.parseChatRequest({
+      'model': 'kiro/claude-sonnet-4',
+      'messages': [
+        {'role': 'user', 'content': 'Search the latest changelog'},
+      ],
+      'kiro': {'server_tools': true},
+    }, requestId: 'req_kiro_tools_top');
+
+    expect(request.kiroServerToolsEnabled, isTrue);
+  });
+
+  test('defaults kiroServerToolsEnabled to false when absent', () {
+    final request = OpenAiRequestParser.parseChatRequest({
+      'model': 'kiro/claude-sonnet-4',
+      'messages': [
+        {'role': 'user', 'content': 'Hi'},
+      ],
+    }, requestId: 'req_kiro_silent');
+
+    expect(request.kiroServerToolsEnabled, isFalse);
+  });
 }

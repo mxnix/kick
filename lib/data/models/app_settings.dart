@@ -38,6 +38,7 @@ class AppSettings {
     'default_google_web_search_enabled',
     'default_google_visible_reasoning_enabled',
     'render_google_grounding_in_message',
+    'default_kiro_server_tools_enabled',
     'logging_verbosity',
     'log_retention_count',
     'unsafe_raw_logging_enabled',
@@ -64,6 +65,7 @@ class AppSettings {
     this.defaultGoogleWebSearchEnabled = false,
     this.defaultGoogleVisibleReasoningEnabled = false,
     this.renderGoogleGroundingInMessage = false,
+    this.defaultKiroServerToolsEnabled = false,
     required this.loggingVerbosity,
     required this.logRetentionCount,
     required this.unsafeRawLoggingEnabled,
@@ -89,6 +91,7 @@ class AppSettings {
   final bool defaultGoogleWebSearchEnabled;
   final bool defaultGoogleVisibleReasoningEnabled;
   final bool renderGoogleGroundingInMessage;
+  final bool defaultKiroServerToolsEnabled;
   final KickLogVerbosity loggingVerbosity;
   final int logRetentionCount;
   final bool unsafeRawLoggingEnabled;
@@ -115,6 +118,7 @@ class AppSettings {
       defaultGoogleWebSearchEnabled: false,
       defaultGoogleVisibleReasoningEnabled: false,
       renderGoogleGroundingInMessage: false,
+      defaultKiroServerToolsEnabled: false,
       loggingVerbosity: KickLogVerbosity.normal,
       logRetentionCount: defaultLogRetentionCount,
       unsafeRawLoggingEnabled: false,
@@ -142,6 +146,7 @@ class AppSettings {
     bool? defaultGoogleWebSearchEnabled,
     bool? defaultGoogleVisibleReasoningEnabled,
     bool? renderGoogleGroundingInMessage,
+    bool? defaultKiroServerToolsEnabled,
     KickLogVerbosity? loggingVerbosity,
     int? logRetentionCount,
     bool? unsafeRawLoggingEnabled,
@@ -175,6 +180,8 @@ class AppSettings {
           defaultGoogleVisibleReasoningEnabled ?? this.defaultGoogleVisibleReasoningEnabled,
       renderGoogleGroundingInMessage:
           renderGoogleGroundingInMessage ?? this.renderGoogleGroundingInMessage,
+      defaultKiroServerToolsEnabled:
+          defaultKiroServerToolsEnabled ?? this.defaultKiroServerToolsEnabled,
       loggingVerbosity: loggingVerbosity ?? this.loggingVerbosity,
       logRetentionCount: normalizeLogRetentionCount(logRetentionCount ?? this.logRetentionCount),
       unsafeRawLoggingEnabled: unsafeRawLoggingEnabled ?? this.unsafeRawLoggingEnabled,
@@ -202,6 +209,7 @@ class AppSettings {
       'default_google_web_search_enabled': defaultGoogleWebSearchEnabled.toString(),
       'default_google_visible_reasoning_enabled': defaultGoogleVisibleReasoningEnabled.toString(),
       'render_google_grounding_in_message': renderGoogleGroundingInMessage.toString(),
+      'default_kiro_server_tools_enabled': defaultKiroServerToolsEnabled.toString(),
       'logging_verbosity': loggingVerbosity.name,
       'log_retention_count': logRetentionCount.toString(),
       'unsafe_raw_logging_enabled': unsafeRawLoggingEnabled.toString(),
@@ -230,6 +238,7 @@ class AppSettings {
       'default_google_web_search_enabled': defaultGoogleWebSearchEnabled,
       'default_google_visible_reasoning_enabled': defaultGoogleVisibleReasoningEnabled,
       'render_google_grounding_in_message': renderGoogleGroundingInMessage,
+      'default_kiro_server_tools_enabled': defaultKiroServerToolsEnabled,
       'logging_verbosity': loggingVerbosity.name,
       'log_retention_count': logRetentionCount,
       'unsafe_raw_logging_enabled': unsafeRawLoggingEnabled,
@@ -277,6 +286,10 @@ class AppSettings {
         json['render_google_grounding_in_message'],
         defaultValue: false,
       ),
+      defaultKiroServerToolsEnabled: _readBool(
+        json['default_kiro_server_tools_enabled'],
+        defaultValue: false,
+      ),
       loggingVerbosity: KickLogVerbosity.values.firstWhere(
         (value) => value.name == json['logging_verbosity'],
         orElse: () => KickLogVerbosity.normal,
@@ -317,6 +330,7 @@ class AppSettings {
       defaultGoogleVisibleReasoningEnabled:
           values['default_google_visible_reasoning_enabled'] == 'true',
       renderGoogleGroundingInMessage: values['render_google_grounding_in_message'] == 'true',
+      defaultKiroServerToolsEnabled: values['default_kiro_server_tools_enabled'] == 'true',
       loggingVerbosity: KickLogVerbosity.values.firstWhere(
         (value) => value.name == values['logging_verbosity'],
         orElse: () => KickLogVerbosity.normal,

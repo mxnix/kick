@@ -15,6 +15,7 @@ void main() {
     expect(settings.defaultGoogleWebSearchEnabled, isFalse);
     expect(settings.defaultGoogleVisibleReasoningEnabled, isFalse);
     expect(settings.renderGoogleGroundingInMessage, isFalse);
+    expect(settings.defaultKiroServerToolsEnabled, isFalse);
     expect(settings.appLocale, isNull);
     expect(settings.useSystemFont, isFalse);
     expect(settings.logRetentionCount, defaultLogRetentionCount);
@@ -41,6 +42,7 @@ void main() {
       defaultGoogleWebSearchEnabled: true,
       defaultGoogleVisibleReasoningEnabled: true,
       renderGoogleGroundingInMessage: true,
+      defaultKiroServerToolsEnabled: true,
       loggingVerbosity: KickLogVerbosity.verbose,
       logRetentionCount: 2400,
       unsafeRawLoggingEnabled: true,
@@ -62,6 +64,7 @@ void main() {
     expect(restored.defaultGoogleWebSearchEnabled, isTrue);
     expect(restored.defaultGoogleVisibleReasoningEnabled, isTrue);
     expect(restored.renderGoogleGroundingInMessage, isTrue);
+    expect(restored.defaultKiroServerToolsEnabled, isTrue);
     expect(restored.windowsLaunchAtStartup, isTrue);
     expect(restored.logRetentionCount, 2400);
     expect(restored.unsafeRawLoggingEnabled, isTrue);
@@ -89,6 +92,7 @@ void main() {
       defaultGoogleWebSearchEnabled: true,
       defaultGoogleVisibleReasoningEnabled: true,
       renderGoogleGroundingInMessage: true,
+      defaultKiroServerToolsEnabled: true,
       loggingVerbosity: KickLogVerbosity.verbose,
       logRetentionCount: 1200,
       unsafeRawLoggingEnabled: true,
@@ -106,6 +110,7 @@ void main() {
     expect(restored.customModels, ['gemini-2.5-flash', 'gemini-2.5-pro']);
     expect(restored.loggingVerbosity, KickLogVerbosity.verbose);
     expect(restored.defaultGoogleVisibleReasoningEnabled, isTrue);
+    expect(restored.defaultKiroServerToolsEnabled, isTrue);
   });
 
   test('normalizes wildcard host back to loopback when LAN is disabled', () {

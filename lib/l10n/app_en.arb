@@ -323,8 +323,8 @@
   "windowsTrayNotificationBody": "The app has been minimized to the system tray",
   "settingsModelsSectionTitle": "Models",
   "settingsModelsSectionSummary": "Custom model IDs",
-  "settingsGoogleSectionTitle": "Gemini CLI",
-  "settingsGoogleSectionSummary": "Google web search and Gemini CLI settings",
+  "settingsGoogleSectionTitle": "Provider features",
+  "settingsGoogleSectionSummary": "Web search and provider-specific options",
   "settingsBackupSectionTitle": "Backup and restore",
   "settingsBackupSectionSummary": "Transfer settings and accounts between devices",
   "settingsBackupInfoTitle": "The backup will include settings, the API key, and OAuth tokens",
@@ -374,6 +374,10 @@
   "defaultGoogleVisibleReasoningSubtitle": "Adds include_reasoning for Gemini CLI requests when the client did not set reasoning options. Helps Custom OpenAI-Compatible clients show reasoning blocks.",
   "renderGoogleGroundingInMessageTitle": "Show citations and sources in the response",
   "renderGoogleGroundingInMessageSubtitle": "If disabled, source links will remain in metadata and will not be added to the response text itself",
+  "settingsGeminiSubsectionTitle": "Gemini CLI",
+  "settingsKiroSubsectionTitle": "Kiro",
+  "defaultKiroServerToolsTitle": "Enable Kiro server tools by default",
+  "defaultKiroServerToolsSubtitle": "Adds the Kiro web search tool to requests when the client did not declare its own tools. Each call costs extra Kiro credits.",
   "customModelsLabel": "Custom model IDs",
   "customModelsHelperText": "One ID per line, for example google/... or kiro/...",
   "settingsSavingStatus": "Saving changes...",
@@ -674,6 +678,14 @@
       }
     }
   },
+  "logsRequestKiroCredits": "Credits: {credits}",
+  "@logsRequestKiroCredits": {
+    "placeholders": {
+      "credits": {
+        "type": "String"
+      }
+    }
+  },
   "logsRequestDetailsShowButton": "Show statuses",
   "logsRequestDetailsHideButton": "Hide statuses",
   "logsLoadedCount": "Loaded: {count}",
@@ -744,6 +756,7 @@
   "logsExportUpstreamReasonsLabel": "Upstream reasons",
   "logsExportRetriedRequestsLabel": "Retried requests",
   "logsExportTokensLabel": "Tokens",
+  "logsExportKiroCreditsLabel": "Kiro credits",
   "logsExportAndroidBackgroundSessionsLabel": "Android background sessions",
   "logsExportTimestampLabel": "Timestamp",
   "logsExportLevelLabel": "Level",

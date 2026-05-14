@@ -15,12 +15,40 @@ import '../model_catalog.dart';
 import '../openai/openai_request_parser.dart';
 import 'kiro_auth_source.dart';
 import 'kiro_embedded_system_prompt.dart';
+import 'kiro_ide_runtime_version.dart';
 
 const defaultKiroRequestTimeout = Duration(seconds: 90);
-const _kiroIdeVersion = '0.12.155';
 const int _kiroMaxPayloadBytes = 600000;
 const int _kiroPayloadTrimTargetBytes = 575000;
 const int _kiroToolNameMaxLength = 64;
+const int _kiroServerToolMaxIterations = 4;
+
+const _kiroRemoteWebSearchToolName = 'remote_web_search';
+const Set<String> _kiroServerToolNames = <String>{_kiroRemoteWebSearchToolName};
+
+final List<Map<String, Object?>> _kiroServerToolDeclarations = <Map<String, Object?>>[
+  <String, Object?>{
+    'toolSpecification': <String, Object?>{
+      'name': _kiroRemoteWebSearchToolName,
+      'description':
+          'Look up information that is outside the model\'s training data or cannot be inferred from the current context. '
+          'Returns title, url, snippet, publishedDate, id, and domain. Always cite sources inline.',
+      'inputSchema': <String, Object?>{
+        'json': <String, Object?>{
+          r'$schema': 'http://json-schema.org/draft-07/schema#',
+          'type': 'object',
+          'properties': <String, Object?>{
+            'query': <String, Object?>{
+              'type': 'string',
+              'description': 'The search query. Must be 200 characters or fewer.',
+            },
+          },
+          'required': <Object?>['query'],
+        },
+      },
+    },
+  },
+];
 
 typedef KiroManagedSourcePathChecker = Future<bool> Function(String? sourcePath);
 typedef KiroAuthSourceSnapshotPersister =
@@ -216,39 +244,101 @@ class KiroCodeAssistClient {
   }) async {
     await _ensureFreshTokensForRequest(account);
     final resolvedModel = resolveKiroUpstreamModel(request.model);
-    final requestBody = _prepareRequestBody(
-      account: account,
-      request: request,
-      model: resolvedModel,
-    );
-    final encodedRequestBody = jsonEncode(requestBody);
+    final useServerTools =
+        request.kiroServerToolsEnabled &&
+        request.tools.isEmpty &&
+        _kiroModelSupportsServerTools(resolvedModel);
+    final extraToolDeclarations = useServerTools
+        ? _kiroServerToolDeclarations
+        : const <Map<String, Object?>>[];
     final accumulator = _KiroResponseAccumulator(model: resolvedModel);
     final controller = StreamController<Map<String, Object?>>();
+    final conversationId = _uuid.v4();
+    final extraHistory = <Map<String, Object?>>[];
 
     unawaited(
       Future<void>(() async {
         try {
-          final response = await _executeWithRetry(
-            () => _sendRetryable(
-              method: 'POST',
-              uri: _generateUri(account),
-              headers: _headers(accessToken: account.tokens.accessToken),
-              body: encodedRequestBody,
-              timeoutLabel: 'Kiro streaming request',
-            ),
-            onRetry: onRetry,
-          );
+          var iteration = 0;
+          while (true) {
+            final requestBody = _prepareRequestBody(
+              account: account,
+              request: request,
+              model: resolvedModel,
+              conversationId: conversationId,
+              extraServerToolDeclarations: extraToolDeclarations,
+              extraHistoryMessages: extraHistory,
+            );
+            final encodedRequestBody = jsonEncode(requestBody);
 
-          final parser = _KiroEventStreamParser();
-          await for (final chunk in response.stream) {
-            final events = parser.feed(chunk);
-            for (final event in events) {
-              accumulator.apply(event);
-              if (accumulator.hasEmittableOutput) {
-                controller.add(accumulator.toPayload());
+            final response = await _executeWithRetry(
+              () => _sendRetryable(
+                method: 'POST',
+                uri: _generateUri(account),
+                headers: _headers(accessToken: account.tokens.accessToken),
+                body: encodedRequestBody,
+                timeoutLabel: 'Kiro streaming request',
+              ),
+              onRetry: onRetry,
+            );
+
+            final parser = _KiroEventStreamParser();
+            await for (final chunk in response.stream) {
+              final events = parser.feed(chunk);
+              for (final event in events) {
+                accumulator.apply(event);
+                if (accumulator.hasEmittableOutput) {
+                  controller.add(accumulator.toPayload());
+                }
               }
             }
+
+            final pendingServerToolCalls = useServerTools
+                ? accumulator.takePendingServerToolCalls()
+                : const <Map<String, Object?>>[];
+            if (pendingServerToolCalls.isEmpty) {
+              break;
+            }
+
+            iteration += 1;
+            if (iteration >= _kiroServerToolMaxIterations) {
+              break;
+            }
+
+            await _ensureFreshTokensForRequest(account);
+            final toolUses = <Map<String, Object?>>[];
+            final toolResults = <Map<String, Object?>>[];
+            for (final toolCall in pendingServerToolCalls) {
+              final function = (toolCall['function'] as Map?)?.cast<String, Object?>() ?? const {};
+              final name = (function['name'] as String? ?? '').trim();
+              final argumentsText = (function['arguments'] as String? ?? '{}');
+              final id = (toolCall['id'] as String? ?? '').trim().isEmpty
+                  ? 'tooluse_${_uuid.v4()}'
+                  : (toolCall['id'] as String).trim();
+              final argumentsMap = _parseToolArgumentsMap(argumentsText);
+              toolUses.add(<String, Object?>{'name': name, 'input': argumentsMap, 'toolUseId': id});
+              final toolResult = await _runKiroServerTool(
+                account: account,
+                name: name,
+                arguments: argumentsMap,
+                toolUseId: id,
+              );
+              toolResults.add(toolResult);
+            }
+
+            extraHistory.add(<String, Object?>{
+              'assistantResponseMessage': <String, Object?>{'content': '', 'toolUses': toolUses},
+            });
+            extraHistory.add(<String, Object?>{
+              'userInputMessage': <String, Object?>{
+                'content': '',
+                'modelId': resolvedModel,
+                'origin': 'AI_EDITOR',
+                'userInputMessageContext': <String, Object?>{'toolResults': toolResults},
+              },
+            });
           }
+
           if (!accumulator.hasEmittableOutput) {
             throw GeminiGatewayException(
               provider: AccountProvider.kiro,
@@ -268,6 +358,117 @@ class KiroCodeAssistClient {
     );
 
     return controller.stream;
+  }
+
+  Map<String, Object?> _parseToolArgumentsMap(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return const <String, Object?>{};
+    }
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map) {
+        return decoded.cast<String, Object?>();
+      }
+    } catch (_) {}
+    return const <String, Object?>{};
+  }
+
+  Future<Map<String, Object?>> _runKiroServerTool({
+    required ProxyRuntimeAccount account,
+    required String name,
+    required Map<String, Object?> arguments,
+    required String toolUseId,
+  }) async {
+    final mcpName = _kiroMcpToolName(name);
+    final mcpId = '${mcpName}_$toolUseId';
+    final body = jsonEncode(<String, Object?>{
+      'id': mcpId,
+      'jsonrpc': '2.0',
+      'method': 'tools/call',
+      'params': <String, Object?>{'name': mcpName, 'arguments': arguments},
+    });
+    final headers = <String, String>{
+      ..._headers(accessToken: account.tokens.accessToken),
+      'x-amzn-kiro-profile-arn': resolveKiroProfileArn(account.providerProfileArn) ?? '',
+    }..removeWhere((key, value) => key == 'x-amzn-kiro-profile-arn' && value.isEmpty);
+
+    try {
+      final response = await _send(
+        method: 'POST',
+        uri: _mcpUri(account),
+        headers: headers,
+        body: body,
+        timeoutLabel: 'Kiro server tool call ($name)',
+      );
+      final responseBody = await response.stream.bytesToString();
+      if (response.statusCode >= 400) {
+        return _kiroToolResultPayload(
+          toolUseId: toolUseId,
+          status: 'error',
+          text: 'Kiro server tool $name returned status ${response.statusCode}: $responseBody',
+        );
+      }
+      final decoded = _tryDecodeJsonMap(responseBody);
+      final result = (decoded['result'] as Map?)?.cast<String, Object?>();
+      final content = result?['content'];
+      final extracted = StringBuffer();
+      if (content is List) {
+        for (final part in content) {
+          if (part is Map) {
+            final text = (part.cast<String, Object?>()['text'] as String?)?.trim() ?? '';
+            if (text.isNotEmpty) {
+              if (extracted.isNotEmpty) {
+                extracted.write('\n');
+              }
+              extracted.write(text);
+            }
+          }
+        }
+      }
+      final isError = result?['isError'] == true;
+      final text = extracted.isEmpty ? responseBody : extracted.toString();
+      return _kiroToolResultPayload(
+        toolUseId: toolUseId,
+        status: isError ? 'error' : 'success',
+        text: text,
+      );
+    } catch (error) {
+      return _kiroToolResultPayload(
+        toolUseId: toolUseId,
+        status: 'error',
+        text: 'Kiro server tool $name failed: $error',
+      );
+    }
+  }
+
+  Map<String, Object?> _kiroToolResultPayload({
+    required String toolUseId,
+    required String status,
+    required String text,
+  }) {
+    return <String, Object?>{
+      'toolUseId': toolUseId,
+      'status': status,
+      'content': <Map<String, Object?>>[
+        <String, Object?>{'text': text},
+      ],
+    };
+  }
+
+  String _kiroMcpToolName(String declaredName) {
+    return switch (declaredName) {
+      _kiroRemoteWebSearchToolName => 'web_search',
+      _ => declaredName,
+    };
+  }
+
+  bool _kiroModelSupportsServerTools(String upstreamModel) {
+    final normalized = upstreamModel.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return false;
+    }
+    return normalized.startsWith('claude-') || normalized.startsWith('anthropic.');
   }
 
   Future<void> _ensureFreshTokensForRequest(ProxyRuntimeAccount account) async {
@@ -418,8 +619,8 @@ class KiroCodeAssistClient {
       HttpHeaders.authorizationHeader: 'Bearer $accessToken',
       HttpHeaders.contentTypeHeader: 'application/json',
       HttpHeaders.userAgentHeader:
-          'aws-sdk-js/1.0.34 ua/2.1 os/win32#10.0.29580 lang/js md/nodejs#22.22.0 api/codewhispererstreaming#1.0.34 m/E KiroIDE-$_kiroIdeVersion-$_fingerprint',
-      'x-amz-user-agent': 'aws-sdk-js/1.0.34 KiroIDE-$_kiroIdeVersion-$_fingerprint',
+          'aws-sdk-js/1.0.34 ua/2.1 os/win32#10.0.29580 lang/js md/nodejs#22.22.0 api/codewhispererstreaming#1.0.34 m/E KiroIDE-$kiroIdeRuntimeVersion-$_fingerprint',
+      'x-amz-user-agent': 'aws-sdk-js/1.0.34 KiroIDE-$kiroIdeRuntimeVersion-$_fingerprint',
       'x-amzn-kiro-agent-mode': 'vibe',
       'amz-sdk-invocation-id': _uuid.v4(),
       'amz-sdk-request': 'attempt=1; max=3',
@@ -430,8 +631,8 @@ class KiroCodeAssistClient {
     return {
       HttpHeaders.authorizationHeader: 'Bearer $accessToken',
       HttpHeaders.userAgentHeader:
-          'aws-sdk-js/1.0.0 ua/2.1 os/win32#10.0.29580 lang/js md/nodejs#22.22.0 api/codewhispererruntime#1.0.0 m/N,E KiroIDE-$_kiroIdeVersion-$_fingerprint',
-      'x-amz-user-agent': 'aws-sdk-js/1.0.0 KiroIDE-$_kiroIdeVersion-$_fingerprint',
+          'aws-sdk-js/1.0.0 ua/2.1 os/win32#10.0.29580 lang/js md/nodejs#22.22.0 api/codewhispererruntime#1.0.0 m/N,E KiroIDE-$kiroIdeRuntimeVersion-$_fingerprint',
+      'x-amz-user-agent': 'aws-sdk-js/1.0.0 KiroIDE-$kiroIdeRuntimeVersion-$_fingerprint',
       'amz-sdk-invocation-id': _uuid.v4(),
       'amz-sdk-request': 'attempt=1; max=1',
       HttpHeaders.connectionHeader: 'close',
@@ -441,6 +642,11 @@ class KiroCodeAssistClient {
   Uri _generateUri(ProxyRuntimeAccount account) {
     final region = (account.providerRegion ?? defaultKiroRegion).trim();
     return Uri.parse('https://q.$region.amazonaws.com/generateAssistantResponse');
+  }
+
+  Uri _mcpUri(ProxyRuntimeAccount account) {
+    final region = (account.providerRegion ?? defaultKiroRegion).trim();
+    return Uri.parse('https://q.$region.amazonaws.com/mcp');
   }
 
   Uri _listModelsUri(ProxyRuntimeAccount account, {String? nextToken}) {
@@ -477,6 +683,9 @@ class KiroCodeAssistClient {
     required ProxyRuntimeAccount account,
     required UnifiedPromptRequest request,
     required String model,
+    String? conversationId,
+    List<Map<String, Object?>> extraServerToolDeclarations = const [],
+    List<Map<String, Object?>> extraHistoryMessages = const [],
   }) {
     final normalizedTurns = _normalizeTurns(request, model: model);
     final history = <Map<String, Object?>>[];
@@ -518,17 +727,23 @@ class KiroCodeAssistClient {
       history.add(trailingAssistantMessage);
     }
 
+    for (final extra in extraHistoryMessages) {
+      knownToolUseIds.addAll(_toolUseIdsFromAssistantMessage(extra));
+      history.add(extra);
+    }
+
     final payload = <String, Object?>{
       'conversationState': {
         'chatTriggerType': 'MANUAL',
-        'conversationId': _uuid.v4(),
+        'conversationId': conversationId ?? _uuid.v4(),
         'currentMessage': {
           'userInputMessage': _userMessage(
             currentTurn,
             model: model,
             includeTools: true,
-            toolsEnabled: request.tools.isNotEmpty,
+            toolsEnabled: request.tools.isNotEmpty || extraServerToolDeclarations.isNotEmpty,
             tools: request.tools,
+            extraServerToolDeclarations: extraServerToolDeclarations,
             knownToolUseIds: knownToolUseIds,
           )['userInputMessage'],
         },
@@ -544,9 +759,19 @@ class KiroCodeAssistClient {
     required ProxyRuntimeAccount account,
     required UnifiedPromptRequest request,
     required String model,
+    String? conversationId,
+    List<Map<String, Object?>> extraServerToolDeclarations = const [],
+    List<Map<String, Object?>> extraHistoryMessages = const [],
   }) {
     _validateKiroTools(request.tools);
-    final payload = _buildRequestBody(account: account, request: request, model: model);
+    final payload = _buildRequestBody(
+      account: account,
+      request: request,
+      model: model,
+      conversationId: conversationId,
+      extraServerToolDeclarations: extraServerToolDeclarations,
+      extraHistoryMessages: extraHistoryMessages,
+    );
     return _guardKiroPayloadSize(payload);
   }
 
@@ -798,6 +1023,7 @@ class KiroCodeAssistClient {
     required bool toolsEnabled,
     required Set<String> knownToolUseIds,
     List<UnifiedToolDeclaration> tools = const [],
+    List<Map<String, Object?>> extraServerToolDeclarations = const [],
   }) {
     final toolResults = toolsEnabled
         ? _toolResults(turn.parts, knownToolUseIds: knownToolUseIds)
@@ -812,9 +1038,10 @@ class KiroCodeAssistClient {
       structuredToolResultIds: structuredToolResultIds,
     );
     final images = _images(turn.parts);
+    final documents = _documents(turn.parts);
     final context = <String, Object?>{};
 
-    if (includeTools && tools.isNotEmpty) {
+    if (includeTools && (tools.isNotEmpty || extraServerToolDeclarations.isNotEmpty)) {
       context['tools'] = [
         for (final tool in tools)
           {
@@ -826,6 +1053,7 @@ class KiroCodeAssistClient {
               'inputSchema': {'json': _sanitizeSchema(tool.parameters)},
             },
           },
+        ...extraServerToolDeclarations,
       ];
     }
     if (toolResults.isNotEmpty) {
@@ -838,6 +1066,7 @@ class KiroCodeAssistClient {
         'modelId': model,
         'origin': 'AI_EDITOR',
         if (images.isNotEmpty) 'images': images,
+        if (documents.isNotEmpty) 'documents': documents,
         if (context.isNotEmpty) 'userInputMessageContext': context,
       },
     };
@@ -883,7 +1112,17 @@ class KiroCodeAssistClient {
           }
           break;
         case UnifiedPartType.inlineData:
+          final mimeType = (part.mimeType ?? '').trim().toLowerCase();
+          if (mimeType.startsWith('image/') || _kiroDocumentFormatFromMime(mimeType) != null) {
+            break;
+          }
+          buffer.add('[Attachment: $mimeType (inline data ignored)]');
+          break;
         case UnifiedPartType.fileData:
+          final fileUri = (part.fileUri ?? '').trim();
+          if (fileUri.isNotEmpty) {
+            buffer.add('[Attachment URL: $fileUri]');
+          }
           break;
       }
     }
@@ -988,6 +1227,71 @@ class KiroCodeAssistClient {
     return images;
   }
 
+  List<Map<String, Object?>> _documents(List<UnifiedPart> parts) {
+    final documents = <Map<String, Object?>>[];
+    var counter = 0;
+    for (final part in parts) {
+      if (part.type != UnifiedPartType.inlineData) {
+        continue;
+      }
+      final mimeType = (part.mimeType ?? '').trim().toLowerCase();
+      final data = (part.data ?? '').trim();
+      if (mimeType.isEmpty || mimeType.startsWith('image/') || data.isEmpty) {
+        continue;
+      }
+      final format = _kiroDocumentFormatFromMime(mimeType);
+      if (format == null) {
+        continue;
+      }
+      counter += 1;
+      documents.add({
+        'format': format,
+        'name': _kiroDocumentName(part.name, counter, format),
+        'source': {'bytes': data},
+      });
+    }
+    return documents;
+  }
+
+  String _kiroDocumentName(String? declaredName, int index, String format) {
+    final trimmed = declaredName?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return 'attachment-$index';
+    }
+    final base = _stripExtension(trimmed, format);
+    final sanitized = _sanitizeKiroDocumentName(base);
+    if (sanitized.isEmpty) {
+      return 'attachment-$index';
+    }
+    return sanitized;
+  }
+
+  String _stripExtension(String name, String format) {
+    final lower = name.toLowerCase();
+    final suffix = '.$format';
+    if (lower.endsWith(suffix)) {
+      return name.substring(0, name.length - suffix.length);
+    }
+    return name;
+  }
+
+  String _sanitizeKiroDocumentName(String name) {
+    final buffer = StringBuffer();
+    for (final rune in name.runes) {
+      final ch = String.fromCharCode(rune);
+      if (RegExp(r'^[A-Za-z0-9 _\-\(\)\[\]]$').hasMatch(ch)) {
+        buffer.write(ch);
+      } else {
+        buffer.write('_');
+      }
+    }
+    var sanitized = buffer.toString().trim();
+    if (sanitized.length > 60) {
+      sanitized = sanitized.substring(0, 60).trim();
+    }
+    return sanitized;
+  }
+
   Map<String, Object?> _sanitizeSchema(Map<String, Object?> schema) {
     final result = <String, Object?>{};
     for (final entry in schema.entries) {
@@ -1030,7 +1334,7 @@ class KiroCodeAssistClient {
         uri: _refreshUri(account),
         headers: {
           HttpHeaders.contentTypeHeader: 'application/json',
-          HttpHeaders.userAgentHeader: 'KiroIDE-$_kiroIdeVersion-$_fingerprint',
+          HttpHeaders.userAgentHeader: 'KiroIDE-$kiroIdeRuntimeVersion-$_fingerprint',
         },
         body: jsonEncode({'refreshToken': account.tokens.refreshToken}),
         timeoutLabel: 'Kiro token refresh',
@@ -1075,7 +1379,7 @@ class KiroCodeAssistClient {
         uri: _builderIdRefreshUri(source.effectiveRegion),
         headers: {
           HttpHeaders.contentTypeHeader: 'application/json',
-          HttpHeaders.userAgentHeader: 'KiroIDE-$_kiroIdeVersion-$_fingerprint',
+          HttpHeaders.userAgentHeader: 'KiroIDE-$kiroIdeRuntimeVersion-$_fingerprint',
         },
         body: jsonEncode({
           'grantType': 'refresh_token',
@@ -1344,6 +1648,17 @@ class _KiroEventStreamParser {
           events.add(_KiroEvent.reasoning(text, signature));
           break;
         case 'tool_start':
+          final hasStop = decoded['stop'] == true;
+          if (hasStop && _currentToolCall != null) {
+            final currentToolUseId = (_currentToolCall!['id'] as String? ?? '').trim();
+            final eventToolUseId = (decoded['toolUseId'] as String? ?? '').trim();
+            if (currentToolUseId.isNotEmpty &&
+                eventToolUseId.isNotEmpty &&
+                currentToolUseId == eventToolUseId) {
+              _finalizeCurrentToolCall(events);
+              break;
+            }
+          }
           _finalizeCurrentToolCall(events);
           final input = decoded['input'];
           _currentToolCall = {
@@ -1356,7 +1671,7 @@ class _KiroEventStreamParser {
               'arguments': _toolInputChunk(input),
             },
           };
-          if (decoded['stop'] == true) {
+          if (hasStop) {
             _finalizeCurrentToolCall(events);
           }
           break;
@@ -1384,6 +1699,9 @@ class _KiroEventStreamParser {
         case 'usage':
           events.add(_KiroEvent.usage(decoded['usage']));
           break;
+        case 'metering':
+          events.add(_KiroEvent.usage(decoded));
+          break;
         case 'followup':
           if (decoded.containsKey('followupPrompt')) {
             events.add(const _KiroEvent.followupPrompt());
@@ -1402,6 +1720,7 @@ class _KiroEventStreamParser {
     final toolStopIndex = text.indexOf('{"stop":');
     final contextUsageIndex = text.indexOf('{"contextUsagePercentage":');
     final usageIndex = text.indexOf('{"usage":');
+    final meteringIndex = text.indexOf('{"unit":');
     final followupIndex = text.indexOf('{"followupPrompt":');
     final reasoningTextIndex = text.indexOf('{"text":');
     final reasoningSignatureIndex = text.indexOf('{"signature":');
@@ -1414,6 +1733,7 @@ class _KiroEventStreamParser {
       if (toolStopIndex >= 0) (index: toolStopIndex, type: 'tool_stop'),
       if (contextUsageIndex >= 0) (index: contextUsageIndex, type: 'context_usage'),
       if (usageIndex >= 0) (index: usageIndex, type: 'usage'),
+      if (meteringIndex >= 0) (index: meteringIndex, type: 'metering'),
       if (followupIndex >= 0) (index: followupIndex, type: 'followup'),
     ];
     if (candidates.isEmpty) {
@@ -1478,13 +1798,26 @@ class _KiroResponseAccumulator {
   final StringBuffer _reasoningText = StringBuffer();
   final List<Map<String, Object?>> _thoughts = <Map<String, Object?>>[];
   final List<Map<String, Object?>> _toolCalls = <Map<String, Object?>>[];
+  final List<Map<String, Object?>> _serverToolCalls = <Map<String, Object?>>[];
   double? _contextUsagePercentage;
   Object? _upstreamUsage;
   bool _usageSeen = false;
   bool _followupPromptSeen = false;
+  double? _creditUsageTotal;
+  String? _creditUsageUnit;
+  String? _creditUsageUnitPlural;
 
   bool get hasEmittableOutput => _text.isNotEmpty || _thoughts.isNotEmpty || _toolCalls.isNotEmpty;
   bool get _hasCompletionSignal => _usageSeen || _contextUsagePercentage != null;
+
+  List<Map<String, Object?>> takePendingServerToolCalls() {
+    if (_serverToolCalls.isEmpty) {
+      return const <Map<String, Object?>>[];
+    }
+    final pending = List<Map<String, Object?>>.from(_serverToolCalls);
+    _serverToolCalls.clear();
+    return pending;
+  }
 
   void apply(_KiroEvent event) {
     switch (event.type) {
@@ -1512,7 +1845,14 @@ class _KiroResponseAccumulator {
         break;
       case _KiroEventType.toolCall:
         final toolCall = event.toolCall;
-        if (toolCall != null) {
+        if (toolCall == null) {
+          break;
+        }
+        final function = (toolCall['function'] as Map?)?.cast<String, Object?>() ?? const {};
+        final name = (function['name'] as String? ?? '').trim();
+        if (_kiroServerToolNames.contains(name)) {
+          _serverToolCalls.add(toolCall);
+        } else {
           _toolCalls.add(toolCall);
         }
         break;
@@ -1522,10 +1862,33 @@ class _KiroResponseAccumulator {
       case _KiroEventType.usage:
         _usageSeen = true;
         _upstreamUsage = event.usage;
+        _absorbUsage(event.usage);
         break;
       case _KiroEventType.followupPrompt:
         _followupPromptSeen = true;
         break;
+    }
+  }
+
+  void _absorbUsage(Object? usage) {
+    if (usage is! Map) {
+      return;
+    }
+    final cast = usage.cast<String, Object?>();
+    final unit = (cast['unit'] as String?)?.trim();
+    final unitPlural = (cast['unitPlural'] as String?)?.trim();
+    final usageValue = cast['usage'];
+    final numeric = usageValue is num
+        ? usageValue.toDouble()
+        : double.tryParse('${usageValue ?? ''}');
+    if (numeric != null) {
+      _creditUsageTotal = (_creditUsageTotal ?? 0) + numeric;
+    }
+    if (unit != null && unit.isNotEmpty) {
+      _creditUsageUnit = unit;
+    }
+    if (unitPlural != null && unitPlural.isNotEmpty) {
+      _creditUsageUnitPlural = unitPlural;
     }
   }
 
@@ -1563,6 +1926,9 @@ class _KiroResponseAccumulator {
         'content_truncated': contentTruncated,
         if (_contextUsagePercentage != null) 'context_usage_percentage': _contextUsagePercentage,
         if (_upstreamUsage != null) 'upstream_usage': _upstreamUsage,
+        if (_creditUsageTotal != null) 'credit_usage_total': _creditUsageTotal,
+        if (_creditUsageUnit != null) 'credit_usage_unit': _creditUsageUnit,
+        if (_creditUsageUnitPlural != null) 'credit_usage_unit_plural': _creditUsageUnitPlural,
       },
       if (finalChunk) 'final_chunk': true,
     };
@@ -1613,6 +1979,22 @@ class _KiroResponseAccumulator {
     }
     return buffer.toString();
   }
+}
+
+String? _kiroDocumentFormatFromMime(String mimeType) {
+  return switch (mimeType) {
+    'application/pdf' => 'pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+    'application/msword' => 'docx',
+    'application/vnd.ms-excel' => 'xlsx',
+    'text/plain' => 'txt',
+    'text/markdown' => 'md',
+    'text/csv' => 'csv',
+    'text/html' => 'html',
+    'application/json' => 'txt',
+    _ => null,
+  };
 }
 
 const Map<String, String> _kiroUpstreamModelAliases = <String, String>{

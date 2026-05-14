@@ -546,10 +546,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsModelsSectionSummary => 'Пользовательские ID моделей';
 
   @override
-  String get settingsGoogleSectionTitle => 'Gemini CLI';
+  String get settingsGoogleSectionTitle => 'Возможности провайдеров';
 
   @override
-  String get settingsGoogleSectionSummary => 'Веб-поиск Google и параметры Gemini CLI';
+  String get settingsGoogleSectionSummary => 'Веб-поиск и параметры конкретных провайдеров';
 
   @override
   String get settingsBackupSectionTitle => 'Резервная копия и восстановление';
@@ -682,6 +682,19 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get renderGoogleGroundingInMessageSubtitle =>
       'Если выключить, ссылки на источники останутся в метаданных и не будут добавляться в текст ответа';
+
+  @override
+  String get settingsGeminiSubsectionTitle => 'Gemini CLI';
+
+  @override
+  String get settingsKiroSubsectionTitle => 'Kiro';
+
+  @override
+  String get defaultKiroServerToolsTitle => 'Включать серверные инструменты Kiro по умолчанию';
+
+  @override
+  String get defaultKiroServerToolsSubtitle =>
+      'Добавляет инструмент веб-поиска Kiro к запросам, если клиент не задал свои инструменты. Каждый вызов расходует дополнительные кредиты Kiro.';
 
   @override
   String get customModelsLabel => 'Пользовательские ID моделей';
@@ -1200,6 +1213,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String logsRequestKiroCredits(String credits) {
+    return 'Кредиты: $credits';
+  }
+
+  @override
   String get logsRequestDetailsShowButton => 'Показать статусы';
 
   @override
@@ -1313,6 +1331,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get logsExportTokensLabel => 'Токены';
+
+  @override
+  String get logsExportKiroCreditsLabel => 'Кредиты Kiro';
 
   @override
   String get logsExportAndroidBackgroundSessionsLabel => 'Фоновые сессии Android';

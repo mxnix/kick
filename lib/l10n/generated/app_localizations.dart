@@ -1068,13 +1068,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsGoogleSectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Gemini CLI'**
+  /// **'Provider features'**
   String get settingsGoogleSectionTitle;
 
   /// No description provided for @settingsGoogleSectionSummary.
   ///
   /// In en, this message translates to:
-  /// **'Google web search and Gemini CLI settings'**
+  /// **'Web search and provider-specific options'**
   String get settingsGoogleSectionSummary;
 
   /// No description provided for @settingsBackupSectionTitle.
@@ -1310,6 +1310,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'If disabled, source links will remain in metadata and will not be added to the response text itself'**
   String get renderGoogleGroundingInMessageSubtitle;
+
+  /// No description provided for @settingsGeminiSubsectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gemini CLI'**
+  String get settingsGeminiSubsectionTitle;
+
+  /// No description provided for @settingsKiroSubsectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kiro'**
+  String get settingsKiroSubsectionTitle;
+
+  /// No description provided for @defaultKiroServerToolsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Kiro server tools by default'**
+  String get defaultKiroServerToolsTitle;
+
+  /// No description provided for @defaultKiroServerToolsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds the Kiro web search tool to requests when the client did not declare its own tools. Each call costs extra Kiro credits.'**
+  String get defaultKiroServerToolsSubtitle;
 
   /// No description provided for @customModelsLabel.
   ///
@@ -2217,6 +2241,12 @@ abstract class AppLocalizations {
   /// **'Retries: {count}'**
   String logsRequestRetryCount(int count);
 
+  /// No description provided for @logsRequestKiroCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Credits: {credits}'**
+  String logsRequestKiroCredits(String credits);
+
   /// No description provided for @logsRequestDetailsShowButton.
   ///
   /// In en, this message translates to:
@@ -2426,6 +2456,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tokens'**
   String get logsExportTokensLabel;
+
+  /// No description provided for @logsExportKiroCreditsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Kiro credits'**
+  String get logsExportKiroCreditsLabel;
 
   /// No description provided for @logsExportAndroidBackgroundSessionsLabel.
   ///

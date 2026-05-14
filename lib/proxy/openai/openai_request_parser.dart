@@ -17,6 +17,7 @@ class UnifiedPromptRequest {
     required this.reasoningEffort,
     required this.googleThinkingConfig,
     required this.googleWebSearchEnabled,
+    required this.kiroServerToolsEnabled,
     required this.responseModalities,
     required this.jsonMode,
     required this.responseSchema,
@@ -37,6 +38,7 @@ class UnifiedPromptRequest {
   final String? reasoningEffort;
   final Map<String, Object?>? googleThinkingConfig;
   final bool googleWebSearchEnabled;
+  final bool kiroServerToolsEnabled;
   final List<String>? responseModalities;
   final bool jsonMode;
   final Map<String, Object?>? responseSchema;
@@ -93,12 +95,11 @@ class UnifiedPart {
        data = null,
        fileUri = null;
 
-  const UnifiedPart.inlineData({required this.mimeType, required this.data})
+  const UnifiedPart.inlineData({required this.mimeType, required this.data, this.name})
     : type = UnifiedPartType.inlineData,
       text = null,
       thoughtSignature = null,
       callId = null,
-      name = null,
       arguments = null,
       fileUri = null;
 
@@ -244,6 +245,7 @@ class OpenAiRequestParser {
     final responseFormat = _readMapField(json, 'response_format');
     final jsonSchema = _readMapValue(responseFormat?['json_schema'], 'response_format.json_schema');
     final googleWebSearchEnabled = _parseGoogleWebSearchEnabled(json);
+    final kiroServerToolsEnabled = _parseKiroServerToolsEnabled(json);
     final mergedSystemInstruction = leadingSystemParts.join('\n\n').trim();
     var systemInstruction = mergedSystemInstruction.isEmpty ? null : mergedSystemInstruction;
     if (turns.isEmpty && systemInstruction != null) {
@@ -268,6 +270,7 @@ class OpenAiRequestParser {
       reasoningEffort: _parseReasoningEffort(json),
       googleThinkingConfig: _parseGoogleThinkingConfig(json),
       googleWebSearchEnabled: googleWebSearchEnabled,
+      kiroServerToolsEnabled: kiroServerToolsEnabled,
       responseModalities: _parseModalities(json['modalities']),
       jsonMode:
           responseFormat?['type'] == 'json_object' || responseFormat?['type'] == 'json_schema',
@@ -346,6 +349,7 @@ class OpenAiRequestParser {
 
     final tools = _parseTools(json['tools']);
     final googleWebSearchEnabled = _parseGoogleWebSearchEnabled(json);
+    final kiroServerToolsEnabled = _parseKiroServerToolsEnabled(json);
     final textConfig = _readMapField(json, 'text');
     final responseFormat = _readMapValue(textConfig?['format'], 'text.format');
 
@@ -365,6 +369,7 @@ class OpenAiRequestParser {
       reasoningEffort: _parseReasoningEffort(json),
       googleThinkingConfig: _parseGoogleThinkingConfig(json),
       googleWebSearchEnabled: googleWebSearchEnabled,
+      kiroServerToolsEnabled: kiroServerToolsEnabled,
       responseModalities: _parseModalities(json['modalities']),
       jsonMode:
           responseFormat?['type'] == 'json_schema' || responseFormat?['type'] == 'json_object',
@@ -780,15 +785,20 @@ class OpenAiRequestParser {
                 _readStringValue(file['url'], 'file.url'))
             ?.trim();
     final mimeType = _resolveFileMimeType(file);
+    final filename = _readStringValue(file['filename'], 'file.filename')?.trim();
 
     if (fileData != null && fileData.isNotEmpty) {
       final parsedDataUri = _parseDataUri(fileData);
       if (parsedDataUri != null) {
         parts.add(
-          UnifiedPart.inlineData(mimeType: parsedDataUri.mimeType, data: parsedDataUri.data),
+          UnifiedPart.inlineData(
+            mimeType: parsedDataUri.mimeType,
+            data: parsedDataUri.data,
+            name: filename,
+          ),
         );
       } else {
-        parts.add(UnifiedPart.inlineData(mimeType: mimeType, data: fileData));
+        parts.add(UnifiedPart.inlineData(mimeType: mimeType, data: fileData, name: filename));
       }
       return;
     }
@@ -872,6 +882,21 @@ class OpenAiRequestParser {
         _readBooleanFlag(directGoogle?['webSearch']) ??
         _readBooleanFlag(json['web_search']) ??
         _readBooleanFlag(json['webSearch']) ??
+        false;
+  }
+
+  static bool _parseKiroServerToolsEnabled(Map<String, Object?> json) {
+    final extraBody = _readMapField(json, 'extra_body');
+    final kiroExtra = _readMapValue(extraBody?['kiro'], 'extra_body.kiro');
+    final directKiro = _readMapField(json, 'kiro');
+    return _readBooleanFlag(kiroExtra?['server_tools']) ??
+        _readBooleanFlag(kiroExtra?['serverTools']) ??
+        _readBooleanFlag(extraBody?['kiro_server_tools']) ??
+        _readBooleanFlag(extraBody?['kiroServerTools']) ??
+        _readBooleanFlag(directKiro?['server_tools']) ??
+        _readBooleanFlag(directKiro?['serverTools']) ??
+        _readBooleanFlag(json['kiro_server_tools']) ??
+        _readBooleanFlag(json['kiroServerTools']) ??
         false;
   }
 

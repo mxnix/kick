@@ -357,6 +357,10 @@ class LogExportService {
     var totalCachedTokens = 0;
     var totalReasoningTokens = 0;
     var hasTokenMetrics = false;
+    double totalKiroCredits = 0;
+    String? kiroCreditUnit;
+    String? kiroCreditUnitPlural;
+    var hasKiroCreditMetrics = false;
     var recoveredBackgroundSessions = 0;
 
     for (final entry in sorted) {
@@ -428,6 +432,20 @@ class LogExportService {
           payload.containsKey('cached_tokens') ||
           payload.containsKey('reasoning_tokens');
 
+      final kiroCreditsValue = payload['kiro_credits_total'];
+      if (kiroCreditsValue is num) {
+        totalKiroCredits += kiroCreditsValue.toDouble();
+        hasKiroCreditMetrics = true;
+      }
+      final unit = _readNonEmptyString(payload['kiro_credit_unit']);
+      if (unit != null) {
+        kiroCreditUnit = unit;
+      }
+      final unitPlural = _readNonEmptyString(payload['kiro_credit_unit_plural']);
+      if (unitPlural != null) {
+        kiroCreditUnitPlural = unitPlural;
+      }
+
       if (entry.category == androidBackgroundSessionCategory &&
           (entry.message == androidBackgroundSessionEndedMessage ||
               entry.message == androidBackgroundSessionRecoveredMessage)) {
@@ -493,6 +511,17 @@ class LogExportService {
         'total=$totalTokens, '
         'cached=$totalCachedTokens, '
         'reasoning=$totalReasoningTokens',
+      );
+    }
+    if (hasKiroCreditMetrics) {
+      final unitLabel =
+          (totalKiroCredits.abs() == 1.0
+              ? kiroCreditUnit
+              : (kiroCreditUnitPlural ?? kiroCreditUnit)) ??
+          'credits';
+      diagnostics.writeln(
+        '${l10n.logsExportKiroCreditsLabel}: '
+        '${_formatCreditsValue(totalKiroCredits)} $unitLabel',
       );
     }
 
@@ -585,6 +614,16 @@ class LogExportService {
       final String text => int.tryParse(text.trim()),
       _ => null,
     };
+  }
+
+  String _formatCreditsValue(double value) {
+    if (value == 0) {
+      return '0';
+    }
+    if (value.abs() >= 1) {
+      return value.toStringAsFixed(2);
+    }
+    return value.toStringAsFixed(4);
   }
 
   Map<String, Object?> _decodePayload(String? raw) {

@@ -1,0 +1,88 @@
+name: Sync Kiro IDE Version
+
+on:
+  schedule:
+    - cron: "0 6 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-kiro-ide-version
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Detect and propose Kiro IDE version bump
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Detect upstream version
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata_url="https://prod.download.desktop.kiro.dev/stable/metadata-win32-x64-user-stable.json"
+          payload=$(curl --fail --silent --show-error --max-time 30 "$metadata_url")
+          upstream=$(printf '%s' "$payload" | jq -r '.currentRelease // empty')
+          if [ -z "$upstream" ] || [ "$upstream" = "null" ]; then
+            echo "Could not parse currentRelease from metadata response." >&2
+            exit 1
+          fi
+          fallback_file="lib/proxy/kiro/kiro_ide_runtime_version.dart"
+          current=$(grep -E "^const String fallbackKiroIdeVersion = '" "$fallback_file" | sed -E "s/^const String fallbackKiroIdeVersion = '([^']+)';.*/\1/")
+          if [ -z "$current" ]; then
+            echo "Could not find fallbackKiroIdeVersion in $fallback_file." >&2
+            exit 1
+          fi
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
+          if [ "$current" = "$upstream" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply version bump
+        if: steps.detect.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ steps.detect.outputs.upstream }}"
+          file="lib/proxy/kiro/kiro_ide_runtime_version.dart"
+          sed -i -E "s/^const String fallbackKiroIdeVersion = '[^']+';/const String fallbackKiroIdeVersion = '$target';/" "$file"
+          if ! grep -q "const String fallbackKiroIdeVersion = '$target';" "$file"; then
+            echo "Failed to update fallbackKiroIdeVersion in $file." >&2
+            exit 1
+          fi
+
+      - name: Open pull request
+        if: steps.detect.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          target="${{ steps.detect.outputs.upstream }}"
+          previous="${{ steps.detect.outputs.current }}"
+          branch="chore/bump-kiro-ide-${target}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Branch $branch already exists upstream; skipping PR creation."
+            exit 0
+          fi
+          git checkout -b "$branch"
+          git add lib/proxy/kiro/kiro_ide_runtime_version.dart
+          git commit -m "chore(kiro): bump Kiro IDE fallback to $target"
+          git push -u origin "$branch"
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore(kiro): bump Kiro IDE fallback to $target" \
+            --body "Upstream Kiro stable release moved from $previous to $target. The runtime probe will pick this up automatically; this PR refreshes the pinned fallback used in tests, offline sessions, and the first request after install."

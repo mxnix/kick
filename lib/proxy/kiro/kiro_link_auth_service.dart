@@ -8,11 +8,11 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import 'kiro_auth_source.dart';
+import 'kiro_ide_runtime_version.dart';
 
 const _defaultKiroLinkAuthRequestTimeout = Duration(seconds: 20);
 const _defaultKiroAuthorizationTimeout = Duration(minutes: 5);
 const _kiroPortalUrl = 'https://app.kiro.dev';
-const _kiroIdeVersion = '0.12.155';
 // The Kiro IDE Cognito client accepts only this exact loopback redirect URI.
 // Changing host/port causes Cognito to respond with redirect_mismatch.
 const _kiroPortalCallbackHost = 'localhost';
@@ -598,5 +598,5 @@ String _kiroUserAgent() {
   final fingerprint = sha256
       .convert(utf8.encode('${host.isEmpty ? 'host' : host}-$user'))
       .toString();
-  return 'KiroIDE-$_kiroIdeVersion-$fingerprint';
+  return 'KiroIDE-$kiroIdeRuntimeVersion-$fingerprint';
 }

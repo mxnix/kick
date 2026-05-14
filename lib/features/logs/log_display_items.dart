@@ -30,6 +30,9 @@ class RequestLogDisplayItem extends LogDisplayItem {
     required this.effectiveLevel,
     required this.retryCount,
     required this.model,
+    required this.kiroCreditsTotal,
+    required this.kiroCreditUnit,
+    required this.kiroCreditUnitPlural,
   }) : _entries = List.unmodifiable(entries);
 
   final String requestId;
@@ -39,6 +42,9 @@ class RequestLogDisplayItem extends LogDisplayItem {
   final AppLogLevel effectiveLevel;
   final int retryCount;
   final String? model;
+  final num? kiroCreditsTotal;
+  final String? kiroCreditUnit;
+  final String? kiroCreditUnitPlural;
 
   @override
   String get key => 'request-$requestId';
@@ -83,6 +89,9 @@ class _RequestLogGroupBuilder extends LogDisplayItem {
   final List<_RequestLogGroupMember> _members = <_RequestLogGroupMember>[];
   var _effectiveLevel = AppLogLevel.info;
   var _retryCount = 0;
+  num? _kiroCreditsTotal;
+  String? _kiroCreditUnit;
+  String? _kiroCreditUnitPlural;
 
   @override
   String get key => 'request-$requestId';
@@ -102,6 +111,17 @@ class _RequestLogGroupBuilder extends LogDisplayItem {
         entry.message == 'Retrying with another account after request failure') {
       _retryCount = _retryCount == 0 ? 1 : _retryCount;
     }
+
+    final credits = payloadData.kiroCreditsTotal;
+    if (credits != null) {
+      _kiroCreditsTotal = (_kiroCreditsTotal ?? 0) + credits;
+    }
+    if ((payloadData.kiroCreditUnit ?? '').isNotEmpty) {
+      _kiroCreditUnit = payloadData.kiroCreditUnit;
+    }
+    if ((payloadData.kiroCreditUnitPlural ?? '').isNotEmpty) {
+      _kiroCreditUnitPlural = payloadData.kiroCreditUnitPlural;
+    }
   }
 
   RequestLogDisplayItem build() {
@@ -114,6 +134,9 @@ class _RequestLogGroupBuilder extends LogDisplayItem {
       effectiveLevel: _effectiveLevel,
       retryCount: _retryCount,
       model: primaryMember.payloadData.model,
+      kiroCreditsTotal: _kiroCreditsTotal,
+      kiroCreditUnit: _kiroCreditUnit,
+      kiroCreditUnitPlural: _kiroCreditUnitPlural,
     );
   }
 }
@@ -126,11 +149,21 @@ class _RequestLogGroupMember {
 }
 
 class _LogEntryPayloadData {
-  const _LogEntryPayloadData({this.requestId, this.model, this.retryCount});
+  const _LogEntryPayloadData({
+    this.requestId,
+    this.model,
+    this.retryCount,
+    this.kiroCreditsTotal,
+    this.kiroCreditUnit,
+    this.kiroCreditUnitPlural,
+  });
 
   final String? requestId;
   final String? model;
   final num? retryCount;
+  final num? kiroCreditsTotal;
+  final String? kiroCreditUnit;
+  final String? kiroCreditUnitPlural;
 }
 
 _RequestLogGroupMember _selectPrimaryMember(List<_RequestLogGroupMember> members) {
@@ -170,6 +203,9 @@ _LogEntryPayloadData _payloadDataForEntry(AppLogEntry entry) {
     requestId: maskedRequestId?.isNotEmpty == true ? maskedRequestId : rawRequestId,
     model: _payloadString(maskedPayload, 'model'),
     retryCount: _payloadNumber(maskedPayload, 'retry_count'),
+    kiroCreditsTotal: _payloadNumber(maskedPayload, 'kiro_credits_total'),
+    kiroCreditUnit: _payloadString(maskedPayload, 'kiro_credit_unit'),
+    kiroCreditUnitPlural: _payloadString(maskedPayload, 'kiro_credit_unit_plural'),
   );
 }
 

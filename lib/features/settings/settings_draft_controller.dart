@@ -49,6 +49,7 @@ class SettingsDraftController extends ChangeNotifier {
   bool _defaultGoogleWebSearchEnabled = false;
   bool _defaultGoogleVisibleReasoningEnabled = false;
   bool _renderGoogleGroundingInMessage = false;
+  bool _defaultKiroServerToolsEnabled = false;
   bool _mark429AsUnhealthy = false;
   bool _initialized = false;
   bool _isHydrating = false;
@@ -75,6 +76,7 @@ class SettingsDraftController extends ChangeNotifier {
   bool get defaultGoogleWebSearchEnabled => _defaultGoogleWebSearchEnabled;
   bool get defaultGoogleVisibleReasoningEnabled => _defaultGoogleVisibleReasoningEnabled;
   bool get renderGoogleGroundingInMessage => _renderGoogleGroundingInMessage;
+  bool get defaultKiroServerToolsEnabled => _defaultKiroServerToolsEnabled;
   bool get mark429AsUnhealthy => _mark429AsUnhealthy;
   bool get showSaveStatus => _showSaveStatus;
   SettingsDraftSaveState get saveState => _saveState;
@@ -217,6 +219,15 @@ class SettingsDraftController extends ChangeNotifier {
     saveImmediately();
   }
 
+  void setDefaultKiroServerToolsEnabled(bool value) {
+    if (_defaultKiroServerToolsEnabled == value) {
+      return;
+    }
+    _defaultKiroServerToolsEnabled = value;
+    notifyListeners();
+    saveImmediately();
+  }
+
   void setMark429AsUnhealthy(bool value) {
     if (_mark429AsUnhealthy == value) {
       return;
@@ -337,6 +348,7 @@ class SettingsDraftController extends ChangeNotifier {
     _defaultGoogleWebSearchEnabled = settings.defaultGoogleWebSearchEnabled;
     _defaultGoogleVisibleReasoningEnabled = settings.defaultGoogleVisibleReasoningEnabled;
     _renderGoogleGroundingInMessage = settings.renderGoogleGroundingInMessage;
+    _defaultKiroServerToolsEnabled = settings.defaultKiroServerToolsEnabled;
     _saveState = SettingsDraftSaveState.saved;
     _saveError = null;
     _showSaveStatus = false;
@@ -388,6 +400,7 @@ class SettingsDraftController extends ChangeNotifier {
       defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
       defaultGoogleVisibleReasoningEnabled: _defaultGoogleVisibleReasoningEnabled,
       renderGoogleGroundingInMessage: _renderGoogleGroundingInMessage,
+      defaultKiroServerToolsEnabled: _defaultKiroServerToolsEnabled,
       loggingVerbosity: _verbosity,
       unsafeRawLoggingEnabled: _unsafeRawLoggingEnabled,
       apiKeyRequired: _apiKeyRequired,
@@ -499,6 +512,7 @@ class SettingsDraftController extends ChangeNotifier {
         left.defaultGoogleWebSearchEnabled == right.defaultGoogleWebSearchEnabled &&
         left.defaultGoogleVisibleReasoningEnabled == right.defaultGoogleVisibleReasoningEnabled &&
         left.renderGoogleGroundingInMessage == right.renderGoogleGroundingInMessage &&
+        left.defaultKiroServerToolsEnabled == right.defaultKiroServerToolsEnabled &&
         left.loggingVerbosity == right.loggingVerbosity &&
         left.logRetentionCount == right.logRetentionCount &&
         left.unsafeRawLoggingEnabled == right.unsafeRawLoggingEnabled &&

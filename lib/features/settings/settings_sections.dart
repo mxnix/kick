@@ -431,7 +431,10 @@ class SettingsGoogleSection extends StatelessWidget {
       expanded: expanded,
       onToggle: onToggle,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _SettingsSubsectionHeader(label: l10n.settingsGeminiSubsectionTitle),
+          const SizedBox(height: 12),
           SettingToggleCard(
             title: l10n.defaultGoogleWebSearchTitle,
             subtitle: l10n.defaultGoogleWebSearchSubtitle,
@@ -451,6 +454,15 @@ class SettingsGoogleSection extends StatelessWidget {
             subtitle: l10n.renderGoogleGroundingInMessageSubtitle,
             value: controller.renderGoogleGroundingInMessage,
             onChanged: controller.setRenderGoogleGroundingInMessage,
+          ),
+          const SizedBox(height: 24),
+          _SettingsSubsectionHeader(label: l10n.settingsKiroSubsectionTitle),
+          const SizedBox(height: 12),
+          SettingToggleCard(
+            title: l10n.defaultKiroServerToolsTitle,
+            subtitle: l10n.defaultKiroServerToolsSubtitle,
+            value: controller.defaultKiroServerToolsEnabled,
+            onChanged: controller.setDefaultKiroServerToolsEnabled,
           ),
         ],
       ),

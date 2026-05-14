@@ -285,8 +285,8 @@
     "windowsTrayNotificationBody": "Приложение свернуто в системный трей",
     "settingsModelsSectionTitle": "Модели",
     "settingsModelsSectionSummary": "Пользовательские ID моделей",
-    "settingsGoogleSectionTitle": "Gemini CLI",
-    "settingsGoogleSectionSummary": "Веб-поиск Google и параметры Gemini CLI",
+    "settingsGoogleSectionTitle": "Возможности провайдеров",
+    "settingsGoogleSectionSummary": "Веб-поиск и параметры конкретных провайдеров",
     "settingsBackupSectionTitle": "Резервная копия и восстановление",
     "settingsBackupSectionSummary": "Перенос настроек и аккаунтов между устройствами",
     "settingsBackupInfoTitle": "В резервную копию попадут настройки, API-ключ и OAuth-токены",
@@ -336,6 +336,10 @@
     "defaultGoogleVisibleReasoningSubtitle": "Добавляет include_reasoning для запросов Gemini CLI, если клиент не задал рассуждения сам. Помогает клиентам показывать блок рассуждений.",
     "renderGoogleGroundingInMessageTitle": "Показывать цитаты и источники в ответе",
     "renderGoogleGroundingInMessageSubtitle": "Если выключить, ссылки на источники останутся в метаданных и не будут добавляться в текст ответа",
+    "settingsGeminiSubsectionTitle": "Gemini CLI",
+    "settingsKiroSubsectionTitle": "Kiro",
+    "defaultKiroServerToolsTitle": "Включать серверные инструменты Kiro по умолчанию",
+    "defaultKiroServerToolsSubtitle": "Добавляет инструмент веб-поиска Kiro к запросам, если клиент не задал свои инструменты. Каждый вызов расходует дополнительные кредиты Kiro.",
     "customModelsLabel": "Пользовательские ID моделей",
     "customModelsHelperText": "По одному ID на строку, например google/... или kiro/...",
     "settingsSavingStatus": "Сохраняем изменения...",
@@ -610,6 +614,14 @@
             }
         }
     },
+    "logsRequestKiroCredits": "Кредиты: {credits}",
+    "@logsRequestKiroCredits": {
+        "placeholders": {
+            "credits": {
+                "type": "String"
+            }
+        }
+    },
     "logsRequestDetailsShowButton": "Показать статусы",
     "logsRequestDetailsHideButton": "Скрыть статусы",
     "logsLoadedCount": "Загружено: {count}",
@@ -838,6 +850,7 @@
     "logsExportErrorDetailsLabel": "Подробности ошибок",
     "logsExportRetriedRequestsLabel": "Повторов запросов",
     "logsExportTokensLabel": "Токены",
+    "logsExportKiroCreditsLabel": "Кредиты Kiro",
     "logsExportAndroidBackgroundSessionsLabel": "Фоновые сессии Android",
     "logsExportTimestampLabel": "Время",
     "logsExportLevelLabel": "Уровень",

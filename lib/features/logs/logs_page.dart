@@ -667,6 +667,14 @@ class _LogRequestGroupCard extends StatelessWidget {
                         ),
                         if (model != null)
                           KickBadge(label: model, leading: const Icon(KickIcons.hub)),
+                        if (group.kiroCreditsTotal != null && group.kiroCreditsTotal! > 0)
+                          KickBadge(
+                            label: l10n.logsRequestKiroCredits(
+                              _formatKiroCreditsAmount(group.kiroCreditsTotal!),
+                            ),
+                            leading: const Icon(KickIcons.credit),
+                            tint: scheme.secondary,
+                          ),
                       ],
                     ),
                     if (primaryEntry.route?.trim().isNotEmpty == true) ...[
@@ -994,6 +1002,16 @@ String _shortRequestId(String requestId) {
     return trimmed;
   }
   return '${trimmed.substring(0, 8)}...';
+}
+
+String _formatKiroCreditsAmount(num value) {
+  if (value == 0) {
+    return '0';
+  }
+  if (value.abs() >= 1) {
+    return value.toStringAsFixed(2);
+  }
+  return value.toStringAsFixed(4);
 }
 
 IconData _logLevelIcon(AppLogLevel level) {

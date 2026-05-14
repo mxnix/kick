@@ -20,6 +20,7 @@ class KickIcons {
   static const IconData cloudOff = Symbols.cloud_off_rounded;
   static const IconData copy = Symbols.content_copy_rounded;
   static const IconData copyAll = Symbols.copy_all_rounded;
+  static const IconData credit = Symbols.paid_rounded;
   static const IconData data = Symbols.data_object_rounded;
   static const IconData deleteSweep = Symbols.delete_sweep_rounded;
   static const IconData download = Symbols.download_rounded;

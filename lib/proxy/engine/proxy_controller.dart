@@ -314,6 +314,7 @@ class KickProxyController {
         'default_google_web_search_enabled': settings.defaultGoogleWebSearchEnabled,
         'default_google_visible_reasoning_enabled': settings.defaultGoogleVisibleReasoningEnabled,
         'render_google_grounding_in_message': settings.renderGoogleGroundingInMessage,
+        'default_kiro_server_tools_enabled': settings.defaultKiroServerToolsEnabled,
       },
       'accounts': runtimeAccounts,
     };

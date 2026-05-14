@@ -16,6 +16,7 @@ import '../account_pool/account_pool.dart';
 import '../gemini/gemini_code_assist_client.dart';
 import '../gemini/gemini_installation_identity.dart';
 import '../kiro/kiro_code_assist_client.dart';
+import '../kiro/kiro_ide_runtime_version.dart';
 import '../model_catalog.dart';
 import '../openai/openai_request_parser.dart';
 import '../openai/openai_response_mapper.dart';
@@ -67,6 +68,7 @@ Map<String, Object?> normalizeOpenAiCompatRequest({
   required Map<String, String> headers,
   bool defaultGoogleWebSearchEnabled = false,
   bool defaultGoogleVisibleReasoningEnabled = false,
+  bool defaultKiroServerToolsEnabled = false,
 }) {
   final normalized = Map<String, Object?>.from(body);
   final bodyFlag = _readGoogleWebSearchFlagFromJson(normalized);
@@ -88,6 +90,26 @@ Map<String, Object?> normalizeOpenAiCompatRequest({
     normalized['extra_body'] = extraBody;
   }
 
+  final kiroBodyFlag = _readKiroServerToolsFlagFromJson(normalized);
+  final kiroHeaderFlag = _readKiroServerToolsFlagFromHeaders(headers);
+  final kiroExplicitFlag = kiroBodyFlag ?? kiroHeaderFlag;
+  final kiroEffectiveFlag =
+      kiroExplicitFlag ??
+      (defaultKiroServerToolsEnabled &&
+              _isKiroRequestModel(normalized['model']) &&
+              !_requestDeclaresTools(normalized) &&
+              !_requestUsesControlledGeneration(normalized)
+          ? true
+          : null);
+  if (kiroEffectiveFlag != null) {
+    final extraBody =
+        _readRequestMap(normalized['extra_body'], 'extra_body') ?? <String, Object?>{};
+    final kiroExtra = _readRequestMap(extraBody['kiro'], 'extra_body.kiro') ?? <String, Object?>{};
+    kiroExtra.putIfAbsent('server_tools', () => kiroEffectiveFlag);
+    extraBody['kiro'] = kiroExtra;
+    normalized['extra_body'] = extraBody;
+  }
+
   if (defaultGoogleVisibleReasoningEnabled &&
       _isGeminiRequestModel(normalized['model']) &&
       !_requestHasExplicitReasoning(normalized)) {
@@ -106,6 +128,25 @@ bool _isGeminiRequestModel(Object? rawModel) {
       normalized.startsWith('google/gemini') ||
       normalized.contains('/gemini-') ||
       normalized.contains('models/gemini-');
+}
+
+bool _isKiroRequestModel(Object? rawModel) {
+  if (rawModel is! String) {
+    return false;
+  }
+  final normalized = rawModel.trim().toLowerCase();
+  if (normalized.isEmpty) {
+    return false;
+  }
+  return normalized.startsWith('kiro/') ||
+      normalized.startsWith('kiro:') ||
+      normalized.startsWith('claude-') ||
+      normalized.startsWith('anthropic.') ||
+      normalized.startsWith('deepseek-') ||
+      normalized.startsWith('minimax-') ||
+      normalized.startsWith('qwen') ||
+      normalized == 'auto' ||
+      normalized == 'simple-task';
 }
 
 bool _requestHasExplicitReasoning(Map<String, Object?> body) {
@@ -154,6 +195,20 @@ bool? _readGoogleWebSearchFlagFromJson(Map<String, Object?> body) {
       _parseBooleanFlag(directGoogle?['webSearch']) ??
       _parseBooleanFlag(body['web_search']) ??
       _parseBooleanFlag(body['webSearch']);
+}
+
+bool? _readKiroServerToolsFlagFromJson(Map<String, Object?> body) {
+  final extraBody = _readRequestMap(body['extra_body'], 'extra_body');
+  final kiroExtra = _readRequestMap(extraBody?['kiro'], 'extra_body.kiro');
+  final directKiro = _readRequestMap(body['kiro'], 'kiro');
+  return _parseBooleanFlag(kiroExtra?['server_tools']) ??
+      _parseBooleanFlag(kiroExtra?['serverTools']) ??
+      _parseBooleanFlag(extraBody?['kiro_server_tools']) ??
+      _parseBooleanFlag(extraBody?['kiroServerTools']) ??
+      _parseBooleanFlag(directKiro?['server_tools']) ??
+      _parseBooleanFlag(directKiro?['serverTools']) ??
+      _parseBooleanFlag(body['kiro_server_tools']) ??
+      _parseBooleanFlag(body['kiroServerTools']);
 }
 
 String _runtimeHostFromSettings(Map<String, Object?>? settings) {
@@ -218,6 +273,26 @@ bool? _readGoogleWebSearchFlagFromHeaders(Map<String, String> headers) {
     'x-google-web-search',
     'web_search',
     'web-search',
+  ];
+  for (final headerName in candidateNames) {
+    final parsed = _parseBooleanFlag(normalizedHeaders[headerName]);
+    if (parsed != null) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
+bool? _readKiroServerToolsFlagFromHeaders(Map<String, String> headers) {
+  final normalizedHeaders = <String, String>{
+    for (final entry in headers.entries) entry.key.toLowerCase(): entry.value,
+  };
+  const candidateNames = <String>[
+    'x-kick-kiro-server-tools',
+    'x-kick-kiro-tools',
+    'x-kiro-server-tools',
+    'kiro_server_tools',
+    'kiro-server-tools',
   ];
   for (final headerName in candidateNames) {
     final parsed = _parseBooleanFlag(normalizedHeaders[headerName]);
@@ -401,6 +476,8 @@ class _ProxyIsolateHost {
       _settings?['default_google_visible_reasoning_enabled'] == true;
   bool get _renderGoogleGroundingInMessage =>
       _settings?['render_google_grounding_in_message'] == true;
+  bool get _defaultKiroServerToolsEnabled =>
+      _settings?['default_kiro_server_tools_enabled'] == true;
 
   Future<bool> handle(Map<String, Object?> message) async {
     switch (message['type']) {
@@ -410,6 +487,7 @@ class _ProxyIsolateHost {
         final previousSettings = _settings;
         _settings = (payload['settings'] as Map?)?.cast<String, Object?>();
         _geminiInstallationIdPath = payload['gemini_installation_id_path'] as String?;
+        unawaited(refreshKiroIdeRuntimeVersion());
         final accounts = ((payload['accounts'] as List?) ?? const [])
             .whereType<Map>()
             .map((item) => ProxyRuntimeAccount.fromJson(item.cast<String, Object?>()))
@@ -546,6 +624,7 @@ class _ProxyIsolateHost {
         headers: request.headers,
         defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
         defaultGoogleVisibleReasoningEnabled: _defaultGoogleVisibleReasoningEnabled,
+        defaultKiroServerToolsEnabled: _defaultKiroServerToolsEnabled,
       );
       _thoughtSignatures.enrichChatRequest(body);
       final resolvedPrompt = prompt = OpenAiRequestParser.parseChatRequest(
@@ -748,6 +827,7 @@ class _ProxyIsolateHost {
         headers: request.headers,
         defaultGoogleWebSearchEnabled: _defaultGoogleWebSearchEnabled,
         defaultGoogleVisibleReasoningEnabled: _defaultGoogleVisibleReasoningEnabled,
+        defaultKiroServerToolsEnabled: _defaultKiroServerToolsEnabled,
       );
       _thoughtSignatures.enrichResponsesRequest(body);
       final resolvedPrompt = prompt = OpenAiRequestParser.parseResponsesRequest(
@@ -1909,6 +1989,9 @@ class _ProxyIsolateHost {
         'kiro_context_usage_percentage',
         kiroMetadata?['context_usage_percentage'],
       ),
+      ...?_optionalMapEntry('kiro_credits_total', kiroMetadata?['credit_usage_total']),
+      ...?_optionalMapEntry('kiro_credit_unit', kiroMetadata?['credit_usage_unit']),
+      ...?_optionalMapEntry('kiro_credit_unit_plural', kiroMetadata?['credit_usage_unit_plural']),
       if (preview.isNotEmpty) 'output_text_chars': preview.length,
       if (reasoningText.isNotEmpty) 'reasoning_text_chars': reasoningText.length,
       if (toolCallCount > 0) 'tool_call_count': toolCallCount,

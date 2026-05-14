@@ -544,10 +544,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsModelsSectionSummary => 'Custom model IDs';
 
   @override
-  String get settingsGoogleSectionTitle => 'Gemini CLI';
+  String get settingsGoogleSectionTitle => 'Provider features';
 
   @override
-  String get settingsGoogleSectionSummary => 'Google web search and Gemini CLI settings';
+  String get settingsGoogleSectionSummary => 'Web search and provider-specific options';
 
   @override
   String get settingsBackupSectionTitle => 'Backup and restore';
@@ -680,6 +680,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get renderGoogleGroundingInMessageSubtitle =>
       'If disabled, source links will remain in metadata and will not be added to the response text itself';
+
+  @override
+  String get settingsGeminiSubsectionTitle => 'Gemini CLI';
+
+  @override
+  String get settingsKiroSubsectionTitle => 'Kiro';
+
+  @override
+  String get defaultKiroServerToolsTitle => 'Enable Kiro server tools by default';
+
+  @override
+  String get defaultKiroServerToolsSubtitle =>
+      'Adds the Kiro web search tool to requests when the client did not declare its own tools. Each call costs extra Kiro credits.';
 
   @override
   String get customModelsLabel => 'Custom model IDs';
@@ -1200,6 +1213,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String logsRequestKiroCredits(String credits) {
+    return 'Credits: $credits';
+  }
+
+  @override
   String get logsRequestDetailsShowButton => 'Show statuses';
 
   @override
@@ -1313,6 +1331,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logsExportTokensLabel => 'Tokens';
+
+  @override
+  String get logsExportKiroCreditsLabel => 'Kiro credits';
 
   @override
   String get logsExportAndroidBackgroundSessionsLabel => 'Android background sessions';

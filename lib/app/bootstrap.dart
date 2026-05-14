@@ -22,6 +22,7 @@ import '../observability/glitchtip.dart';
 import '../proxy/engine/proxy_controller.dart';
 import '../proxy/gemini/gemini_oauth_service.dart';
 import '../proxy/gemini/gemini_play_telemetry_service.dart';
+import '../proxy/kiro/kiro_ide_runtime_version.dart';
 
 final appBootstrapProvider = Provider<AppBootstrap>(
   (ref) => throw UnimplementedError('Bootstrap must be provided before runApp.'),
@@ -234,6 +235,13 @@ Future<void> _warmBootstrapServices({
     }
   } finally {
     playTelemetry.dispose();
+  }
+
+  try {
+    await refreshKiroIdeRuntimeVersion();
+    timings.mark('kiro_ide_version_refreshed');
+  } catch (error, stackTrace) {
+    _debugBootstrapFailure('kiro_ide_version_refreshed', error, stackTrace);
   }
 }
 

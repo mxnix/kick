@@ -225,6 +225,90 @@ void main() {
     expect(normalized['extra_body'], isNull);
   });
 
+  test('normalizeOpenAiCompatRequest injects Kiro server tools from header for Kiro models', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'kiro/claude-sonnet-4',
+        'messages': [
+          {'role': 'user', 'content': 'Hi'},
+        ],
+      },
+      headers: const {'x-kick-kiro-server-tools': 'true'},
+    );
+
+    final extra = (normalized['extra_body'] as Map?)?['kiro'] as Map?;
+    expect(extra?['server_tools'], isTrue);
+  });
+
+  test('normalizeOpenAiCompatRequest applies default Kiro server tools when request is silent', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'kiro/claude-opus-4.6',
+        'messages': [
+          {'role': 'user', 'content': 'Hi'},
+        ],
+      },
+      headers: const {},
+      defaultKiroServerToolsEnabled: true,
+    );
+
+    final extra = (normalized['extra_body'] as Map?)?['kiro'] as Map?;
+    expect(extra?['server_tools'], isTrue);
+  });
+
+  test('normalizeOpenAiCompatRequest does not apply default Kiro tools to Gemini models', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'gemini-3-flash-preview',
+        'messages': [
+          {'role': 'user', 'content': 'Hi'},
+        ],
+      },
+      headers: const {},
+      defaultKiroServerToolsEnabled: true,
+    );
+
+    expect((normalized['extra_body'] as Map?)?['kiro'], isNull);
+  });
+
+  test('normalizeOpenAiCompatRequest keeps explicit Kiro server tools off when set in body', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'kiro/claude-sonnet-4',
+        'kiro_server_tools': false,
+        'messages': [
+          {'role': 'user', 'content': 'Hi'},
+        ],
+      },
+      headers: const {'x-kick-kiro-server-tools': 'true'},
+      defaultKiroServerToolsEnabled: true,
+    );
+
+    final extra = (normalized['extra_body'] as Map?)?['kiro'] as Map?;
+    expect(extra?['server_tools'], isFalse);
+  });
+
+  test('normalizeOpenAiCompatRequest does not inject Kiro tools when client tools present', () {
+    final normalized = normalizeOpenAiCompatRequest(
+      body: {
+        'model': 'kiro/claude-sonnet-4',
+        'tools': [
+          {
+            'type': 'function',
+            'function': {'name': 'lookup', 'description': 'lookup'},
+          },
+        ],
+        'messages': [
+          {'role': 'user', 'content': 'Hi'},
+        ],
+      },
+      headers: const {},
+      defaultKiroServerToolsEnabled: true,
+    );
+
+    expect((normalized['extra_body'] as Map?)?['kiro'], isNull);
+  });
+
   test('retryProxyPortBind retries transient bind races until the port is released', () async {
     var attempts = 0;
 

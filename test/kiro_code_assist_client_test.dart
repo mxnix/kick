@@ -71,6 +71,7 @@ void main() {
       reasoningEffort: reasoningEffort,
       googleThinkingConfig: googleThinkingConfig,
       googleWebSearchEnabled: false,
+      kiroServerToolsEnabled: false,
       responseModalities: null,
       jsonMode: false,
       responseSchema: null,
@@ -1023,6 +1024,322 @@ void main() {
     expect(error.detail, GeminiGatewayFailureDetail.quotaExhausted);
     expect(error.quotaSnapshot, 'Usage limit exceeded for this account.');
     expect(error.retryAfter, isNotNull);
+  });
+
+  test('attaches inline document parts to userInputMessage.documents', () async {
+    Map<String, Object?>? capturedBody;
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/generateAssistantResponse');
+          capturedBody = (jsonDecode((request as http.Request).body) as Map)
+              .cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('\u0000\u0000{"content":"ack"}\u0000\u0000{"usage":{}}')),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final pdfBase64 = base64Encode(utf8.encode('%PDF-1.4'));
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        turns: [
+          UnifiedTurn(
+            role: 'user',
+            parts: [
+              const UnifiedPart.text('Summarize this document'),
+              UnifiedPart.inlineData(mimeType: 'application/pdf', data: pdfBase64),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    expect(capturedBody, isNotNull);
+    final conversationState = (capturedBody!['conversationState'] as Map).cast<String, Object?>();
+    final currentMessage = (conversationState['currentMessage'] as Map).cast<String, Object?>();
+    final userInputMessage = (currentMessage['userInputMessage'] as Map).cast<String, Object?>();
+    final documents = (userInputMessage['documents'] as List).cast<Map>();
+
+    expect(documents, hasLength(1));
+    expect(documents.single['format'], 'pdf');
+    expect(documents.single['name'], 'attachment-1');
+    expect(((documents.single['source'] as Map)['bytes']), pdfBase64);
+  });
+
+  test('uses sanitized client filename for Kiro documents when present', () async {
+    Map<String, Object?>? capturedBody;
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          capturedBody = (jsonDecode((request as http.Request).body) as Map)
+              .cast<String, Object?>();
+          return http.StreamedResponse(
+            Stream.value(utf8.encode('\u0000\u0000{"content":"ok"}\u0000\u0000{"usage":{}}')),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final pdfBase64 = base64Encode(utf8.encode('%PDF-1.4'));
+    await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(
+        turns: [
+          UnifiedTurn(
+            role: 'user',
+            parts: [
+              const UnifiedPart.text('Read it'),
+              UnifiedPart.inlineData(
+                mimeType: 'application/pdf',
+                data: pdfBase64,
+                name: 'Quarterly Report Q1/2026.pdf',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    final conversationState = (capturedBody!['conversationState'] as Map).cast<String, Object?>();
+    final currentMessage = (conversationState['currentMessage'] as Map).cast<String, Object?>();
+    final userInputMessage = (currentMessage['userInputMessage'] as Map).cast<String, Object?>();
+    final documents = (userInputMessage['documents'] as List).cast<Map>();
+
+    expect(documents.single['name'], 'Quarterly Report Q1_2026');
+  });
+
+  test('records meteringEvent credits in kiroMetadata.credit_usage_total', () async {
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"content":"Hi"}'),
+              utf8.encode('\u0000\u0000{"unit":"credit","unitPlural":"credits","usage":0.123}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final response = await client.generateContent(
+      account: sampleAccount(),
+      request: sampleRequest(),
+    );
+
+    final metadata = (response['kiroMetadata'] as Map).cast<String, Object?>();
+    expect(metadata['credit_usage_total'], closeTo(0.123, 1e-9));
+    expect(metadata['credit_usage_unit'], 'credit');
+    expect(metadata['credit_usage_unit_plural'], 'credits');
+  });
+
+  test('runs server tool loop when remote_web_search is opted in', () async {
+    final mcpRequests = <Map<String, Object?>>[];
+    final generateRequests = <Map<String, Object?>>[];
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          expect(request.url.path, '/generateAssistantResponse');
+          generateRequests.add(
+            (jsonDecode((request as http.Request).body) as Map).cast<String, Object?>(),
+          );
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"name":"remote_web_search","toolUseId":"tool-1"}'),
+              utf8.encode(
+                '\u0000\u0000{"input":"{\\"query\\":\\"latest dart\\"}",'
+                '"name":"remote_web_search","toolUseId":"tool-1"}',
+              ),
+              utf8.encode(
+                '\u0000\u0000{"name":"remote_web_search","stop":true,"toolUseId":"tool-1"}',
+              ),
+            ]),
+            200,
+          );
+        },
+        (request) async {
+          expect(request.url.path, '/mcp');
+          mcpRequests.add(
+            (jsonDecode((request as http.Request).body) as Map).cast<String, Object?>(),
+          );
+          return http.Response(
+            jsonEncode({
+              'id': 'web_search_tool-1',
+              'jsonrpc': '2.0',
+              'result': {
+                'content': [
+                  {'type': 'text', 'text': 'Search snippet'},
+                ],
+                'isError': false,
+              },
+            }),
+            200,
+            headers: {HttpHeaders.contentTypeHeader: 'application/json'},
+          );
+        },
+        (request) async {
+          expect(request.url.path, '/generateAssistantResponse');
+          generateRequests.add(
+            (jsonDecode((request as http.Request).body) as Map).cast<String, Object?>(),
+          );
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"content":"Latest Dart is 3.11"}'),
+              utf8.encode('\u0000\u0000{"usage":{}}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+
+    final response = await client.generateContent(
+      account: sampleAccount(),
+      request: UnifiedPromptRequest(
+        requestId: 'req_kiro_tool',
+        model: 'kiro/claude-sonnet-4',
+        stream: false,
+        source: 'chat.completions',
+        turns: const [
+          UnifiedTurn(role: 'user', parts: [UnifiedPart.text('What is the latest Dart?')]),
+        ],
+        tools: const [],
+        systemInstruction: null,
+        toolChoice: null,
+        temperature: null,
+        topP: null,
+        maxOutputTokens: null,
+        stopSequences: null,
+        reasoningEffort: null,
+        googleThinkingConfig: null,
+        googleWebSearchEnabled: false,
+        kiroServerToolsEnabled: true,
+        responseModalities: null,
+        jsonMode: false,
+        responseSchema: null,
+      ),
+    );
+
+    expect(generateRequests, hasLength(2));
+    expect(mcpRequests, hasLength(1));
+
+    final firstBody = (generateRequests.first['conversationState'] as Map).cast<String, Object?>();
+    final firstCurrentMessage = (firstBody['currentMessage'] as Map).cast<String, Object?>();
+    final firstUserInputMessage = (firstCurrentMessage['userInputMessage'] as Map)
+        .cast<String, Object?>();
+    final firstContext = (firstUserInputMessage['userInputMessageContext'] as Map)
+        .cast<String, Object?>();
+    final firstTools = (firstContext['tools'] as List).cast<Map>();
+    expect(
+      firstTools.map((tool) => (tool['toolSpecification'] as Map)['name']),
+      containsAll(<String>['remote_web_search']),
+    );
+
+    final mcpBody = mcpRequests.first;
+    expect(mcpBody['method'], 'tools/call');
+    final mcpParams = (mcpBody['params'] as Map).cast<String, Object?>();
+    expect(mcpParams['name'], 'web_search');
+    expect(((mcpParams['arguments'] as Map)['query']), 'latest dart');
+
+    final secondBody = (generateRequests[1]['conversationState'] as Map).cast<String, Object?>();
+    final secondHistory = (secondBody['history'] as List).cast<Map>();
+    final lastHistoryMessage = secondHistory.last.cast<String, Object?>();
+    final lastUserInputMessage = (lastHistoryMessage['userInputMessage'] as Map)
+        .cast<String, Object?>();
+    final lastContext = (lastUserInputMessage['userInputMessageContext'] as Map)
+        .cast<String, Object?>();
+    final toolResults = (lastContext['toolResults'] as List).cast<Map>();
+    expect(toolResults, hasLength(1));
+    expect(toolResults.first['toolUseId'], 'tool-1');
+    expect(toolResults.first['status'], 'success');
+
+    expect(OpenAiResponseMapper.currentText(response), 'Latest Dart is 3.11');
+    expect(OpenAiResponseMapper.currentToolCalls(response), isEmpty);
+  });
+
+  test('reuses conversationId across server tool iterations', () async {
+    final conversationIds = <String>{};
+    final client = KiroCodeAssistClient(
+      httpClient: QueueHttpClient([
+        (request) async {
+          final body = (jsonDecode((request as http.Request).body) as Map).cast<String, Object?>();
+          conversationIds.add(((body['conversationState'] as Map)['conversationId'] as String));
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"name":"remote_web_search","toolUseId":"tool-X"}'),
+              utf8.encode(
+                '\u0000\u0000{"input":"{\\"query\\":\\"a\\"}",'
+                '"name":"remote_web_search","toolUseId":"tool-X"}',
+              ),
+              utf8.encode(
+                '\u0000\u0000{"name":"remote_web_search","stop":true,"toolUseId":"tool-X"}',
+              ),
+            ]),
+            200,
+          );
+        },
+        (request) async {
+          return http.Response(
+            jsonEncode({
+              'id': 'web_search_tool-X',
+              'jsonrpc': '2.0',
+              'result': {
+                'content': [
+                  {'type': 'text', 'text': 'snippet'},
+                ],
+              },
+            }),
+            200,
+          );
+        },
+        (request) async {
+          final body = (jsonDecode((request as http.Request).body) as Map).cast<String, Object?>();
+          conversationIds.add(((body['conversationState'] as Map)['conversationId'] as String));
+          return http.StreamedResponse(
+            Stream<List<int>>.fromIterable([
+              utf8.encode('\u0000\u0000{"content":"ok"}'),
+              utf8.encode('\u0000\u0000{"usage":{}}'),
+            ]),
+            200,
+          );
+        },
+      ]),
+    );
+
+    await client.generateContent(
+      account: sampleAccount(),
+      request: UnifiedPromptRequest(
+        requestId: 'req_kiro_conv',
+        model: 'kiro/claude-sonnet-4',
+        stream: false,
+        source: 'chat.completions',
+        turns: const [
+          UnifiedTurn(role: 'user', parts: [UnifiedPart.text('Q')]),
+        ],
+        tools: const [],
+        systemInstruction: null,
+        toolChoice: null,
+        temperature: null,
+        topP: null,
+        maxOutputTokens: null,
+        stopSequences: null,
+        reasoningEffort: null,
+        googleThinkingConfig: null,
+        googleWebSearchEnabled: false,
+        kiroServerToolsEnabled: true,
+        responseModalities: null,
+        jsonMode: false,
+        responseSchema: null,
+      ),
+    );
+
+    expect(conversationIds, hasLength(1));
   });
 }
 
