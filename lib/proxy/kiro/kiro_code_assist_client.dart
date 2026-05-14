@@ -457,6 +457,7 @@ class KiroCodeAssistClient {
     final region = (account.providerRegion ?? defaultKiroRegion).trim();
     final profileArn = resolveKiroProfileArn(account.providerProfileArn);
     return Uri.https('q.$region.amazonaws.com', '/getUsageLimits', <String, String>{
+      'isEmailRequired': 'true',
       'origin': 'AI_EDITOR',
       if (profileArn != null && profileArn.isNotEmpty) 'profileArn': profileArn,
       'resourceType': 'AGENTIC_REQUEST',

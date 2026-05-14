@@ -1587,6 +1587,10 @@ String _accountSubtitle(AccountProfile account) {
     return identity;
   }
 
+  if (trimmed.contains('@')) {
+    return trimmed;
+  }
+
   final lower = trimmed.toLowerCase();
   final alreadyQualified =
       lower == 'kiro' ||

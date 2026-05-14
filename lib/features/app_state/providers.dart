@@ -144,10 +144,22 @@ final accountUsageQueryProvider = FutureProvider.autoDispose.family<GeminiUsageS
       throw StateError('Usage details are not available for this provider.');
     }
 
-    return switch (account.provider) {
+    final snapshot = await switch (account.provider) {
       AccountProvider.gemini => ref.watch(geminiUsageServiceProvider).fetchUsage(account),
       AccountProvider.kiro => ref.watch(kiroUsageServiceProvider).fetchUsage(account),
     };
+
+    if (snapshot.resolvedEmail != null &&
+        snapshot.resolvedEmail!.trim().isNotEmpty &&
+        snapshot.resolvedEmail!.trim() != account.email.trim()) {
+      final bootstrap = ref.read(appBootstrapProvider);
+      await bootstrap.accountsRepository.upsert(
+        account.copyWith(email: snapshot.resolvedEmail!.trim()),
+      );
+      await ref.read(accountsControllerProvider.notifier).refreshState();
+    }
+
+    return snapshot;
   } finally {
     keepAliveLink.close();
   }
@@ -335,6 +347,31 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
       );
       await bootstrap.accountsRepository.upsert(profile);
       await refreshState();
+
+      // Attempt to resolve the real email from Kiro usage API.
+      unawaited(
+        Future<void>(() async {
+          try {
+            final usageService = KiroUsageService();
+            try {
+              final snapshot = await usageService.fetchUsage(profile);
+              if (snapshot.resolvedEmail != null &&
+                  snapshot.resolvedEmail!.trim().isNotEmpty &&
+                  snapshot.resolvedEmail!.trim() != profile.email.trim()) {
+                await bootstrap.accountsRepository.upsert(
+                  profile.copyWith(email: snapshot.resolvedEmail!.trim()),
+                );
+                await refreshState();
+              }
+            } finally {
+              usageService.dispose();
+            }
+          } catch (_) {
+            // Non-critical: email will be resolved on next usage fetch.
+          }
+        }),
+      );
+
       final enabledAccounts = (state.asData?.value ?? const <AccountProfile>[])
           .where((account) => account.enabled)
           .length;

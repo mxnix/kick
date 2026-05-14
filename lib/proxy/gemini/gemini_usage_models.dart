@@ -152,11 +152,13 @@ class GeminiUsageSnapshot {
     required this.fetchedAt,
     required this.subscriptionTitle,
     required this.buckets,
+    this.resolvedEmail,
   });
 
   final DateTime fetchedAt;
   final String subscriptionTitle;
   final List<GeminiUsageBucket> buckets;
+  final String? resolvedEmail;
 
   double get totalUsed => buckets.fold(0, (sum, bucket) => sum + bucket.usedPercent);
 
@@ -268,10 +270,15 @@ class GeminiUsageSnapshot {
       'Kiro',
     );
 
+    final userInfo = ((json['userInfo'] as Map?) ?? const <String, Object?>{})
+        .cast<String, Object?>();
+    final email = GeminiUsageBucket._readString(userInfo['email']);
+
     return GeminiUsageSnapshot(
       fetchedAt: fetchedAt?.toLocal() ?? DateTime.now(),
       subscriptionTitle: subscriptionTitle,
       buckets: List.unmodifiable(buckets),
+      resolvedEmail: email.isNotEmpty ? email : null,
     );
   }
 

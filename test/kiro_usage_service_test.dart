@@ -36,7 +36,7 @@ void main() {
             expect(request.url.host, 'q.us-east-1.amazonaws.com');
             expect(request.url.path, '/getUsageLimits');
             expect(request.url.queryParameters['origin'], 'AI_EDITOR');
-            expect(request.url.queryParameters.containsKey('isEmailRequired'), isFalse);
+            expect(request.url.queryParameters['isEmailRequired'], 'true');
             expect(request.url.queryParameters['resourceType'], 'AGENTIC_REQUEST');
             expect(
               request.url.queryParameters['profileArn'],
@@ -62,6 +62,7 @@ void main() {
                     'nextDateReset': 1790812800,
                   },
                 ],
+                'userInfo': {'email': 'kiro-user@example.com', 'userId': 'd-test.user-id'},
               }),
               200,
             );
@@ -98,6 +99,7 @@ void main() {
     expect(requestHeaders?[HttpHeaders.userAgentHeader] ?? '', contains('KiroIDE-'));
 
     expect(snapshot.subscriptionTitle, 'KIRO PRO');
+    expect(snapshot.resolvedEmail, 'kiro-user@example.com');
     expect(snapshot.buckets, hasLength(1));
     final bucket = snapshot.buckets.single;
     expect(bucket.modelId, 'Credit');
