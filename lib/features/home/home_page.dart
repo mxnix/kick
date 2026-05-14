@@ -942,7 +942,7 @@ String _defaultSillyTavernModel(AppSettings settings) {
       return trimmed;
     }
   }
-  return 'google/gemini-2.5-pro';
+  return 'google/gemini-3.1-pro-preview';
 }
 
 String _formatSillyTavernPushError(KickLocalizations l10n, Object error) {

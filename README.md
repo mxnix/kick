@@ -57,12 +57,12 @@
 
 ## What KiCk Does
 
-KiCk runs a local OpenAI-compatible server on your device and forwards requests to Gemini CLI through connected Google accounts, or to Kiro through an AWS Builder ID session. It is built for people who want a native app around local AI proxying: account management, keys, logs, retries, model routing, and one-button startup.
+KiCk runs a local OpenAI-compatible server on your device and forwards requests to Gemini CLI through connected Google accounts, or to Kiro through a signed-in Kiro account. It is built for people who want a native app around local AI proxying: account management, keys, logs, retries, model routing, and one-button startup.
 
 | Area | What you get |
 | --- | --- |
 | Local API | OpenAI-compatible `http://127.0.0.1:3000/v1` endpoint |
-| Providers | Gemini CLI via Google sign-in, Kiro via AWS Builder ID |
+| Providers | Gemini CLI via Google sign-in, Kiro via GitHub or Google sign-in |
 | Platforms | Windows, Linux, and Android |
 | Accounts | Multiple accounts with priority ordering and availability handling |
 | Privacy | Tokens, settings, keys, and logs stay on your device |
@@ -71,7 +71,7 @@ KiCk runs a local OpenAI-compatible server on your device and forwards requests 
 
 1. Download the latest build from [Releases](https://github.com/mxnix/kick/releases/latest), or install from a Linux repository below.
 2. Open **Accounts** and connect a Gemini CLI or Kiro account.
-3. For Gemini CLI, enter your `Google Cloud` project ID. For Kiro, finish AWS Builder ID authorization.
+3. For Gemini CLI, enter your `Google Cloud` project ID. For Kiro, sign in through GitHub or Google in the browser.
 4. Return to **Home**, start the proxy, and copy the local endpoint plus API key.
 5. Use them in Gemini CLI, SillyTavern, another OpenAI-compatible client, or your own app.
 
@@ -79,9 +79,9 @@ The default endpoint is `http://127.0.0.1:3000/v1`. You can change the host, por
 
 ## Features
 
-- Local OpenAI-compatible proxy with `/v1/chat/completions` and `/v1/responses`.
+- Local OpenAI-compatible proxy with `/v1/chat/completions` and `/v1/responses`, including SSE streaming via `"stream": true`.
 - Account pool for Gemini CLI and Kiro with priorities, retries, cooldowns, and model filters.
-- Native account connection flows for Google sign-in and AWS Builder ID.
+- Native account connection flows for Google sign-in and Kiro sign-in via GitHub or Google.
 - Configurable address, port, LAN access, access key, retry policy, and custom model IDs.
 - One-click profile push to a running SillyTavern instance.
 - Searchable logs with export, raw request logging controls, and sensitive data masking.
@@ -102,7 +102,7 @@ curl http://127.0.0.1:3000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    "model": "gemini-2.5-pro",
+    "model": "gemini-3.1-pro-preview",
     "messages": [
       {"role": "user", "content": "Write a short greeting"}
     ]
@@ -192,7 +192,7 @@ Read the full [Privacy Policy](docs/PRIVACY.md).
 - Port already in use: choose a different port in settings.
 - No active accounts: connect a Gemini CLI or Kiro account, or re-enable an existing one.
 - Google sign-in expired: reconnect the Gemini CLI account.
-- Kiro session expired: reconnect the Kiro account.
+- Kiro session expired: sign in to Kiro again.
 - Google asks for verification: open the verification page and sign in with the same account.
 - Wrong `Google Cloud` project ID or disabled access: verify the project and its settings.
 - `429` errors: wait for the limit to reset or enable temporary account cooldown.

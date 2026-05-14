@@ -46,7 +46,7 @@ void main() {
       proxyEndpoint: 'http://localhost:3000/v1',
       apiKey: 'kick-api-key',
       profileName: 'KiCk',
-      model: 'google/gemini-2.5-pro',
+      model: 'google/gemini-3.1-pro-preview',
     );
 
     expect(result.profileName, 'KiCk');
@@ -61,7 +61,7 @@ void main() {
     final oaiSettings = (savedSettings!['oai_settings'] as Map).cast<String, Object?>();
     expect(oaiSettings['chat_completion_source'], 'custom');
     expect(oaiSettings['custom_url'], 'http://localhost:3000/v1');
-    expect(oaiSettings['custom_model'], 'google/gemini-2.5-pro');
+    expect(oaiSettings['custom_model'], 'google/gemini-3.1-pro-preview');
     expect(oaiSettings['bypass_status_check'], isTrue);
     expect(oaiSettings['custom_prompt_post_processing'], 'merge');
 
