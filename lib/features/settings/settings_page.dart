@@ -249,6 +249,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!mounted || result == null) {
         return;
       }
+      unawaited(
+        ref
+            .read(analyticsProvider)
+            .trackBackupExported(
+              encrypted: result.protectedWithPassword,
+              accountCount: result.accountCount,
+              accountsWithTokens: result.accountsWithTokens,
+            ),
+      );
       _showSnackBar(l10n.settingsBackupExportedMessage(result.fileName));
     } catch (error) {
       if (!mounted) {
@@ -309,6 +318,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         return;
       }
 
+      unawaited(
+        ref
+            .read(analyticsProvider)
+            .trackBackupRestored(
+              wasPasswordProtected: result.wasPasswordProtected,
+              accountCount: result.accountCount,
+              accountsWithoutTokens: result.accountsWithoutTokens,
+            ),
+      );
+
       await ref.read(accountsControllerProvider.notifier).refreshState();
       if (!mounted) {
         return;
@@ -325,6 +344,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!mounted) {
         return;
       }
+      unawaited(
+        ref
+            .read(analyticsProvider)
+            .trackBackupRestored(
+              wasPasswordProtected: false,
+              accountCount: 0,
+              accountsWithoutTokens: 0,
+              errorKind: _backupErrorKind(error),
+            ),
+      );
       _showSnackBar(
         l10n.settingsBackupRestoreFailedMessage(_formatConfigurationBackupError(l10n, error)),
       );
@@ -390,6 +419,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       };
     }
     return formatUserFacingError(l10n, error);
+  }
+
+  String _backupErrorKind(Object error) {
+    if (error is ConfigurationBackupException) {
+      return error.code.name;
+    }
+    return error.runtimeType.toString();
   }
 }
 

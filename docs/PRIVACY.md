@@ -35,7 +35,7 @@ Anonymous analytics is **disabled** by default. If you opt in, KiCk sends only b
 - `PROJECT_ID`,
 - raw logs.
 
-You can disable analytics again at any time from settings.
+You can disable analytics again at any time from settings. When you do, KiCk emits a single `analytics_consent_revoked` marker and purges the local outgoing queue. The full list of events and properties is published in [`docs/ANALYTICS.md`](ANALYTICS.md).
 
 ## Access modes
 

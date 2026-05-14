@@ -284,6 +284,7 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
         bootstrap.analytics.trackAccountConnectSucceeded(
           reauthorization: reauthorization,
           enabledAccounts: enabledAccounts,
+          provider: KickAnalytics.providerName(AccountProvider.gemini),
         ),
       );
       return profile;
@@ -292,6 +293,7 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
         bootstrap.analytics.trackAccountConnectFailed(
           reauthorization: reauthorization,
           errorKind: _analyticsErrorKind(error),
+          provider: KickAnalytics.providerName(AccountProvider.gemini),
         ),
       );
       rethrow;
@@ -379,6 +381,7 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
         bootstrap.analytics.trackAccountConnectSucceeded(
           reauthorization: reauthorization,
           enabledAccounts: enabledAccounts,
+          provider: KickAnalytics.providerName(AccountProvider.kiro),
         ),
       );
     } catch (error) {
@@ -386,6 +389,7 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
         bootstrap.analytics.trackAccountConnectFailed(
           reauthorization: reauthorization,
           errorKind: _analyticsErrorKind(error),
+          provider: KickAnalytics.providerName(AccountProvider.kiro),
         ),
       );
       rethrow;
@@ -394,10 +398,17 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
 
   Future<void> saveAccount(AccountProfile account) async {
     final bootstrap = ref.read(appBootstrapProvider);
+    final previous = await _findAccount(account.id);
     await bootstrap.accountsRepository.upsert(
       account.copyWith(priority: normalizeAccountPriority(account.priority)),
     );
     await refreshState();
+    if (previous != null && previous.enabled != account.enabled) {
+      _emitAccountStateChanged(
+        action: account.enabled ? 'enabled' : 'disabled',
+        provider: account.provider,
+      );
+    }
   }
 
   Future<void> deleteAccount(AccountProfile account) async {
@@ -409,6 +420,7 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
       await deleteManagedKiroCredentialSource(account.credentialSourcePath);
     }
     await refreshState();
+    _emitAccountStateChanged(action: 'removed', provider: account.provider);
   }
 
   Future<void> resetHealth(AccountProfile account) async {
@@ -418,6 +430,32 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
         runtimeNotSupportedModels: const <String>[],
         clearCooldown: true,
         clearQuotaSnapshot: true,
+      ),
+    );
+  }
+
+  Future<AccountProfile?> _findAccount(String id) async {
+    final accounts = state.asData?.value;
+    if (accounts != null) {
+      for (final account in accounts) {
+        if (account.id == id) {
+          return account;
+        }
+      }
+    }
+    return null;
+  }
+
+  void _emitAccountStateChanged({required String action, required AccountProvider provider}) {
+    final analytics = ref.read(appBootstrapProvider).analytics;
+    final accounts = state.asData?.value ?? const <AccountProfile>[];
+    final enabled = accounts.where((account) => account.enabled).length;
+    unawaited(
+      analytics.trackAccountStateChanged(
+        action: action,
+        provider: KickAnalytics.providerName(provider),
+        enabledAccounts: enabled,
+        totalAccounts: accounts.length,
       ),
     );
   }
@@ -544,7 +582,28 @@ final appUpdateCheckerProvider = Provider<AppUpdateChecker>((ref) {
 
 final appUpdateQueryProvider = FutureProvider.autoDispose<AppUpdateInfo>((ref) async {
   final currentVersion = await ref.watch(appVersionProvider.future);
-  return ref.watch(appUpdateCheckerProvider).checkForUpdates(currentVersion: currentVersion);
+  final analytics = ref.watch(analyticsProvider);
+  try {
+    final info = await ref
+        .watch(appUpdateCheckerProvider)
+        .checkForUpdates(currentVersion: currentVersion);
+    unawaited(
+      analytics.trackUpdateCheckCompleted(
+        hasUpdate: info.hasUpdate,
+        installerAvailable: info.installerUrl?.trim().isNotEmpty == true,
+      ),
+    );
+    return info;
+  } catch (error) {
+    unawaited(
+      analytics.trackUpdateCheckCompleted(
+        hasUpdate: false,
+        installerAvailable: false,
+        errorKind: error.runtimeType.toString(),
+      ),
+    );
+    rethrow;
+  }
 });
 
 class LogsController extends AsyncNotifier<LogsViewState> {

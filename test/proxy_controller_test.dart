@@ -419,7 +419,7 @@ void main() {
             event.name == 'upstream_compatibility_issue' &&
             event.properties['issue_kind'] == 'unsupported_model' &&
             event.properties['upstream_reason'] == 'CONSUMER_INVALID' &&
-            event.properties['has_action_url'] == 1,
+            event.properties['has_action_url'] == true,
       ),
       isTrue,
     );
@@ -438,7 +438,7 @@ void main() {
         (event) =>
             event.name == 'proxy_request_retried' &&
             event.properties['upstream_reason'] == 'SERVICE_DISABLED' &&
-            event.properties['has_action_url'] == 1,
+            event.properties['has_action_url'] == true,
       ),
       isTrue,
     );
@@ -949,7 +949,7 @@ class _MemorySecretStoreBackend implements SecretStoreBackend {
   }
 }
 
-class _RecordingAnalyticsTransport implements AnalyticsTransport {
+class _RecordingAnalyticsTransport extends AnalyticsTransport {
   final List<_RecordedAnalyticsEvent> events = <_RecordedAnalyticsEvent>[];
 
   @override

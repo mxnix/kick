@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -165,8 +167,17 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (!mounted || !context.mounted) {
         return;
       }
+      unawaited(ref.read(analyticsProvider).trackSillyTavernPushSucceeded());
       _showSnackBar(context, context.l10n.pushSillyTavernSuccessMessage(result.profileName));
     } catch (error) {
+      unawaited(
+        ref
+            .read(analyticsProvider)
+            .trackSillyTavernPushFailed(
+              failureKind: _sillyTavernPushFailureKind(error),
+              statusCode: error is SillyTavernPushException ? error.statusCode : null,
+            ),
+      );
       if (!mounted || !context.mounted) {
         return;
       }
@@ -958,4 +969,11 @@ String _formatSillyTavernPushError(KickLocalizations l10n, Object error) {
     };
   }
   return error.toString();
+}
+
+String _sillyTavernPushFailureKind(Object error) {
+  if (error is SillyTavernPushException) {
+    return error.failure.name;
+  }
+  return error.runtimeType.toString();
 }

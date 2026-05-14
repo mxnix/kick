@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/platform/desktop_runtime.dart';
+import '../app_state/providers.dart';
 import 'app_update_checker.dart';
 
 const _appUpdateChannelName = 'kick/app_update';
@@ -462,6 +463,8 @@ class AppUpdateController extends Notifier<AppUpdateFlowState> {
       progress: 0,
     );
 
+    final analytics = ref.read(analyticsProvider);
+    final downloadStopwatch = Stopwatch()..start();
     try {
       final downloadedUpdate = await ref
           .read(appUpdateInstallerProvider)
@@ -495,11 +498,26 @@ class AppUpdateController extends Notifier<AppUpdateFlowState> {
         progress: 1,
         downloadedUpdate: downloadedUpdate,
       );
+      unawaited(
+        analytics.trackUpdateDownloadCompleted(
+          succeeded: true,
+          checksumVerified: downloadedUpdate.isChecksumVerified,
+          durationMs: downloadStopwatch.elapsedMilliseconds,
+        ),
+      );
     } catch (error) {
       state = AppUpdateFlowState(
         version: updateInfo.latestVersion,
         phase: AppUpdatePhase.error,
         errorMessage: _normalizeInstallerError(error),
+      );
+      unawaited(
+        analytics.trackUpdateDownloadCompleted(
+          succeeded: false,
+          checksumVerified: false,
+          durationMs: downloadStopwatch.elapsedMilliseconds,
+          errorKind: error.runtimeType.toString(),
+        ),
       );
     }
   }
@@ -519,8 +537,14 @@ class AppUpdateController extends Notifier<AppUpdateFlowState> {
       return;
     }
 
+    final analytics = ref.read(analyticsProvider);
     try {
       final result = await ref.read(appUpdateInstallerProvider).launchInstall(downloadedUpdate);
+      unawaited(
+        analytics.trackUpdateInstallLaunched(
+          permissionRequired: result == AppUpdateInstallLaunchResult.permissionRequired,
+        ),
+      );
       if (result == AppUpdateInstallLaunchResult.permissionRequired) {
         state = state.copyWith(
           version: updateInfo.latestVersion,
@@ -541,6 +565,7 @@ class AppUpdateController extends Notifier<AppUpdateFlowState> {
         phase: AppUpdatePhase.error,
         errorMessage: _normalizeInstallerError(error),
       );
+      unawaited(analytics.trackUpdateInstallFailed(errorKind: error.runtimeType.toString()));
     }
   }
 

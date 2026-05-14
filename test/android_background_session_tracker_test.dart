@@ -35,10 +35,10 @@ void main() {
     expect(transport.events, hasLength(1));
     expect(transport.events.single.name, 'android_background_session');
     expect(transport.events.single.properties, containsPair('duration_sec', 95));
-    expect(transport.events.single.properties, containsPair('killed_in_background', 0));
+    expect(transport.events.single.properties, containsPair('killed_in_background', false));
     expect(
       transport.events.single.properties,
-      containsPair('android_background_runtime_enabled', 1),
+      containsPair('android_background_runtime_enabled', true),
     );
   });
 
@@ -80,12 +80,12 @@ void main() {
     expect(transport.events, hasLength(1));
     expect(transport.events.single.name, 'android_background_session');
     expect(transport.events.single.properties, containsPair('duration_sec', 240));
-    expect(transport.events.single.properties, containsPair('killed_in_background', 1));
-    expect(transport.events.single.properties, containsPair('proxy_was_running', 1));
+    expect(transport.events.single.properties, containsPair('killed_in_background', true));
+    expect(transport.events.single.properties, containsPair('proxy_was_running', true));
   });
 }
 
-class _RecordingAnalyticsTransport implements AnalyticsTransport {
+class _RecordingAnalyticsTransport extends AnalyticsTransport {
   final List<_RecordedAnalyticsEvent> events = <_RecordedAnalyticsEvent>[];
 
   @override

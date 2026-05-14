@@ -743,7 +743,12 @@ class _ProxyIsolateHost {
       return _errorResponse(400, 'invalid_request_error', error.message);
     } on GeminiGatewayException catch (error, stackTrace) {
       if (prompt != null) {
-        _emitRequestFailedAnalytics(request: prompt, route: route, error: error);
+        _emitRequestFailedAnalytics(
+          request: prompt,
+          route: route,
+          error: error,
+          tracker: retryTracker,
+        );
         _emitRequestRetriedAnalytics(
           request: prompt,
           route: route,
@@ -778,7 +783,12 @@ class _ProxyIsolateHost {
         source: GeminiGatewayFailureSource.proxy,
       );
       if (prompt != null) {
-        _emitRequestFailedAnalytics(request: prompt, route: route, error: gatewayError);
+        _emitRequestFailedAnalytics(
+          request: prompt,
+          route: route,
+          error: gatewayError,
+          tracker: retryTracker,
+        );
         _emitRequestRetriedAnalytics(
           request: prompt,
           route: route,
@@ -932,7 +942,12 @@ class _ProxyIsolateHost {
       return _errorResponse(400, 'invalid_request_error', error.message);
     } on GeminiGatewayException catch (error, stackTrace) {
       if (prompt != null) {
-        _emitRequestFailedAnalytics(request: prompt, route: route, error: error);
+        _emitRequestFailedAnalytics(
+          request: prompt,
+          route: route,
+          error: error,
+          tracker: retryTracker,
+        );
         _emitRequestRetriedAnalytics(
           request: prompt,
           route: route,
@@ -967,7 +982,12 @@ class _ProxyIsolateHost {
         source: GeminiGatewayFailureSource.proxy,
       );
       if (prompt != null) {
-        _emitRequestFailedAnalytics(request: prompt, route: route, error: gatewayError);
+        _emitRequestFailedAnalytics(
+          request: prompt,
+          route: route,
+          error: gatewayError,
+          tracker: retryTracker,
+        );
         _emitRequestRetriedAnalytics(
           request: prompt,
           route: route,
@@ -1058,7 +1078,7 @@ class _ProxyIsolateHost {
           await _publishAccounts();
         }
         _publishStatus();
-        _emitRequestSucceededAnalytics(request: request, route: route);
+        _emitRequestSucceededAnalytics(request: request, route: route, tracker: retryTracker);
         return payload;
       } on GeminiGatewayException catch (error) {
         lastError = error;
@@ -1234,7 +1254,7 @@ class _ProxyIsolateHost {
               await _publishAccounts();
             }
             _publishStatus();
-            _emitRequestSucceededAnalytics(request: request, route: route);
+            _emitRequestSucceededAnalytics(request: request, route: route, tracker: retryTracker);
             await _logRetryOutcome(
               category: request.source,
               route: route,
@@ -1251,7 +1271,12 @@ class _ProxyIsolateHost {
           } on GeminiGatewayException catch (error, stackTrace) {
             failed = true;
             _registerFailure(account, request.model, error);
-            _emitRequestFailedAnalytics(request: request, route: route, error: error);
+            _emitRequestFailedAnalytics(
+              request: request,
+              route: route,
+              error: error,
+              tracker: retryTracker,
+            );
             _emitRequestRetriedAnalytics(
               request: request,
               route: route,
@@ -1288,7 +1313,12 @@ class _ProxyIsolateHost {
               source: GeminiGatewayFailureSource.proxy,
             );
             _registerFailure(account, request.model, gatewayError);
-            _emitRequestFailedAnalytics(request: request, route: route, error: gatewayError);
+            _emitRequestFailedAnalytics(
+              request: request,
+              route: route,
+              error: gatewayError,
+              tracker: retryTracker,
+            );
             _emitRequestRetriedAnalytics(
               request: request,
               route: route,
@@ -2241,6 +2271,7 @@ class _ProxyIsolateHost {
   void _emitRequestSucceededAnalytics({
     required UnifiedPromptRequest request,
     required String route,
+    _RequestRetryTracker? tracker,
   }) {
     _sendPort.send({
       'type': 'analytics',
@@ -2249,6 +2280,7 @@ class _ProxyIsolateHost {
         'route': route,
         'model': request.model,
         'stream': request.stream,
+        if (tracker != null) 'latency_ms': tracker.elapsedMs,
       },
     });
   }
@@ -2257,6 +2289,7 @@ class _ProxyIsolateHost {
     required UnifiedPromptRequest request,
     required String route,
     required GeminiGatewayException error,
+    _RequestRetryTracker? tracker,
   }) {
     _sendPort.send({
       'type': 'analytics',
@@ -2267,6 +2300,7 @@ class _ProxyIsolateHost {
         'stream': request.stream,
         'error_kind': error.kind.name,
         'status_code': error.statusCode,
+        if (tracker != null) 'latency_ms': tracker.elapsedMs,
         ..._gatewayErrorContext(error),
       },
     });
@@ -2291,6 +2325,7 @@ class _ProxyIsolateHost {
         'route': route,
         'model': request.model,
         'stream': request.stream,
+        'latency_ms': tracker.elapsedMs,
         ...tracker.toAnalyticsPayload(outcome: succeeded ? 'succeeded' : 'failed', error: error),
         if (error != null) ..._gatewayErrorContext(error),
       },
@@ -2512,7 +2547,8 @@ Middleware _corsMiddleware(_ProxyIsolateHost host) {
 }
 
 class _RequestRetryTracker {
-  _RequestRetryTracker({required this.requestId, required this.model, required this.stream});
+  _RequestRetryTracker({required this.requestId, required this.model, required this.stream})
+    : _stopwatch = Stopwatch()..start();
 
   factory _RequestRetryTracker.fromRequest(UnifiedPromptRequest request) {
     return _RequestRetryTracker(
@@ -2525,6 +2561,7 @@ class _RequestRetryTracker {
   final String requestId;
   final String model;
   final bool stream;
+  final Stopwatch _stopwatch;
 
   int upstreamRetryCount = 0;
   int accountFailoverCount = 0;
@@ -2533,6 +2570,7 @@ class _RequestRetryTracker {
 
   bool get hasRetries => retryCount > 0;
   int get retryCount => upstreamRetryCount + accountFailoverCount;
+  int get elapsedMs => _stopwatch.elapsedMilliseconds;
 
   void recordUpstreamRetry(GeminiRetryEvent event) {
     upstreamRetryCount += 1;

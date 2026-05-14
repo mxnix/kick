@@ -2,7 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math' as math;
 import 'dart:ui';
+
+import 'package:uuid/uuid.dart';
 
 import '../../analytics/kick_analytics.dart';
 import '../../core/platform/android_foreground_runtime.dart';
@@ -117,23 +120,95 @@ class ProxyRuntimeState {
 }
 
 class _ProxySessionMetrics {
+  String? sessionId;
   int successCount = 0;
   int failedCount = 0;
   int retriedCount = 0;
   bool active = false;
   bool summaryEmitted = false;
+  Stopwatch? _startStopwatch;
 
-  void begin() {
+  final List<int> _latenciesMs = <int>[];
+  int _latencyMaxMs = 0;
+  final Set<String> _routesSeen = <String>{};
+  final Set<String> _modelFamiliesSeen = <String>{};
+
+  void begin({String? sessionId, Stopwatch? startStopwatch}) {
+    this.sessionId = sessionId;
     successCount = 0;
     failedCount = 0;
     retriedCount = 0;
     active = true;
     summaryEmitted = false;
+    _startStopwatch = startStopwatch;
+    _latenciesMs.clear();
+    _latencyMaxMs = 0;
+    _routesSeen.clear();
+    _modelFamiliesSeen.clear();
   }
 
   void end() {
     active = false;
     summaryEmitted = true;
+    _startStopwatch = null;
+  }
+
+  int? consumeStartLatencyMs() {
+    final stopwatch = _startStopwatch;
+    if (stopwatch == null) {
+      return null;
+    }
+    final elapsed = stopwatch.elapsedMilliseconds;
+    _startStopwatch = null;
+    return elapsed > 0 ? elapsed : null;
+  }
+
+  void recordLatency(int? latencyMs) {
+    if (latencyMs == null || latencyMs <= 0) {
+      return;
+    }
+    _latenciesMs.add(latencyMs);
+    if (latencyMs > _latencyMaxMs) {
+      _latencyMaxMs = latencyMs;
+    }
+  }
+
+  void recordRoute(String? route) {
+    if (route == null) {
+      return;
+    }
+    final trimmed = route.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    _routesSeen.add(trimmed);
+  }
+
+  void recordModelFamily(String? family) {
+    if (family == null) {
+      return;
+    }
+    final trimmed = family.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    _modelFamiliesSeen.add(trimmed);
+  }
+
+  int? get latencyP50Ms => _percentile(0.50);
+  int? get latencyP95Ms => _percentile(0.95);
+  int? get latencyMaxMs => _latencyMaxMs > 0 ? _latencyMaxMs : null;
+
+  List<String> get routesSeen => _routesSeen.toList(growable: false);
+  List<String> get modelFamiliesSeen => _modelFamiliesSeen.toList(growable: false);
+
+  int? _percentile(double percentile) {
+    if (_latenciesMs.isEmpty) {
+      return null;
+    }
+    final sorted = [..._latenciesMs]..sort();
+    final index = ((sorted.length - 1) * percentile).round();
+    return sorted[math.max(0, math.min(sorted.length - 1, index))];
   }
 }
 
@@ -179,6 +254,7 @@ class KickProxyController {
   final ProxyRuntimeProbe _probeExistingRuntime;
   final SecretStore _secretStore;
   final ProxyIsolateSpawner _spawnIsolate;
+  static const _uuid = Uuid();
 
   final _states = StreamController<ProxyRuntimeState>.broadcast();
   final _activity = StreamController<String>.broadcast();
@@ -206,6 +282,7 @@ class KickProxyController {
   bool _awaitingStartResult = false;
   bool _disposing = false;
   bool _disposed = false;
+  Stopwatch? _startLatencyStopwatch;
 
   Future<void> initialize() async {
     if (_disposed || _disposing) {
@@ -333,6 +410,7 @@ class KickProxyController {
     }
 
     _awaitingStartResult = true;
+    _startLatencyStopwatch = Stopwatch()..start();
     if (!_currentState.running) {
       _setStartPending(true);
     }
@@ -357,12 +435,17 @@ class KickProxyController {
         _awaitingStartResult = false;
         _setStartPending(false);
         if (!wasRunningBeforeSync) {
+          _beginSessionMetrics();
           unawaited(
             _analytics.trackProxyStarted(
               allowLan: settings.allowLan,
               activeAccounts: _currentState.activeAccounts,
+              sessionId: _sessionMetrics.sessionId,
+              startLatencyMs: _sessionMetrics.consumeStartLatencyMs(),
             ),
           );
+        } else {
+          _startLatencyStopwatch = null;
         }
         if (settings.androidBackgroundRuntime) {
           await _ensureAndroidRuntimeRunning();
@@ -372,6 +455,7 @@ class KickProxyController {
       if (_currentState.running) {
         _awaitingStartResult = false;
         _setStartPending(false);
+        _startLatencyStopwatch = null;
         if (settings?.androidBackgroundRuntime == true) {
           await _ensureAndroidRuntimeRunning();
         }
@@ -392,6 +476,7 @@ class KickProxyController {
       if (!waitingForRuntimeStatus) {
         _awaitingStartResult = false;
         _setStartPending(false);
+        _startLatencyStopwatch = null;
       }
       rethrow;
     }
@@ -594,7 +679,7 @@ class KickProxyController {
       clearLastError: true,
     );
     if (!wasRunning) {
-      _sessionMetrics.begin();
+      _beginSessionMetrics();
     }
     _emitState(_currentState);
     return true;
@@ -683,14 +768,17 @@ class KickProxyController {
     );
     _emitActivity('logs');
     if (trackStartFailure) {
-      await _analytics.trackProxyStartFailed(errorKind: _classifyRuntimeError(message));
+      await _analytics.trackProxyStartFailed(
+        errorKind: _classifyRuntimeError(message),
+        sessionId: _sessionMetrics.sessionId,
+      );
     }
   }
 
   void _handleStatusTransition(ProxyRuntimeState previous, ProxyRuntimeState next) {
     if (!_awaitingStartResult) {
       if (!previous.running && next.running) {
-        _sessionMetrics.begin();
+        _beginSessionMetrics();
       } else if (previous.running && !next.running) {
         unawaited(
           _emitProxySessionSummaryIfNeeded(
@@ -704,11 +792,13 @@ class KickProxyController {
 
     if (!previous.running && next.running) {
       _awaitingStartResult = false;
-      _sessionMetrics.begin();
+      _beginSessionMetrics();
       unawaited(
         _analytics.trackProxyStarted(
           allowLan: _lastSettings?.allowLan ?? false,
           activeAccounts: next.activeAccounts,
+          sessionId: _sessionMetrics.sessionId,
+          startLatencyMs: _sessionMetrics.consumeStartLatencyMs(),
         ),
       );
       return;
@@ -716,7 +806,13 @@ class KickProxyController {
 
     if (!next.running && next.lastError != null) {
       _awaitingStartResult = false;
-      unawaited(_analytics.trackProxyStartFailed(errorKind: _classifyRuntimeError(next.lastError)));
+      _startLatencyStopwatch = null;
+      unawaited(
+        _analytics.trackProxyStartFailed(
+          errorKind: _classifyRuntimeError(next.lastError),
+          sessionId: _sessionMetrics.sessionId,
+        ),
+      );
       unawaited(_emitProxySessionSummaryIfNeeded(stopReason: _stopReasonForState(next)));
       return;
     }
@@ -733,15 +829,29 @@ class KickProxyController {
 
   Future<void> _handleAnalyticsMessage(Map<String, Object?> payload) async {
     final kind = payload['kind'] as String? ?? '';
+    final route = payload['route'] as String? ?? '';
+    final model = payload['model'] as String? ?? '';
+    final stream = payload['stream'] == true;
+    final latencyMs = payload['latency_ms'] as int?;
+    final sessionId = _sessionMetrics.sessionId;
+
+    if (_sessionMetrics.active) {
+      _sessionMetrics.recordRoute(route);
+      _sessionMetrics.recordModelFamily(KickAnalytics.modelFamily(model));
+      _sessionMetrics.recordLatency(latencyMs);
+    }
+
     switch (kind) {
       case 'proxy_request_succeeded':
         if (_sessionMetrics.active) {
           _sessionMetrics.successCount += 1;
         }
         await _analytics.trackFirstSuccessfulRequest(
-          route: payload['route'] as String? ?? '',
-          model: payload['model'] as String? ?? '',
-          stream: payload['stream'] == true,
+          route: route,
+          model: model,
+          stream: stream,
+          sessionId: sessionId,
+          latencyMs: latencyMs,
         );
         break;
       case 'proxy_request_failed':
@@ -749,9 +859,9 @@ class KickProxyController {
           _sessionMetrics.failedCount += 1;
         }
         await _analytics.trackProxyRequestFailed(
-          route: payload['route'] as String? ?? '',
-          model: payload['model'] as String? ?? '',
-          stream: payload['stream'] == true,
+          route: route,
+          model: model,
+          stream: stream,
           errorKind: payload['error_kind'] as String? ?? 'unknown',
           errorSource: payload['error_source'] as String?,
           statusCode: payload['status_code'] as int?,
@@ -761,6 +871,8 @@ class KickProxyController {
           hasActionUrl: payload.containsKey('has_action_url')
               ? payload['has_action_url'] == true
               : null,
+          sessionId: sessionId,
+          latencyMs: latencyMs,
         );
         break;
       case 'proxy_request_retried':
@@ -768,9 +880,9 @@ class KickProxyController {
           _sessionMetrics.retriedCount += 1;
         }
         await _analytics.trackProxyRequestRetried(
-          route: payload['route'] as String? ?? '',
-          model: payload['model'] as String? ?? '',
-          stream: payload['stream'] == true,
+          route: route,
+          model: model,
+          stream: stream,
           outcome: payload['outcome'] as String? ?? 'unknown',
           retryCount: payload['retry_count'] as int? ?? 0,
           upstreamRetryCount: payload['upstream_retry_count'] as int? ?? 0,
@@ -785,14 +897,16 @@ class KickProxyController {
           hasActionUrl: payload.containsKey('has_action_url')
               ? payload['has_action_url'] == true
               : null,
+          sessionId: sessionId,
+          latencyMs: latencyMs,
         );
         break;
       case 'upstream_compatibility_issue':
         await _analytics.trackUpstreamCompatibilityIssue(
           issueKind: payload['issue_kind'] as String? ?? 'unknown',
-          route: payload['route'] as String? ?? '',
-          model: payload['model'] as String? ?? '',
-          stream: payload['stream'] == true,
+          route: route,
+          model: model,
+          stream: stream,
           errorKind: payload['error_kind'] as String?,
           errorSource: payload['error_source'] as String?,
           statusCode: payload['status_code'] as int?,
@@ -802,9 +916,17 @@ class KickProxyController {
           hasActionUrl: payload.containsKey('has_action_url')
               ? payload['has_action_url'] == true
               : null,
+          sessionId: sessionId,
         );
         break;
     }
+  }
+
+  void _beginSessionMetrics() {
+    final stopwatch = _startLatencyStopwatch;
+    _startLatencyStopwatch = null;
+    _sessionMetrics.begin(sessionId: _uuid.v4(), startStopwatch: stopwatch);
+    _analytics.resetSessionThrottle();
   }
 
   String _classifyRuntimeError(String? message) {
@@ -841,8 +963,16 @@ class KickProxyController {
     final uptimeSec = currentState.startedAt == null
         ? 0
         : DateTime.now().difference(currentState.startedAt!).inSeconds;
+    final routesSeen = _sessionMetrics.routesSeen;
+    final modelFamiliesSeen = _sessionMetrics.modelFamiliesSeen;
+    final latencyP50 = _sessionMetrics.latencyP50Ms;
+    final latencyP95 = _sessionMetrics.latencyP95Ms;
+    final latencyMax = _sessionMetrics.latencyMaxMs;
+    final failedDropped = _analytics.droppedEventsFor(KickAnalyticsEvents.proxyRequestFailed);
+    final retriedDropped = _analytics.droppedEventsFor(KickAnalyticsEvents.proxyRequestRetried);
     final payload = <String, Object?>{
       'stop_reason': stopReason,
+      'session_id': _sessionMetrics.sessionId,
       'uptime_sec': uptimeSec < 0 ? 0 : uptimeSec,
       'request_count': currentState.requestCount,
       'success_count': _sessionMetrics.successCount,
@@ -850,6 +980,13 @@ class KickProxyController {
       'retried_count': _sessionMetrics.retriedCount,
       'active_accounts': currentState.activeAccounts,
       'healthy_accounts': currentState.healthyAccounts,
+      if (failedDropped > 0) 'failed_dropped': failedDropped,
+      if (retriedDropped > 0) 'retried_dropped': retriedDropped,
+      'latency_p50_ms': ?latencyP50,
+      'latency_p95_ms': ?latencyP95,
+      'latency_max_ms': ?latencyMax,
+      if (routesSeen.isNotEmpty) 'routes_seen': routesSeen,
+      if (modelFamiliesSeen.isNotEmpty) 'model_families_seen': modelFamiliesSeen,
       if (currentSettings != null) 'request_max_retries': currentSettings.requestMaxRetries,
       if (currentSettings != null) 'mark_429_as_unhealthy': currentSettings.mark429AsUnhealthy,
       if (currentSettings != null)
@@ -880,6 +1017,14 @@ class KickProxyController {
       mark429AsUnhealthy: payload['mark_429_as_unhealthy'] as bool? ?? false,
       androidBackgroundRuntime: payload['android_background_runtime'] as bool? ?? false,
       stopReason: stopReason,
+      sessionId: _sessionMetrics.sessionId,
+      failedDropped: failedDropped > 0 ? failedDropped : null,
+      retriedDropped: retriedDropped > 0 ? retriedDropped : null,
+      latencyP50Ms: latencyP50,
+      latencyP95Ms: latencyP95,
+      latencyMaxMs: latencyMax,
+      routesSeen: routesSeen.isEmpty ? null : routesSeen,
+      modelFamiliesSeen: modelFamiliesSeen.isEmpty ? null : modelFamiliesSeen,
     );
     _sessionMetrics.end();
   }

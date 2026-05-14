@@ -58,6 +58,7 @@ class AppBootstrap {
   Future<void> dispose() async {
     await DesktopRuntime.dispose();
     await proxyController.dispose();
+    await analytics.dispose();
     await database.close();
   }
 }
@@ -165,10 +166,15 @@ Future<void> _warmBootstrapServices({
   required bool clearRawPayload,
   required _BootstrapTimings timings,
 }) async {
+  final perfStopwatch = Stopwatch()..start();
+  int? logsScrubMs;
+  int? proxyReadyMs;
+  int? analyticsTrackedMs;
   await Future<void>.delayed(Duration.zero);
   try {
     await logsRepository.scrubSensitiveEntries(clearRawPayload: clearRawPayload);
     timings.mark('logs_scrubbed');
+    logsScrubMs = perfStopwatch.elapsedMilliseconds;
   } catch (error, stackTrace) {
     _debugBootstrapFailure('logs_scrubbed', error, stackTrace);
     unawaited(
@@ -185,6 +191,7 @@ Future<void> _warmBootstrapServices({
   try {
     await proxyController.initialize();
     timings.mark('proxy_controller_initialized');
+    proxyReadyMs = perfStopwatch.elapsedMilliseconds;
   } catch (error, stackTrace) {
     _debugBootstrapFailure('proxy_controller_initialized', error, stackTrace);
     unawaited(
@@ -201,6 +208,7 @@ Future<void> _warmBootstrapServices({
   try {
     await analytics.trackAppOpen();
     timings.mark('analytics_tracked');
+    analyticsTrackedMs = perfStopwatch.elapsedMilliseconds;
   } catch (error, stackTrace) {
     _debugBootstrapFailure('analytics_tracked', error, stackTrace);
     unawaited(
@@ -213,6 +221,14 @@ Future<void> _warmBootstrapServices({
       ),
     );
   }
+
+  unawaited(
+    analytics.trackAppOpenPerf(
+      totalBootstrapMs: analyticsTrackedMs ?? perfStopwatch.elapsedMilliseconds,
+      proxyReadyMs: proxyReadyMs,
+      logsScrubMs: logsScrubMs,
+    ),
+  );
 
   final playTelemetry = GeminiPlayTelemetryService(
     installationIdPath: playTelemetryInstallationIdPath,

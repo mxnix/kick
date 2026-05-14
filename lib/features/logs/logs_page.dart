@@ -335,6 +335,9 @@ class _LogsPageState extends ConsumerState<LogsPage> {
       if (result == null) {
         return;
       }
+      unawaited(
+        ref.read(analyticsProvider).trackLogsExported(target: 'save', entryCount: entries.length),
+      );
       _showSnackBar(l10n.logsExportedMessage(result.fileName));
     } catch (error) {
       if (!mounted) {
@@ -360,6 +363,9 @@ class _LogsPageState extends ConsumerState<LogsPage> {
     try {
       final metadata = await _buildExportMetadata();
       await ref.read(logExportServiceProvider).share(entries, metadata: metadata);
+      unawaited(
+        ref.read(analyticsProvider).trackLogsExported(target: 'share', entryCount: entries.length),
+      );
     } catch (error) {
       if (!mounted) {
         return;
