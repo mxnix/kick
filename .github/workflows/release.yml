@@ -927,7 +927,24 @@ jobs:
             exit 0
           }
 
-          & $winget.Source validate --manifest "${{ steps.winget_manifest.outputs.manifest_dir }}" --disable-interactivity
+          $output = & $winget.Source validate --manifest "${{ steps.winget_manifest.outputs.manifest_dir }}" --disable-interactivity 2>&1
+          $exit = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+
+          if ($exit -eq 0) {
+            exit 0
+          }
+
+          # `winget validate` returns a non-zero exit code even when the manifest
+          # is valid but produced warnings (e.g., the runner's winget predates the
+          # 1.12.0 schema URL pattern). Treat that case as success; the winget-pkgs
+          # bot performs authoritative validation when the PR is opened.
+          if (($output -join "`n") -match 'Manifest validation succeeded with warnings\.') {
+            Write-Host "::notice::winget validate reported only warnings; continuing."
+            exit 0
+          }
+
+          exit $exit
 
       - name: Submit package to WinGet
         shell: pwsh
