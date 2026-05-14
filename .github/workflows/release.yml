@@ -787,7 +787,11 @@ jobs:
           $release = Invoke-RestMethod -Headers $headers -Uri $releaseApiUrl
           $releaseDate = ([datetimeoffset]$release.published_at).UtcDateTime.ToString('yyyy-MM-dd')
 
-          $checksumText = Invoke-RestMethod -Headers @{ 'User-Agent' = 'kick-release-workflow' } -Uri $checksumUrl
+          $checksumResponse = Invoke-WebRequest -Headers @{ 'User-Agent' = 'kick-release-workflow' } -Uri $checksumUrl
+          $checksumText = $checksumResponse.Content
+          if ($checksumText -is [byte[]]) {
+            $checksumText = [System.Text.Encoding]::UTF8.GetString($checksumText)
+          }
           $escapedInstallerFileName = [regex]::Escape($installerFileName)
           $checksumLine = ($checksumText -split '\r?\n') |
             Where-Object { $_ -match "^[A-Fa-f0-9]{64}\s+\*$escapedInstallerFileName$" } |
@@ -928,11 +932,10 @@ jobs:
       - name: Submit package to WinGet
         shell: pwsh
         env:
-          WINGET_PAT: ${{ secrets.WINGET_PAT }}
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_PAT }}
         run: |
           $version = "${{ needs.metadata.outputs.version }}"
           & .\wingetcreate.exe submit `
-            --prtitle "Add nikzmx.KiCk version $version" `
-            --token $env:WINGET_PAT `
+            --prtitle "New version: nikzmx.KiCk version $version" `
             --no-open `
             "${{ steps.winget_manifest.outputs.manifest_dir }}"
