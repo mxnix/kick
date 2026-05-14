@@ -27,6 +27,7 @@ import '../../proxy/gemini/gemini_usage_service.dart';
 import '../../proxy/kiro/kiro_auth_source.dart';
 import '../../proxy/kiro/kiro_link_auth_service.dart';
 import '../../proxy/kiro/kiro_usage_service.dart';
+import '../accounts/account_share_service.dart';
 import '../home/silly_tavern_push_service.dart';
 import '../logs/log_display_items.dart';
 import '../logs/log_export_service.dart';
@@ -220,6 +221,11 @@ final configurationBackupServiceProvider = Provider<ConfigurationBackupService>(
     writeTokens: bootstrap.secretStore.writeOAuthTokens,
     deleteTokens: bootstrap.secretStore.deleteOAuthTokens,
   );
+});
+
+final accountShareServiceProvider = Provider<AccountShareService>((ref) {
+  final bootstrap = ref.watch(appBootstrapProvider);
+  return AccountShareService(readTokens: bootstrap.secretStore.readOAuthTokens);
 });
 
 final accountsControllerProvider = AsyncNotifierProvider<AccountsController, List<AccountProfile>>(
@@ -432,6 +438,61 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
         clearQuotaSnapshot: true,
       ),
     );
+  }
+
+  Future<AccountProfile> importSharedAccount(AccountShareImportResult shared) async {
+    final bootstrap = ref.read(appBootstrapProvider);
+    final source = shared.account;
+
+    final newId = _uuid.v4();
+    final newTokenRef = source.usesSecretStoreTokens
+        ? 'kick.oauth.${_uuid.v4()}'
+        : 'kick.kiro.${_uuid.v4()}';
+
+    var profile = source.copyWith(
+      id: newId,
+      tokenRef: newTokenRef,
+      enabled: true,
+      usageCount: 0,
+      errorCount: 0,
+      clearCooldown: true,
+      clearQuotaSnapshot: true,
+      clearLastUsedAt: true,
+      runtimeNotSupportedModels: const <String>[],
+      priority: normalizeAccountPriority(source.priority),
+    );
+
+    if (source.provider == AccountProvider.kiro) {
+      final managedState = shared.kiroManagedCredentialState;
+      if (managedState != null) {
+        final shareService = ref.read(accountShareServiceProvider);
+        final restored = await shareService.materializeKiroManagedCredential(managedState);
+        if (restored != null) {
+          profile = profile.copyWith(
+            credentialSourcePath: restored.sourcePath,
+            credentialSourceType: restored.sourceType,
+            providerRegion: restored.effectiveRegion,
+            providerProfileArn: resolveKiroProfileArn(
+              restored.profileArn,
+              fallback: source.providerProfileArn,
+            ),
+          );
+        }
+      } else if (source.credentialSourceType == defaultKiroCredentialSourceType) {
+        final defaultPath = resolveKiroCredentialSourcePath(null);
+        profile = profile.copyWith(
+          credentialSourcePath: defaultPath,
+          clearCredentialSourcePath: defaultPath == null,
+        );
+      }
+    } else if (shared.tokens != null) {
+      await bootstrap.secretStore.writeOAuthTokens(newTokenRef, shared.tokens!);
+    }
+
+    await bootstrap.accountsRepository.upsert(profile);
+    await refreshState();
+    _emitAccountStateChanged(action: 'imported', provider: profile.provider);
+    return profile;
   }
 
   Future<AccountProfile?> _findAccount(String id) async {

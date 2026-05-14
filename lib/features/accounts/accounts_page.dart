@@ -26,6 +26,7 @@ import 'account_avatar.dart';
 import 'account_editor_dialog.dart';
 import 'account_priority_presentation.dart';
 import 'account_provider_picker_dialog.dart';
+import 'account_share_service.dart';
 
 class AccountsPage extends ConsumerStatefulWidget {
   const AccountsPage({super.key});
@@ -178,11 +179,17 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   }
 
   Future<void> _authenticateNewAccount(BuildContext context, WidgetRef ref) async {
-    final provider = await showAccountProviderPickerDialog(context);
-    if (!context.mounted || provider == null) {
+    final pickerResult = await showAccountProviderPickerDialog(context);
+    if (!context.mounted || pickerResult == null) {
       return;
     }
 
+    if (pickerResult is AccountProviderPickerImportFromFile) {
+      await _importSharedAccount(context, ref);
+      return;
+    }
+
+    final provider = (pickerResult as AccountProviderPickerSelected).provider;
     final draft = await showAccountEditorDialog(
       context,
       provider: provider,
@@ -212,6 +219,52 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       notSupportedModels: draft.notSupportedModels,
       autoDiagnoseWhenProjectIdMissing: true,
     );
+  }
+
+  Future<void> _importSharedAccount(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final shareService = ref.read(accountShareServiceProvider);
+    AccountShareImportResult? imported;
+    try {
+      imported = await shareService.pickAndDecode(dialogTitle: l10n.accountShareImportDialogTitle);
+    } on AccountShareException catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(_formatAccountShareError(l10n, error))));
+      return;
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.accountShareImportFailedMessage)));
+      return;
+    }
+
+    if (!context.mounted || imported == null) {
+      return;
+    }
+
+    try {
+      final saved = await ref
+          .read(accountsControllerProvider.notifier)
+          .importSharedAccount(imported);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.accountShareImportedMessage(saved.label))));
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.accountShareImportFailedMessage)));
+    }
   }
 }
 
@@ -758,7 +811,7 @@ class _AccountCard extends ConsumerWidget {
   }
 }
 
-enum _AccountMenuAction { reauthorize, diagnose, reset, delete }
+enum _AccountMenuAction { reauthorize, diagnose, reset, share, delete }
 
 Future<void> _handleAccountMenuAction(
   BuildContext context,
@@ -792,6 +845,9 @@ Future<void> _handleAccountMenuAction(
     case _AccountMenuAction.reset:
       await ref.read(accountsControllerProvider.notifier).resetHealth(account);
       return;
+    case _AccountMenuAction.share:
+      await _shareAccount(context, ref, account);
+      return;
     case _AccountMenuAction.delete:
       final shouldDelete = await _confirmDeleteAccount(context, account);
       if (!context.mounted || !shouldDelete) {
@@ -800,6 +856,41 @@ Future<void> _handleAccountMenuAction(
       await ref.read(accountsControllerProvider.notifier).deleteAccount(account);
       return;
   }
+}
+
+Future<void> _shareAccount(BuildContext context, WidgetRef ref, AccountProfile account) async {
+  final l10n = context.l10n;
+  final messenger = ScaffoldMessenger.of(context);
+  final shareService = ref.read(accountShareServiceProvider);
+  try {
+    final result = await shareService.share(
+      account: account,
+      dialogTitle: l10n.accountShareExportDialogTitle,
+      shareSubject: l10n.accountShareSubject(account.label),
+      shareText: l10n.accountShareSubject(account.label),
+    );
+    if (!context.mounted || result == null) {
+      return;
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.accountShareExportedMessage(result.fileName))));
+  } catch (_) {
+    if (!context.mounted) {
+      return;
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.accountShareExportFailedMessage)));
+  }
+}
+
+String _formatAccountShareError(KickLocalizations l10n, AccountShareException error) {
+  return switch (error.code) {
+    AccountShareErrorCode.invalidFormat => l10n.accountShareInvalidFormatMessage,
+    AccountShareErrorCode.unsupportedVersion => l10n.accountShareUnsupportedVersionMessage,
+    AccountShareErrorCode.readFailed => l10n.accountShareReadFailedMessage,
+  };
 }
 
 Future<bool> _confirmDeleteAccount(BuildContext context, AccountProfile account) async {
@@ -1873,6 +1964,11 @@ class _AccountMoreActionsButton extends StatelessWidget {
           leadingIcon: const Icon(Icons.restart_alt_rounded, size: 18),
           onPressed: () => onSelected(_AccountMenuAction.reset),
           child: Text(resetLabel),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.ios_share_rounded, size: 18),
+          onPressed: () => onSelected(_AccountMenuAction.share),
+          child: Text(l10n.accountShareAction),
         ),
         MenuItemButton(
           leadingIcon: Icon(Icons.delete_rounded, size: 18, color: scheme.error),

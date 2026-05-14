@@ -598,6 +598,78 @@ abstract class AppLocalizations {
   /// **'More'**
   String get moreButton;
 
+  /// No description provided for @accountShareAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get accountShareAction;
+
+  /// No description provided for @accountImportFromFileButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Import from file'**
+  String get accountImportFromFileButton;
+
+  /// No description provided for @accountShareSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} account file for KiCk'**
+  String accountShareSubject(String label);
+
+  /// No description provided for @accountShareExportDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Where should the account file be saved?'**
+  String get accountShareExportDialogTitle;
+
+  /// No description provided for @accountShareImportDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a .kickacc account file'**
+  String get accountShareImportDialogTitle;
+
+  /// No description provided for @accountShareExportedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Account saved to file {fileName}'**
+  String accountShareExportedMessage(String fileName);
+
+  /// No description provided for @accountShareExportFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to share the account'**
+  String get accountShareExportFailedMessage;
+
+  /// No description provided for @accountShareImportedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Account {label} added'**
+  String accountShareImportedMessage(String label);
+
+  /// No description provided for @accountShareImportFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to import the account'**
+  String get accountShareImportFailedMessage;
+
+  /// No description provided for @accountShareInvalidFormatMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid account file format'**
+  String get accountShareInvalidFormatMessage;
+
+  /// No description provided for @accountShareUnsupportedVersionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Account file version is not supported'**
+  String get accountShareUnsupportedVersionMessage;
+
+  /// No description provided for @accountShareReadFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to read the account file'**
+  String get accountShareReadFailedMessage;
+
   /// No description provided for @deleteAccountDialogTitle.
   ///
   /// In en, this message translates to:

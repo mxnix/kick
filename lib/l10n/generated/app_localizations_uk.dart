@@ -284,6 +284,48 @@ class AppLocalizationsUk extends AppLocalizations {
   String get moreButton => 'Ще';
 
   @override
+  String get accountShareAction => 'Поділитися';
+
+  @override
+  String get accountImportFromFileButton => 'Імпортувати з файлу';
+
+  @override
+  String accountShareSubject(String label) {
+    return 'Файл акаунта $label для KiCk';
+  }
+
+  @override
+  String get accountShareExportDialogTitle => 'Куди зберегти файл акаунта?';
+
+  @override
+  String get accountShareImportDialogTitle => 'Оберіть файл акаунта .kickacc';
+
+  @override
+  String accountShareExportedMessage(String fileName) {
+    return 'Акаунт збережено у файл $fileName';
+  }
+
+  @override
+  String get accountShareExportFailedMessage => 'Не вдалося поділитися акаунтом';
+
+  @override
+  String accountShareImportedMessage(String label) {
+    return 'Акаунт $label додано';
+  }
+
+  @override
+  String get accountShareImportFailedMessage => 'Не вдалося імпортувати акаунт';
+
+  @override
+  String get accountShareInvalidFormatMessage => 'Невірний формат файлу акаунта';
+
+  @override
+  String get accountShareUnsupportedVersionMessage => 'Версія файлу акаунта не підтримується';
+
+  @override
+  String get accountShareReadFailedMessage => 'Не вдалося прочитати файл акаунта';
+
+  @override
   String get deleteAccountDialogTitle => 'Видалити акаунт?';
 
   @override

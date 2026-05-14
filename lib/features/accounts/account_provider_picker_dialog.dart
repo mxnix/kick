@@ -1,11 +1,26 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/kick_icons.dart';
 import '../../data/models/account_profile.dart';
 import '../../l10n/kick_localizations.dart';
+import '../shared/kick_actions.dart';
 import '../shared/provider_icon.dart';
 
-Future<AccountProvider?> showAccountProviderPickerDialog(BuildContext context) {
-  return showDialog<AccountProvider>(
+sealed class AccountProviderPickerResult {
+  const AccountProviderPickerResult();
+}
+
+class AccountProviderPickerSelected extends AccountProviderPickerResult {
+  const AccountProviderPickerSelected(this.provider);
+  final AccountProvider provider;
+}
+
+class AccountProviderPickerImportFromFile extends AccountProviderPickerResult {
+  const AccountProviderPickerImportFromFile();
+}
+
+Future<AccountProviderPickerResult?> showAccountProviderPickerDialog(BuildContext context) {
+  return showDialog<AccountProviderPickerResult>(
     context: context,
     builder: (context) => const _AccountProviderPickerDialog(),
   );
@@ -92,6 +107,15 @@ class _AccountProviderPickerDialog extends StatelessWidget {
                       ),
                     ],
                   ),
+                  SizedBox(height: compact ? 18 : 28),
+                  KickSecondaryAction(
+                    icon: KickIcons.fileUpload,
+                    label: l10n.accountImportFromFileButton,
+                    fullWidth: true,
+                    variant: KickSecondaryActionVariant.text,
+                    onPressed: () =>
+                        Navigator.of(context).pop(const AccountProviderPickerImportFromFile()),
+                  ),
                 ],
               );
             },
@@ -153,7 +177,8 @@ class _ProviderChoiceCardState extends State<_ProviderChoiceCard> {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(radius),
-                onTap: () => Navigator.of(context).pop(widget.provider),
+                onTap: () =>
+                    Navigator.of(context).pop(AccountProviderPickerSelected(widget.provider)),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutCubic,

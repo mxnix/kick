@@ -172,6 +172,39 @@
   "deleteTooltip": "Delete",
   "accountUsageOpenTooltip": "Quotas",
   "moreButton": "More",
+  "accountShareAction": "Share",
+  "accountImportFromFileButton": "Import from file",
+  "accountShareSubject": "{label} account file for KiCk",
+  "@accountShareSubject": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "accountShareExportDialogTitle": "Where should the account file be saved?",
+  "accountShareImportDialogTitle": "Select a .kickacc account file",
+  "accountShareExportedMessage": "Account saved to file {fileName}",
+  "@accountShareExportedMessage": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "accountShareExportFailedMessage": "Failed to share the account",
+  "accountShareImportedMessage": "Account {label} added",
+  "@accountShareImportedMessage": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "accountShareImportFailedMessage": "Failed to import the account",
+  "accountShareInvalidFormatMessage": "Invalid account file format",
+  "accountShareUnsupportedVersionMessage": "Account file version is not supported",
+  "accountShareReadFailedMessage": "Failed to read the account file",
   "deleteAccountDialogTitle": "Delete account?",
   "deleteAccountDialogMessage": "Account {label} will be removed from KiCk. You can reconnect it later if needed.",
   "@deleteAccountDialogMessage": {

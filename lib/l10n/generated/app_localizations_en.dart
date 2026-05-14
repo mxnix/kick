@@ -284,6 +284,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreButton => 'More';
 
   @override
+  String get accountShareAction => 'Share';
+
+  @override
+  String get accountImportFromFileButton => 'Import from file';
+
+  @override
+  String accountShareSubject(String label) {
+    return '$label account file for KiCk';
+  }
+
+  @override
+  String get accountShareExportDialogTitle => 'Where should the account file be saved?';
+
+  @override
+  String get accountShareImportDialogTitle => 'Select a .kickacc account file';
+
+  @override
+  String accountShareExportedMessage(String fileName) {
+    return 'Account saved to file $fileName';
+  }
+
+  @override
+  String get accountShareExportFailedMessage => 'Failed to share the account';
+
+  @override
+  String accountShareImportedMessage(String label) {
+    return 'Account $label added';
+  }
+
+  @override
+  String get accountShareImportFailedMessage => 'Failed to import the account';
+
+  @override
+  String get accountShareInvalidFormatMessage => 'Invalid account file format';
+
+  @override
+  String get accountShareUnsupportedVersionMessage => 'Account file version is not supported';
+
+  @override
+  String get accountShareReadFailedMessage => 'Failed to read the account file';
+
+  @override
   String get deleteAccountDialogTitle => 'Delete account?';
 
   @override

@@ -139,6 +139,39 @@
     "deleteTooltip": "Удалить",
     "accountUsageOpenTooltip": "Лимиты",
     "moreButton": "Ещё",
+    "accountShareAction": "Поделиться",
+    "accountImportFromFileButton": "Импортировать из файла",
+    "accountShareSubject": "Файл аккаунта {label} для KiCk",
+    "@accountShareSubject": {
+      "placeholders": {
+        "label": {
+          "type": "String"
+        }
+      }
+    },
+    "accountShareExportDialogTitle": "Куда сохранить файл аккаунта?",
+    "accountShareImportDialogTitle": "Выберите файл аккаунта .kickacc",
+    "accountShareExportedMessage": "Аккаунт сохранён в файл {fileName}",
+    "@accountShareExportedMessage": {
+      "placeholders": {
+        "fileName": {
+          "type": "String"
+        }
+      }
+    },
+    "accountShareExportFailedMessage": "Не удалось поделиться аккаунтом",
+    "accountShareImportedMessage": "Аккаунт {label} добавлен",
+    "@accountShareImportedMessage": {
+      "placeholders": {
+        "label": {
+          "type": "String"
+        }
+      }
+    },
+    "accountShareImportFailedMessage": "Не удалось импортировать аккаунт",
+    "accountShareInvalidFormatMessage": "Неверный формат файла аккаунта",
+    "accountShareUnsupportedVersionMessage": "Версия файла аккаунта не поддерживается",
+    "accountShareReadFailedMessage": "Не удалось прочитать файл аккаунта",
     "deleteAccountDialogTitle": "Удалить аккаунт?",
     "deleteAccountDialogMessage": "Аккаунт {label} будет удалён из KiCk. При необходимости его можно подключить снова позже.",
     "@deleteAccountDialogMessage": {

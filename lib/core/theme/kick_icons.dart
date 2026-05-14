@@ -27,6 +27,7 @@ class KickIcons {
   static const IconData edit = Symbols.edit_rounded;
   static const IconData error = Symbols.error_rounded;
   static const IconData expandMore = Symbols.expand_more_rounded;
+  static const IconData fileUpload = Symbols.file_upload_rounded;
   static const IconData filter = Symbols.filter_alt_rounded;
   static const IconData hub = Symbols.hub_rounded;
   static const IconData hourglass = Symbols.hourglass_top_rounded;
