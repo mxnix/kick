@@ -16,13 +16,36 @@ import '../shared/app_update_banner.dart';
 import '../shared/kick_actions.dart';
 import '../shared/kick_scroll.dart';
 import '../shared/kick_surfaces.dart';
+import 'about_easter_egg.dart';
 import 'app_update_checker.dart';
 
-class AboutPage extends ConsumerWidget {
+const int _kEasterEggTapThreshold = 5;
+
+class AboutPage extends ConsumerStatefulWidget {
   const AboutPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends ConsumerState<AboutPage> {
+  int _iconTapCount = 0;
+  bool _easterEggActive = false;
+
+  void _handleAppIconTap() {
+    if (_easterEggActive) {
+      return;
+    }
+    setState(() {
+      _iconTapCount += 1;
+      if (_iconTapCount >= _kEasterEggTapThreshold) {
+        _easterEggActive = true;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final settingsValue = ref.watch(settingsControllerProvider);
     final appVersionValue = ref.watch(appVersionProvider);
@@ -32,7 +55,7 @@ class AboutPage extends ConsumerWidget {
       orElse: () => kickBuildAppVersion,
     );
 
-    return settingsValue.when(
+    final body = settingsValue.when(
       data: (settings) => KickSmoothSingleChildScrollView(
         padding: EdgeInsets.only(bottom: AppShell.floatingNavigationClearanceOf(context)),
         child: Column(
@@ -44,6 +67,7 @@ class AboutPage extends ConsumerWidget {
               appTitle: l10n.appTitle,
               versionLabel: versionLabel,
               description: l10n.aboutDescription,
+              onIconTap: _handleAppIconTap,
             ),
             const SizedBox(height: 14),
             _AboutUpdatesCard(
@@ -99,6 +123,18 @@ class AboutPage extends ConsumerWidget {
         message: formatUserFacingError(l10n, error),
       ),
       loading: () => const Center(child: KickLoadingIndicator()),
+    );
+
+    return Stack(
+      children: [
+        body,
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: !_easterEggActive,
+            child: AboutEasterEggOverlay(active: _easterEggActive),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -363,16 +399,29 @@ class _AboutHeroCard extends StatelessWidget {
     required this.appTitle,
     required this.versionLabel,
     required this.description,
+    this.onIconTap,
   });
 
   final String appTitle;
   final String versionLabel;
   final String description;
+  final VoidCallback? onIconTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
+    final iconBox = Container(
+      width: 66,
+      height: 66,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: scheme.surfaceContainerHigh,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset(kickAppIconAssetPath, fit: BoxFit.cover),
+    );
 
     return KickPanel(
       tone: KickPanelTone.accent,
@@ -383,15 +432,13 @@ class _AboutHeroCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 66,
-                height: 66,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  color: scheme.surfaceContainerHigh,
+              Semantics(
+                button: onIconTap != null,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onIconTap,
+                  child: iconBox,
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: Image.asset(kickAppIconAssetPath, fit: BoxFit.cover),
               ),
               const SizedBox(width: 16),
               Expanded(
