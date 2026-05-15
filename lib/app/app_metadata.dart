@@ -1,5 +1,5 @@
 // Keep this fallback in sync with pubspec.yaml; app_metadata_test.dart enforces it.
-const kickDefaultAppVersion = '1.5.1';
+const kickDefaultAppVersion = '1.5.2';
 const kickBuildAppVersion = String.fromEnvironment(
   'FLUTTER_BUILD_NAME',
   defaultValue: kickDefaultAppVersion,
