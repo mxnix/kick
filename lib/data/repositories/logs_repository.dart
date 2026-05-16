@@ -98,6 +98,15 @@ class LogsRepository {
     await _pruneToRetentionLimit();
   }
 
+  /// Updates the in-memory retention limit without touching the database.
+  /// Use [pruneToRetentionLimit] (typically scheduled on idle) to actually
+  /// run the `DELETE` once the UI has finished its first frame.
+  void setRetentionLimitWithoutPruning(int retentionLimit) {
+    _retentionLimit = normalizeLogRetentionCount(retentionLimit);
+  }
+
+  Future<void> pruneToRetentionLimit() => _pruneToRetentionLimit();
+
   Future<void> insert(AppLogEntry entry) async {
     final sanitizedMessage = LogSanitizer.sanitizeText(entry.message);
     final sanitizedMaskedPayload = LogSanitizer.sanitizeSerializedPayload(entry.maskedPayload);
@@ -165,6 +174,17 @@ class LogsRepository {
       }
       offset += batchSize;
     }
+  }
+
+  /// Returns true when at least one log row still carries a non-empty
+  /// `raw_payload`. Used by bootstrap to skip the full scrub pass when the
+  /// raw payload column is already empty (which is the steady state once
+  /// `unsafe_raw_logging_enabled` has stayed off across a single warm-up).
+  Future<bool> hasNonEmptyRawPayload() async {
+    final row = await _database
+        .customSelect("SELECT 1 AS hit FROM logs WHERE raw_payload != '' LIMIT 1")
+        .getSingleOrNull();
+    return row != null;
   }
 
   Future<void> _pruneToRetentionLimit() async {

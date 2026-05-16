@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../l10n/kick_localizations.dart';
+import 'desktop_runtime.dart';
 import 'window_state_store.dart';
 
 class WindowBootstrap {
@@ -80,6 +81,17 @@ class WindowBootstrap {
         if (saved.isMaximized) {
           await windowManager.maximize();
         }
+      }
+
+      // Reveal the window only after frameless/bounds/maximize state have
+      // been applied. The native runner (windows/runner/flutter_window.cpp)
+      // intentionally leaves the window hidden so we don't flash a default
+      // 430x860 white WS_OVERLAPPEDWINDOW in the top-left corner before the
+      // saved geometry and dark theme settle in. Tray-only launches keep the
+      // window hidden until the user explicitly opens it.
+      if (!DesktopRuntime.startHiddenOnLaunch) {
+        await windowManager.show();
+        await windowManager.focus();
       }
     });
   }

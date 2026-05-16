@@ -77,15 +77,17 @@ bool FlutterWindow::OnCreate() {
       });
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
-  });
-
-  // Flutter can complete the first frame before the "show window" callback is
-  // registered. The following call ensures a frame is pending to ensure the
-  // window is shown. It is a no-op if the first frame hasn't completed yet.
-  flutter_controller_->ForceRedraw();
-
+  // The Dart side (window_manager + WindowBootstrap.reveal) controls when
+  // the window becomes visible. Showing the window here, the moment the
+  // engine reports its first frame, used to flash a default 430x860
+  // WS_OVERLAPPEDWINDOW with a white background in the top-left corner
+  // before WindowBootstrap.configure() had a chance to apply the saved
+  // bounds, frameless chrome and dark theme. By keeping the window hidden
+  // we let Dart restore geometry first and call windowManager.show() once
+  // the loading shell is ready, eliminating the flash.
+  //
+  // ForceRedraw is intentionally left out for the same reason - we don't
+  // want to repaint a window the user is not supposed to see yet.
   return true;
 }
 

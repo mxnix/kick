@@ -17,8 +17,30 @@ const String _kiroIdeStableMetadataUrl =
 String _runtimeVersion = fallbackKiroIdeVersion;
 DateTime? _lastSuccessfulProbe;
 Future<void>? _inFlightProbe;
+KiroIdeVersionPersistedState? _cachedPersistedState;
+KiroIdeVersionStateWriter? _persistedStateWriter;
 
 String get kiroIdeRuntimeVersion => _runtimeVersion;
+
+/// Hydrates the in-process cache from a previously persisted snapshot. Should
+/// be called once during bootstrap so the first probe-call after a restart can
+/// honour the 12h throttle without making a fresh network round-trip.
+void hydrateKiroIdeRuntimeVersionFromCache(KiroIdeVersionPersistedState? state) {
+  if (state == null) {
+    return;
+  }
+  if (state.version.trim().isNotEmpty) {
+    _runtimeVersion = state.version.trim();
+  }
+  _lastSuccessfulProbe = state.probedAt;
+  _cachedPersistedState = state;
+}
+
+/// Wires the persistent cache I/O so the probe can write the latest
+/// `(version, probedAt)` pair to durable storage on success.
+void registerKiroIdeRuntimeVersionPersistence({KiroIdeVersionStateWriter? writer}) {
+  _persistedStateWriter = writer;
+}
 
 void setKiroIdeRuntimeVersionForTesting(String value) {
   final trimmed = value.trim();
@@ -29,6 +51,22 @@ void resetKiroIdeRuntimeVersionForTesting() {
   _runtimeVersion = fallbackKiroIdeVersion;
   _lastSuccessfulProbe = null;
   _inFlightProbe = null;
+  _cachedPersistedState = null;
+  _persistedStateWriter = null;
+}
+
+/// Returns true when [refreshKiroIdeRuntimeVersion] would otherwise short
+/// circuit because the previous successful probe is still within
+/// [minInterval]. Lets the bootstrap decide upfront whether to spend a future
+/// on the network at all.
+bool shouldSkipKiroIdeRuntimeVersionProbe({
+  Duration minInterval = _kiroIdeVersionProbeMinInterval,
+}) {
+  final last = _lastSuccessfulProbe;
+  if (last == null) {
+    return false;
+  }
+  return DateTime.now().difference(last) < minInterval;
 }
 
 /// Fetches the latest Kiro IDE stable release version, applying it as the
@@ -87,6 +125,18 @@ Future<void> _probe({http.Client? httpClient}) async {
     }
     _runtimeVersion = trimmed;
     _lastSuccessfulProbe = DateTime.now();
+    final state = KiroIdeVersionPersistedState(version: trimmed, probedAt: _lastSuccessfulProbe!);
+    if (_cachedPersistedState != state) {
+      _cachedPersistedState = state;
+      final writer = _persistedStateWriter;
+      if (writer != null) {
+        unawaited(
+          Future<void>.sync(() => writer(state)).catchError((_) {
+            // Persistence is best-effort; keep the in-memory cache regardless.
+          }),
+        );
+      }
+    }
   } on TimeoutException {
     // Silent fallback: keep current value.
   } on http.ClientException {
@@ -100,4 +150,55 @@ Future<void> _probe({http.Client? httpClient}) async {
       client.close();
     }
   }
+}
+
+typedef KiroIdeVersionStateReader = Future<KiroIdeVersionPersistedState?> Function();
+typedef KiroIdeVersionStateWriter = Future<void> Function(KiroIdeVersionPersistedState state);
+
+/// Snapshot persisted between runs so the 12h probe throttle survives
+/// process restarts. The serialized form is `version|iso8601` text — kept
+/// trivial so callers can drop it straight into the existing key/value
+/// settings table without an extra schema migration.
+class KiroIdeVersionPersistedState {
+  const KiroIdeVersionPersistedState({required this.version, required this.probedAt});
+
+  final String version;
+  final DateTime probedAt;
+
+  String encode() {
+    final trimmed = version.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+    return '$trimmed|${probedAt.toUtc().toIso8601String()}';
+  }
+
+  static KiroIdeVersionPersistedState? tryDecode(String? raw) {
+    if (raw == null) {
+      return null;
+    }
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final separator = trimmed.indexOf('|');
+    if (separator <= 0 || separator == trimmed.length - 1) {
+      return null;
+    }
+    final version = trimmed.substring(0, separator).trim();
+    final timestamp = DateTime.tryParse(trimmed.substring(separator + 1).trim());
+    if (version.isEmpty || timestamp == null) {
+      return null;
+    }
+    return KiroIdeVersionPersistedState(version: version, probedAt: timestamp);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is KiroIdeVersionPersistedState &&
+      other.version == version &&
+      other.probedAt.isAtSameMomentAs(probedAt);
+
+  @override
+  int get hashCode => Object.hash(version, probedAt.toUtc());
 }

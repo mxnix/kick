@@ -1,6 +1,13 @@
 import 'dart:convert';
 
 class LogSanitizer {
+  /// Increment whenever sanitizer output changes (new redaction rules, new
+  /// sensitive keys, different summarization output). Bootstrap re-scrubs the
+  /// historic logs table only when this value differs from the version that
+  /// last scrubbed the database, so bumping this string is the supported way
+  /// to invalidate previously-stored sanitized payloads.
+  static const String schemaVersion = '2026-05-16.1';
+
   static const removedFromExportNotice = '[Removed from export for safety]';
   static const _prettyJsonEncoder = JsonEncoder.withIndent('  ');
   static final _emailPattern = RegExp(

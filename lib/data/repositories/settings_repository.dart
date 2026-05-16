@@ -9,24 +9,61 @@ class SettingsRepository {
   final AppDatabase _database;
 
   Future<AppSettings?> readSettings({required String apiKey}) async {
+    final raw = await readAllRaw();
+    return _parseSettings(raw, apiKey: apiKey);
+  }
+
+  /// Reads every row from the settings table in a single query. Useful at
+  /// bootstrap time when the caller needs both [AppSettings] and auxiliary
+  /// keys (window state, tray flag, scrub version, etc.) without paying for a
+  /// separate `customSelect` for each lookup.
+  Future<Map<String, String>> readAllRaw() async {
     final rows = await _database.customSelect('SELECT key, value FROM settings').get();
-    if (rows.isEmpty) {
+    final raw = <String, String>{};
+    for (final row in rows) {
+      raw[row.read<String>('key')] = row.read<String>('value');
+    }
+    return raw;
+  }
+
+  /// Parses [AppSettings] from a previously fetched raw map, returning `null`
+  /// when none of the [AppSettings.storageKeys] are present (i.e. fresh
+  /// install).
+  static AppSettings? parseSettingsFromRaw(Map<String, String> raw, {required String apiKey}) {
+    return _parseSettings(raw, apiKey: apiKey);
+  }
+
+  static AppSettings? _parseSettings(Map<String, String> raw, {required String apiKey}) {
+    if (raw.isEmpty) {
       return null;
     }
 
-    final map = <String, String>{};
-    for (final row in rows) {
-      final key = row.read<String>('key');
-      if (AppSettings.storageKeys.contains(key)) {
-        map[key] = row.read<String>('value');
+    final filtered = <String, String>{};
+    for (final entry in raw.entries) {
+      if (AppSettings.storageKeys.contains(entry.key)) {
+        filtered[entry.key] = entry.value;
       }
     }
-
-    if (map.isEmpty) {
+    if (filtered.isEmpty) {
       return null;
     }
+    return AppSettings.fromStorageMap(filtered, apiKey: apiKey);
+  }
 
-    return AppSettings.fromStorageMap(map, apiKey: apiKey);
+  static String? readNonEmptyString(Map<String, String> raw, String key) {
+    final value = raw[key];
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
+
+  static bool readBoolFlag(Map<String, String> raw, String key, {bool defaultValue = false}) {
+    final value = raw[key]?.trim();
+    if (value == null || value.isEmpty) {
+      return defaultValue;
+    }
+    return value == 'true';
   }
 
   Future<String?> readLegacyApiKey() async {
@@ -37,6 +74,16 @@ class SettingsRepository {
         )
         .getSingleOrNull();
     final value = row?.read<String>('value').trim();
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
+
+  /// Variant of [readLegacyApiKey] that operates on a previously fetched
+  /// raw settings map, avoiding an extra `SELECT` round-trip during bootstrap.
+  static String? readLegacyApiKeyFromRaw(Map<String, String> raw) {
+    final value = raw['api_key']?.trim();
     if (value == null || value.isEmpty) {
       return null;
     }
