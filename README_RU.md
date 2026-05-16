@@ -25,9 +25,6 @@
   <a href="https://flutter.dev/">
     <img src="https://img.shields.io/badge/Flutter-02569B?style=flat-square&logo=flutter&logoColor=white" alt="На Flutter">
   </a>
-  <a href="https://aur.archlinux.org/packages/kick-bin">
-    <img src="https://img.shields.io/aur/version/kick-bin?style=flat-square&color=1793D1&logo=arch-linux&logoColor=white" alt="Пакет AUR">
-  </a>
   <a href="https://github.com/mxnix/kick/blob/main/LICENSE.md">
     <img src="https://img.shields.io/github/license/mxnix/kick?style=flat-square" alt="Лицензия">
   </a>
