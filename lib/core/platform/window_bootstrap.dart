@@ -61,9 +61,11 @@ class WindowBootstrap {
     await windowManager.waitUntilReadyToShow(options, () async {
       if (Platform.isWindows || Platform.isLinux) {
         await windowManager.setAsFrameless();
-        await windowManager.setHasShadow(false);
       }
       if (Platform.isWindows) {
+        // setHasShadow is only implemented on Windows/macOS in window_manager;
+        // calling it on Linux throws MissingPluginException.
+        await windowManager.setHasShadow(false);
         await windowManager.setSkipTaskbar(false);
       }
 
