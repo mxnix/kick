@@ -223,7 +223,7 @@ void main() {
         : currentAbi.substring(separatorIndex + 1);
     expect(
       capturedHeaders?[HttpHeaders.userAgentHeader],
-      '$geminiCodeAssistUserAgentPrefix/$geminiCodeAssistCliVersion/gemini-2.5-pro '
+      '$geminiCodeAssistUserAgentPrefix-$geminiCodeAssistDefaultClientName/$geminiCodeAssistCliVersion/gemini-2.5-pro '
       '($expectedPlatform; $expectedArchitecture; ${determineGeminiCliSurface()}) '
       'google-api-nodejs-client/$geminiCodeAssistGoogleApiNodeClientVersion',
     );

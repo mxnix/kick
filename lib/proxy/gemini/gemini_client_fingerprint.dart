@@ -40,10 +40,8 @@ String buildGeminiCliUserAgentPrefix({String? clientName, String? clientPrefix})
     return normalizedClientPrefix;
   }
 
-  final normalizedClientName = _normalizeUserAgentValue(clientName);
-  if (normalizedClientName == null) {
-    return geminiCodeAssistUserAgentPrefix;
-  }
+  final normalizedClientName =
+      _normalizeUserAgentValue(clientName) ?? geminiCodeAssistDefaultClientName;
   if (normalizedClientName == geminiCodeAssistUserAgentPrefix ||
       normalizedClientName.startsWith('$geminiCodeAssistUserAgentPrefix-')) {
     return normalizedClientName;

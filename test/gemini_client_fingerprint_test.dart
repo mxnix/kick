@@ -28,7 +28,7 @@ void main() {
   test('builds the default Gemini CLI user agent with a terminal surface', () {
     expect(
       buildGeminiCliUserAgent('gemini-2.5-pro'),
-      '$geminiCodeAssistUserAgentPrefix/$geminiCodeAssistCliVersion/gemini-2.5-pro '
+      '$geminiCodeAssistUserAgentPrefix-$geminiCodeAssistDefaultClientName/$geminiCodeAssistCliVersion/gemini-2.5-pro '
       '(${expectedPlatform()}; ${expectedArchitecture()}; $geminiCodeAssistUserAgentSurface) '
       'google-api-nodejs-client/$geminiCodeAssistGoogleApiNodeClientVersion',
     );
@@ -76,7 +76,9 @@ void main() {
     expect(headers['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
     expect(
       headers[HttpHeaders.userAgentHeader],
-      startsWith('$geminiCodeAssistUserAgentPrefix/$geminiCodeAssistCliVersion/gemini-2.5-pro '),
+      startsWith(
+        '$geminiCodeAssistUserAgentPrefix-$geminiCodeAssistDefaultClientName/$geminiCodeAssistCliVersion/gemini-2.5-pro ',
+      ),
     );
     expect(headers.containsKey('x-gemini-api-privileged-user-id'), isFalse);
   });
