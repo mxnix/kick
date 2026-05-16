@@ -5,10 +5,9 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   dynamic_color
   flutter_secure_storage_linux
-  local_notifier
   screen_retriever_linux
   sentry_flutter
-  tray_manager
+  system_tray
   url_launcher_linux
   window_manager
 )

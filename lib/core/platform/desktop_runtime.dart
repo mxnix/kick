@@ -1,20 +1,23 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:launch_at_startup/launch_at_startup.dart';
-import 'package:local_notifier/local_notifier.dart';
-import 'package:tray_manager/tray_manager.dart';
+import 'package:system_tray/system_tray.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../app/app_metadata.dart';
 import '../../data/models/app_settings.dart';
 import '../../l10n/kick_localizations.dart';
+import 'launch_at_login_service.dart';
+import 'tray_notification_service.dart';
 import 'window_bootstrap.dart';
 
 const desktopLaunchToTrayArgument = '--background';
-const _showWindowMenuItemKey = 'show_window';
-const _hideWindowMenuItemKey = 'hide_window';
-const _exitAppMenuItemKey = 'exit_app';
+
+// Stable identifiers required by Windows toast notifications. Generated once
+// for KiCk; do not change between releases or queued notifications may go to
+// the wrong action centre slot.
+const _kickWindowsAppUserModelId = 'KiCk.Desktop';
+const _kickWindowsToastGuid = '4f5c2e4a-7c8b-4f9b-9e6e-2c3a4d8a3a11';
 
 class DesktopLaunchOptions {
   const DesktopLaunchOptions({required this.startHidden});
@@ -26,7 +29,7 @@ class DesktopLaunchOptions {
   final bool startHidden;
 }
 
-class DesktopRuntime with TrayListener, WindowListener {
+class DesktopRuntime with WindowListener {
   DesktopRuntime._();
 
   static const trayNotificationShownKey = 'desktop_tray_notification_shown';
@@ -81,8 +84,16 @@ class DesktopRuntime with TrayListener, WindowListener {
     await _instance._exitApplication();
   }
 
+  final SystemTray _tray = SystemTray();
+  final Menu _trayMenu = Menu();
+  final LaunchAtLoginService _launchAtLogin = const LaunchAtLoginService(
+    appName: 'kick',
+    startupArgument: desktopLaunchToTrayArgument,
+  );
+
+  TrayNotificationService? _notifications;
   bool _configured = false;
-  bool _listenersAttached = false;
+  bool _windowListenerAttached = false;
   bool _exitRequested = false;
   bool _trayNotificationShown = false;
   Future<void>? _configureFuture;
@@ -108,26 +119,26 @@ class DesktopRuntime with TrayListener, WindowListener {
     final l10n = lookupKickLocalizations();
     _trayNotificationShown = await (_readTrayNotificationShown?.call() ?? Future.value(false));
 
-    launchAtStartup.setup(
-      appName: 'kick',
-      appPath: Platform.resolvedExecutable,
-      args: const [desktopLaunchToTrayArgument],
-    );
-    await localNotifier.setup(
+    _notifications = TrayNotificationService(
       appName: l10n.appTitle,
-      shortcutPolicy: Platform.isWindows ? ShortcutPolicy.requireCreate : ShortcutPolicy.ignore,
+      windowsAppUserModelId: _kickWindowsAppUserModelId,
+      windowsGuid: _kickWindowsToastGuid,
     );
+    await _notifications!.initialize(onTap: () => unawaited(_showWindow()));
 
-    if (!_listenersAttached) {
-      trayManager.addListener(this);
+    if (!_windowListenerAttached) {
       windowManager.addListener(this);
-      _listenersAttached = true;
+      _windowListenerAttached = true;
     }
 
     await windowManager.setPreventClose(true);
-    await trayManager.setIcon(_trayIconAssetPath);
-    await _refreshTrayTitle(l10n);
-    await _setTrayContextMenu(windowVisible: !startHiddenOnLaunch);
+    await _tray.initSystemTray(
+      title: Platform.isLinux ? l10n.appTitle : '',
+      iconPath: _trayIconAssetPath,
+      toolTip: l10n.appTitle,
+    );
+    _tray.registerSystemTrayEventHandler(_handleTrayEvent);
+    await _refreshTrayContextMenu(windowVisible: !startHiddenOnLaunch);
 
     if (startHiddenOnLaunch) {
       await _hideWindowFromTaskbarIfSupported();
@@ -143,50 +154,45 @@ class DesktopRuntime with TrayListener, WindowListener {
 
     await _refreshLocalizedUi();
 
-    final isEnabled = await launchAtStartup.isEnabled();
+    final isEnabled = await _launchAtLogin.isEnabled();
     if (settings.windowsLaunchAtStartup) {
       if (refreshRegistration && isEnabled) {
-        await launchAtStartup.disable();
+        await _launchAtLogin.disable();
       }
-      await launchAtStartup.enable();
+      await _launchAtLogin.enable();
       return;
     }
 
     if (isEnabled) {
-      await launchAtStartup.disable();
+      await _launchAtLogin.disable();
     }
   }
 
   Future<void> _refreshLocalizedUi() async {
     final windowVisible = await windowManager.isVisible();
     final l10n = lookupKickLocalizations();
-    await _refreshTrayTitle(l10n);
-    await _setTrayContextMenu(windowVisible: windowVisible);
-  }
-
-  Future<void> _refreshTrayTitle(KickLocalizations l10n) async {
-    if (Platform.isWindows) {
-      await trayManager.setToolTip(l10n.appTitle);
-      return;
-    }
     if (Platform.isLinux) {
-      await trayManager.setTitle(l10n.appTitle);
+      await _tray.setTitle(l10n.appTitle);
+    } else {
+      await _tray.setToolTip(l10n.appTitle);
     }
+    await _refreshTrayContextMenu(windowVisible: windowVisible);
   }
 
   Future<void> _dispose() async {
-    if (_listenersAttached) {
-      trayManager.removeListener(this);
+    if (_windowListenerAttached) {
       windowManager.removeListener(this);
-      _listenersAttached = false;
+      _windowListenerAttached = false;
     }
     if (_configured) {
       try {
-        await trayManager.destroy();
+        await _tray.destroy();
       } catch (_) {
         // Best-effort cleanup while the engine is shutting down.
       }
     }
+    await _notifications?.dispose();
+    _notifications = null;
 
     _configured = false;
     _exitRequested = false;
@@ -199,7 +205,7 @@ class DesktopRuntime with TrayListener, WindowListener {
   Future<void> _showWindow() async {
     await _showWindowInTaskbarIfSupported();
     await WindowBootstrap.reveal();
-    await _setTrayContextMenu(windowVisible: true);
+    await _refreshTrayContextMenu(windowVisible: true);
   }
 
   Future<void> _hideWindowToTray({bool showEducationNotification = false}) async {
@@ -209,7 +215,7 @@ class DesktopRuntime with TrayListener, WindowListener {
 
     await _hideWindowFromTaskbarIfSupported();
     await windowManager.hide();
-    await _setTrayContextMenu(windowVisible: false);
+    await _refreshTrayContextMenu(windowVisible: false);
     if (showEducationNotification) {
       await _showFirstHideNotificationIfNeeded();
     }
@@ -227,22 +233,33 @@ class DesktopRuntime with TrayListener, WindowListener {
 
   Future<void> _exitApplication() async {
     _exitRequested = true;
-    await trayManager.destroy();
+    try {
+      await _tray.destroy();
+    } catch (_) {
+      // Best-effort cleanup; continue shutting down even if tray destruction
+      // fails (for instance because the icon was never installed).
+    }
     await windowManager.setPreventClose(false);
     await windowManager.destroy();
   }
 
-  Future<void> _setTrayContextMenu({required bool windowVisible}) async {
+  Future<void> _refreshTrayContextMenu({required bool windowVisible}) async {
     final l10n = lookupKickLocalizations();
-    final items = <MenuItem>[
-      MenuItem(
-        key: windowVisible ? _hideWindowMenuItemKey : _showWindowMenuItemKey,
+    await _trayMenu.buildFrom(<MenuItemBase>[
+      MenuItemLabel(
         label: windowVisible ? l10n.trayHideToTrayAction : l10n.trayOpenWindowAction,
+        onClicked: (_) {
+          if (windowVisible) {
+            unawaited(_hideWindowToTray());
+          } else {
+            unawaited(_showWindow());
+          }
+        },
       ),
-      MenuItem.separator(),
-      MenuItem(key: _exitAppMenuItemKey, label: l10n.trayExitAction),
-    ];
-    await trayManager.setContextMenu(Menu(items: items));
+      MenuSeparator(),
+      MenuItemLabel(label: l10n.trayExitAction, onClicked: (_) => unawaited(_exitApplication())),
+    ]);
+    await _tray.setContextMenu(_trayMenu);
   }
 
   Future<void> _showFirstHideNotificationIfNeeded() async {
@@ -254,16 +271,10 @@ class DesktopRuntime with TrayListener, WindowListener {
     await _writeTrayNotificationShown?.call(true);
 
     final l10n = lookupKickLocalizations();
-    final notification = LocalNotification(
+    await _notifications?.showTrayHint(
       title: l10n.windowsTrayNotificationTitle,
       body: l10n.windowsTrayNotificationBody,
-      silent: false,
     );
-    notification.onClick = () {
-      unawaited(_showWindow());
-      unawaited(notification.close());
-    };
-    await notification.show();
   }
 
   Future<void> _hideWindowFromTaskbarIfSupported() async {
@@ -278,6 +289,34 @@ class DesktopRuntime with TrayListener, WindowListener {
     }
   }
 
+  void _handleTrayEvent(String eventName) {
+    if (!_configured || _exitRequested) {
+      return;
+    }
+
+    switch (eventName) {
+      case kSystemTrayEventClick:
+        if (Platform.isWindows) {
+          unawaited(_toggleWindowVisibility());
+        } else {
+          unawaited(_tray.popUpContextMenu());
+        }
+        return;
+      case kSystemTrayEventRightClick:
+        if (Platform.isWindows) {
+          unawaited(_tray.popUpContextMenu());
+        } else {
+          unawaited(_toggleWindowVisibility());
+        }
+        return;
+      case kSystemTrayEventDoubleClick:
+        unawaited(_toggleWindowVisibility());
+        return;
+      default:
+        return;
+    }
+  }
+
   @override
   void onWindowEvent(String eventName) {
     if (!_configured || _exitRequested) {
@@ -289,7 +328,7 @@ class DesktopRuntime with TrayListener, WindowListener {
         unawaited(_syncVisibleWindowState());
         return;
       case 'hide':
-        unawaited(_setTrayContextMenu(windowVisible: false));
+        unawaited(_refreshTrayContextMenu(windowVisible: false));
         return;
       default:
         return;
@@ -301,36 +340,7 @@ class DesktopRuntime with TrayListener, WindowListener {
       await windowManager.setSkipTaskbar(false);
     }
 
-    await _setTrayContextMenu(windowVisible: true);
-  }
-
-  @override
-  void onTrayIconMouseDown() {
-    unawaited(_toggleWindowVisibility());
-  }
-
-  @override
-  void onTrayIconRightMouseDown() {
-    if (Platform.isWindows) {
-      unawaited(trayManager.popUpContextMenu());
-    }
-  }
-
-  @override
-  void onTrayMenuItemClick(MenuItem menuItem) {
-    switch (menuItem.key) {
-      case _showWindowMenuItemKey:
-        unawaited(_showWindow());
-        return;
-      case _hideWindowMenuItemKey:
-        unawaited(_hideWindowToTray());
-        return;
-      case _exitAppMenuItemKey:
-        unawaited(_exitApplication());
-        return;
-      case null:
-        return;
-    }
+    await _refreshTrayContextMenu(windowVisible: true);
   }
 
   @override

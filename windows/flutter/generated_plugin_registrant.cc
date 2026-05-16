@@ -8,11 +8,10 @@
 
 #include <dynamic_color/dynamic_color_plugin_c_api.h>
 #include <flutter_secure_storage_windows/flutter_secure_storage_windows_plugin.h>
-#include <local_notifier/local_notifier_plugin.h>
 #include <screen_retriever_windows/screen_retriever_windows_plugin_c_api.h>
 #include <sentry_flutter/sentry_flutter_plugin.h>
 #include <share_plus/share_plus_windows_plugin_c_api.h>
-#include <tray_manager/tray_manager_plugin.h>
+#include <system_tray/system_tray_plugin.h>
 #include <url_launcher_windows/url_launcher_windows.h>
 #include <window_manager/window_manager_plugin.h>
 
@@ -21,16 +20,14 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("DynamicColorPluginCApi"));
   FlutterSecureStorageWindowsPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FlutterSecureStorageWindowsPlugin"));
-  LocalNotifierPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("LocalNotifierPlugin"));
   ScreenRetrieverWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ScreenRetrieverWindowsPluginCApi"));
   SentryFlutterPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("SentryFlutterPlugin"));
   SharePlusWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("SharePlusWindowsPluginCApi"));
-  TrayManagerPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("TrayManagerPlugin"));
+  SystemTrayPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("SystemTrayPlugin"));
   UrlLauncherWindowsRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("UrlLauncherWindows"));
   WindowManagerPluginRegisterWithRegistrar(

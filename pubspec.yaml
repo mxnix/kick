@@ -21,7 +21,7 @@ dependencies:
   flutter_riverpod: ^3.3.1
   flutter_secure_storage: ^10.0.0
   go_router: ^17.1.0
-  hive: ^2.2.3
+  hive_ce: ^2.19.3
   http: ^1.5.0
   intl: ^0.20.2
   path: ^1.9.1
@@ -35,13 +35,13 @@ dependencies:
   window_manager: ^0.5.1
   share_plus: ^12.0.1
   package_info_plus: ^8.3.1
-  tray_manager: ^0.5.2
-  launch_at_startup: ^0.5.1
-  local_notifier: ^0.1.6
+  system_tray: ^2.0.3
+  flutter_local_notifications: ^21.0.0
+  win32_registry: ^2.1.0
   m3e_collection: ^0.3.7
   material_symbols_icons: ^4.2928.1
   sentry_flutter: ^9.16.0
-  cryptography: ^2.9.0
+  cryptography_plus: ^3.0.0
   flutter_svg: ^2.2.4
 
 dev_dependencies:
@@ -53,6 +53,9 @@ dev_dependencies:
 
 dependency_overrides:
   device_info_plus: ^12.4.0
+  # system_tray pins uuid ^3.0.6 in its pubspec, but only relies on
+  # `const Uuid().v1()`, which is API-compatible with uuid 4.x.
+  uuid: ^4.5.1
 
 flutter:
   generate: true

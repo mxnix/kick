@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:aptabase_flutter/aptabase_flutter.dart';
 import 'package:aptabase_flutter/storage_manager.dart';
 import 'package:flutter/foundation.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
