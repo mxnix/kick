@@ -49,6 +49,24 @@ static void my_application_activate(GApplication* application) {
 
   // Hide the native title bar / header bar entirely — KiCk draws its own
   // custom title bar in Flutter (see kick_window_frame.dart).
+  //
+  // On Wayland (especially KDE Plasma / KWin), a bare
+  // gtk_window_set_decorated(FALSE) is not enough: the compositor keeps
+  // drawing server-side decorations because the client never advertised
+  // that it handles its own decorations. The result is a duplicate title
+  // bar — one from KWin on top, and KiCk's custom Flutter title bar
+  // below.
+  //
+  // Installing an (empty) custom titlebar widget switches GTK into CSD
+  // mode and triggers an xdg-decoration negotiation that asks the
+  // compositor to skip server-side decorations. After that we can call
+  // gtk_window_set_decorated(FALSE) to hide the empty CSD titlebar and
+  // the resize borders, leaving the Flutter UI fully responsible for the
+  // window chrome.
+  GtkWidget* empty_titlebar = gtk_event_box_new();
+  gtk_widget_set_size_request(empty_titlebar, 0, 0);
+  gtk_widget_show(empty_titlebar);
+  gtk_window_set_titlebar(window, empty_titlebar);
   gtk_window_set_decorated(window, FALSE);
   gtk_window_set_title(window, "KiCk");
 
