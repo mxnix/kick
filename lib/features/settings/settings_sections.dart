@@ -64,17 +64,17 @@ class SettingsAppearanceSection extends StatelessWidget {
             segments: [
               ButtonSegment(
                 value: ThemeMode.system,
-                label: Text(l10n.themeModeSystemShort),
+                label: _SegmentedButtonLabel(text: l10n.themeModeSystemShort),
                 icon: const Icon(Icons.brightness_auto_rounded),
               ),
               ButtonSegment(
                 value: ThemeMode.light,
-                label: Text(l10n.themeModeLight),
+                label: _SegmentedButtonLabel(text: l10n.themeModeLight),
                 icon: const Icon(Icons.light_mode_rounded),
               ),
               ButtonSegment(
                 value: ThemeMode.dark,
-                label: Text(l10n.themeModeDark),
+                label: _SegmentedButtonLabel(text: l10n.themeModeDark),
                 icon: const Icon(Icons.dark_mode_rounded),
               ),
             ],
@@ -90,12 +90,12 @@ class SettingsAppearanceSection extends StatelessWidget {
             segments: [
               ButtonSegment(
                 value: false,
-                label: Text(l10n.fontOptionGoogleSans),
+                label: _SegmentedButtonLabel(text: l10n.fontOptionGoogleSans),
                 icon: const Icon(Icons.font_download_rounded),
               ),
               ButtonSegment(
                 value: true,
-                label: Text(l10n.fontOptionSystem),
+                label: _SegmentedButtonLabel(text: l10n.fontOptionSystem),
                 icon: const Icon(Icons.computer_rounded),
               ),
             ],
@@ -116,9 +116,18 @@ class SettingsAppearanceSection extends StatelessWidget {
             expandedInsets: EdgeInsets.zero,
             showSelectedIcon: false,
             segments: [
-              ButtonSegment(value: KickLogVerbosity.quiet, label: Text(l10n.loggingQuiet)),
-              ButtonSegment(value: KickLogVerbosity.normal, label: Text(l10n.loggingNormal)),
-              ButtonSegment(value: KickLogVerbosity.verbose, label: Text(l10n.loggingVerbose)),
+              ButtonSegment(
+                value: KickLogVerbosity.quiet,
+                label: _SegmentedButtonLabel(text: l10n.loggingQuiet),
+              ),
+              ButtonSegment(
+                value: KickLogVerbosity.normal,
+                label: _SegmentedButtonLabel(text: l10n.loggingNormal),
+              ),
+              ButtonSegment(
+                value: KickLogVerbosity.verbose,
+                label: _SegmentedButtonLabel(text: l10n.loggingVerbose),
+              ),
             ],
             selected: {controller.verbosity},
             onSelectionChanged: (value) => controller.setVerbosity(value.first),
@@ -184,6 +193,23 @@ class _SettingsSubsectionHeader extends StatelessWidget {
       style: Theme.of(
         context,
       ).textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 0.4),
+    );
+  }
+}
+
+/// Single-line, shrink-to-fit label for [SegmentedButton] segments. Prevents
+/// localized strings (e.g. "Стандартное") from breaking mid-word on narrow
+/// viewports.
+class _SegmentedButtonLabel extends StatelessWidget {
+  const _SegmentedButtonLabel({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(text, maxLines: 1, softWrap: false, overflow: TextOverflow.fade),
     );
   }
 }

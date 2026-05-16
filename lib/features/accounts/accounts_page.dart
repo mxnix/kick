@@ -644,11 +644,14 @@ class _AccountCard extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        _AccountProviderInlineBadge(provider: account.provider),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _AccountProviderInlineBadge(provider: account.provider),
+                    ),
+                    const SizedBox(height: 6),
                     Text(
                       _accountSubtitle(account),
                       style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),

@@ -353,18 +353,22 @@ class _AboutActionCard extends StatelessWidget {
               Icon(icon, color: tint),
               const SizedBox(width: 10),
               Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
-              KickSecondaryAction(
-                onPressed: onPressed,
-                icon: onPressed == null ? KickIcons.hourglass : KickIcons.refresh,
-                label: actionLabel,
-                variant: KickSecondaryActionVariant.text,
-              ),
             ],
           ),
           const SizedBox(height: 10),
           Text(
             message,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: KickSecondaryAction(
+              onPressed: onPressed,
+              icon: onPressed == null ? KickIcons.hourglass : KickIcons.refresh,
+              label: actionLabel,
+              variant: KickSecondaryActionVariant.text,
+            ),
           ),
         ],
       ),

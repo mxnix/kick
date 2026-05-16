@@ -379,7 +379,7 @@ class KickThemeData {
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           textStyle: WidgetStatePropertyAll(textTheme.labelLarge),
-          padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 18, vertical: 16)),
+          padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10, vertical: 16)),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(tokens.panelRadius - 6)),
           ),
