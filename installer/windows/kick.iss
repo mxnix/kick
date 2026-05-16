@@ -1,4 +1,5 @@
 #define MyAppName "KiCk"
+#define MyAppExeName "KiCk.exe"
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -34,8 +35,10 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 SetupIconFile={#RepoRoot}\windows\runner\resources\app_icon.ico
-UninstallDisplayIcon={app}\KiCk.exe
+UninstallDisplayIcon={app}\{#MyAppExeName}
 LicenseFile={#RepoRoot}\LICENSE.md
+CloseApplications=force
+RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -48,8 +51,35 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\KiCk"; Filename: "{app}\KiCk.exe"
-Name: "{autodesktop}\KiCk"; Filename: "{app}\KiCk.exe"; Tasks: desktopicon
+Name: "{autoprograms}\KiCk"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\KiCk"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\KiCk.exe"; Description: "{cm:LaunchProgram,KiCk}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,KiCk}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+procedure KillRunningApp;
+var
+  ResultCode: Integer;
+begin
+  Exec(
+    ExpandConstant('{cmd}'),
+    '/C taskkill /F /IM "{#MyAppExeName}"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  KillRunningApp;
+  Result := '';
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  KillRunningApp;
+  Result := True;
+end;
