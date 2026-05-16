@@ -84,6 +84,14 @@ class DesktopRuntime with WindowListener {
     await _instance._exitApplication();
   }
 
+  static void registerPreExitHook(Future<void> Function() hook) {
+    _instance._preExitHooks.add(hook);
+  }
+
+  static void unregisterPreExitHook(Future<void> Function() hook) {
+    _instance._preExitHooks.remove(hook);
+  }
+
   final SystemTray _tray = SystemTray();
   final Menu _trayMenu = Menu();
   final LaunchAtLoginService _launchAtLogin = const LaunchAtLoginService(
@@ -99,6 +107,7 @@ class DesktopRuntime with WindowListener {
   Future<void>? _configureFuture;
   Future<bool> Function()? _readTrayNotificationShown;
   Future<void> Function(bool value)? _writeTrayNotificationShown;
+  final List<Future<void> Function()> _preExitHooks = <Future<void> Function()>[];
 
   Future<void> _configure(
     AppSettings settings, {
@@ -233,6 +242,13 @@ class DesktopRuntime with WindowListener {
 
   Future<void> _exitApplication() async {
     _exitRequested = true;
+    for (final hook in List<Future<void> Function()>.from(_preExitHooks)) {
+      try {
+        await hook();
+      } catch (_) {
+        // Best-effort: don't block shutdown if a hook throws.
+      }
+    }
     try {
       await _tray.destroy();
     } catch (_) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../analytics/kick_analytics.dart';
 import '../core/platform/android_foreground_runtime.dart';
 import '../core/platform/desktop_runtime.dart';
 import '../core/platform/window_bootstrap.dart';
+import '../core/platform/window_state_store.dart';
 import '../core/security/proxy_api_key.dart';
 import '../data/app_database.dart';
 import '../data/models/account_profile.dart';
@@ -41,6 +43,7 @@ class AppBootstrap {
     this.geminiInstallationIdPath = '',
     required this.initialSettings,
     required this.initialAccounts,
+    this.windowStatePersister,
   });
 
   final AppDatabase database;
@@ -54,8 +57,13 @@ class AppBootstrap {
   final String geminiInstallationIdPath;
   final AppSettings initialSettings;
   final List<AccountProfile> initialAccounts;
+  final WindowStatePersister? windowStatePersister;
 
   Future<void> dispose() async {
+    if (windowStatePersister != null) {
+      await windowStatePersister!.flush();
+      await windowStatePersister!.dispose();
+    }
     await DesktopRuntime.dispose();
     await proxyController.dispose();
     await analytics.dispose();
@@ -92,8 +100,23 @@ Future<AppBootstrap> initializeAppBootstrap() async {
         currentSettings?.copyWith(apiKey: apiKey) ?? AppSettings.defaults(apiKey: apiKey);
     setKickLocaleOverride(effectiveSettings.appLocale);
     timings.mark('settings_ready');
+
+    const desktopWindowStateKey = 'desktop_window_state';
+    final savedWindowStateRaw = await settingsRepository.readStringValue(desktopWindowStateKey);
+    final savedWindowState = DesktopWindowState.tryParse(savedWindowStateRaw);
+    WindowBootstrap.restoreState = savedWindowState;
     await WindowBootstrap.configure();
     timings.mark('window_bootstrap_ready');
+
+    WindowStatePersister? windowStatePersister;
+    if (Platform.isWindows || Platform.isLinux) {
+      windowStatePersister = WindowStatePersister(
+        writer: (value) => settingsRepository.writeStringValue(desktopWindowStateKey, value),
+      );
+      await windowStatePersister.attach();
+      final persister = windowStatePersister;
+      DesktopRuntime.registerPreExitHook(() => persister.flush());
+    }
     await AndroidForegroundRuntime.configure();
     timings.mark('android_runtime_ready');
     await logsRepository.setRetentionLimit(effectiveSettings.logRetentionCount);
@@ -143,6 +166,7 @@ Future<AppBootstrap> initializeAppBootstrap() async {
       geminiInstallationIdPath: geminiInstallationIdPath,
       initialSettings: effectiveSettings,
       initialAccounts: initialAccounts,
+      windowStatePersister: windowStatePersister,
     );
   } catch (error, stackTrace) {
     unawaited(

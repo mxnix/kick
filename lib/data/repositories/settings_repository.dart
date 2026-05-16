@@ -63,6 +63,27 @@ class SettingsRepository {
     });
   }
 
+  Future<String?> readStringValue(String key) async {
+    final row = await _database
+        .customSelect(
+          'SELECT value FROM settings WHERE key = ?1 LIMIT 1',
+          variables: [Variable<String>(key)],
+        )
+        .getSingleOrNull();
+    final value = row?.read<String>('value');
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return value;
+  }
+
+  Future<void> writeStringValue(String key, String value) async {
+    await _database.customInsert(
+      'INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)',
+      variables: [Variable<String>(key), Variable<String>(value)],
+    );
+  }
+
   Future<bool> readBooleanFlag(String key, {bool defaultValue = false}) async {
     final row = await _database
         .customSelect(
