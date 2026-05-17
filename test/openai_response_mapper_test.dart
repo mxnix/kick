@@ -256,11 +256,14 @@ void main() {
       '{"city":"Moscow"}',
     );
     expect(choice['finish_reason'], 'tool_calls');
-    expect((response['usage'] as Map)['cached_tokens'], 2);
-    expect(
-      (((response['usage'] as Map)['completion_tokens_details'] as Map)['reasoning_tokens']),
-      4,
-    );
+    final usage = (response['usage'] as Map).cast<String, Object?>();
+    expect(usage.containsKey('cached_tokens'), isFalse);
+    expect(((usage['prompt_tokens_details'] as Map)['cached_tokens']), 2);
+    expect(((usage['completion_tokens_details'] as Map)['reasoning_tokens']), 4);
+    // OpenAI bills reasoning tokens as part of the completion.
+    expect(usage['prompt_tokens'], 12);
+    expect(usage['completion_tokens'], 9); // visible 5 + reasoning 4
+    expect(usage['total_tokens'], 21); // prompt + completion
   });
 
   test('chat completion injects grounding citations and sources into content', () {

@@ -576,17 +576,27 @@ class OpenAiResponseMapper {
 
     final usageMetadata =
         (response['usageMetadata'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{};
+    final promptTokens = _parseInt(usageMetadata['promptTokenCount']) ?? 0;
+    final visibleCompletionTokens = _parseInt(usageMetadata['candidatesTokenCount']) ?? 0;
+    final reasoningTokens = _parseInt(usageMetadata['thoughtsTokenCount']) ?? 0;
+    final cachedTokens = _parseInt(usageMetadata['cachedContentTokenCount']) ?? 0;
+    // Match OpenAI semantics: reasoning tokens are billed as part of the
+    // completion, and total_tokens equals prompt + completion. Keeping the
+    // upstream "totalTokenCount" verbatim leaves clients with a total that
+    // does not equal prompt + completion, which trips strict cost trackers
+    // (SillyTavern, OpenWebUI, OpenAI SDK consumers).
+    final completionTokens = visibleCompletionTokens + reasoningTokens;
+    final totalTokens = promptTokens + completionTokens;
     return _ExtractedResponse(
       choices: extractedChoices.isEmpty
           ? [_fallbackChoiceForEmptyResponse(response)]
           : extractedChoices,
       usage: {
-        'prompt_tokens': usageMetadata['promptTokenCount'] ?? 0,
-        'completion_tokens': usageMetadata['candidatesTokenCount'] ?? 0,
-        'total_tokens': usageMetadata['totalTokenCount'] ?? 0,
-        'cached_tokens': usageMetadata['cachedContentTokenCount'] ?? 0,
-        'prompt_tokens_details': {'cached_tokens': usageMetadata['cachedContentTokenCount'] ?? 0},
-        'completion_tokens_details': {'reasoning_tokens': usageMetadata['thoughtsTokenCount'] ?? 0},
+        'prompt_tokens': promptTokens,
+        'completion_tokens': completionTokens,
+        'total_tokens': totalTokens,
+        'prompt_tokens_details': {'cached_tokens': cachedTokens},
+        'completion_tokens_details': {'reasoning_tokens': reasoningTokens},
       },
     );
   }
