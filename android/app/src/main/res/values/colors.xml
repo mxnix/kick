@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#FFFFFF</color>
-    <color name="launch_background">#FFFFFF</color>
+    <!-- Light theme fallback for API < 31. On API 31+ overridden by values-v31/colors.xml -->
+    <color name="launch_background">#FAFAFA</color>
 </resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark theme fallback for API < 31. On API 31+ overridden by values-night-v31/colors.xml -->
+    <color name="launch_background">#101012</color>
+</resources>
