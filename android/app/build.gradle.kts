@@ -107,7 +107,7 @@ flutter {
 
 dependencies {
     // Required for flutter_local_notifications core library desugaring.
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 if (releaseTaskRequested) {
     val keyPropertiesFile = rootProject.file("key.properties")
