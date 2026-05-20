@@ -12,11 +12,16 @@ import '../../data/models/account_profile.dart';
 import '../../data/models/app_settings.dart';
 import '../../data/models/oauth_tokens.dart';
 import '../../proxy/kiro/kiro_auth_source.dart';
+import '../../proxy/luma/luma_session.dart';
 
 typedef ConfigurationBackupDirectoryResolver = Future<Directory> Function();
 typedef ConfigurationBackupReadTokens = Future<OAuthTokens?> Function(String tokenRef);
 typedef ConfigurationBackupWriteTokens = Future<void> Function(String tokenRef, OAuthTokens tokens);
 typedef ConfigurationBackupDeleteTokens = Future<void> Function(String tokenRef);
+typedef ConfigurationBackupReadLumaSession = Future<String?> Function(String tokenRef);
+typedef ConfigurationBackupWriteLumaSession =
+    Future<void> Function(String tokenRef, String payload);
+typedef ConfigurationBackupDeleteLumaSession = Future<void> Function(String tokenRef);
 typedef ConfigurationBackupReadAccounts = Future<List<AccountProfile>> Function();
 typedef ConfigurationBackupReadSettings = Future<AppSettings?> Function();
 typedef ConfigurationBackupReplaceAccounts = Future<void> Function(List<AccountProfile> accounts);
@@ -123,6 +128,9 @@ class ConfigurationBackupService {
     required ConfigurationBackupReplaceAccounts replaceAccounts,
     required ConfigurationBackupWriteTokens writeTokens,
     required ConfigurationBackupDeleteTokens deleteTokens,
+    ConfigurationBackupReadLumaSession? readLumaSession,
+    ConfigurationBackupWriteLumaSession? writeLumaSession,
+    ConfigurationBackupDeleteLumaSession? deleteLumaSession,
     ConfigurationBackupDirectoryResolver? exportDirectoryResolver,
     ConfigurationBackupSaveFileCallback? saveFileCallback,
     ConfigurationBackupPickFileCallback? pickFileCallback,
@@ -135,6 +143,9 @@ class ConfigurationBackupService {
        _replaceAccounts = replaceAccounts,
        _writeTokens = writeTokens,
        _deleteTokens = deleteTokens,
+       _readLumaSession = readLumaSession,
+       _writeLumaSession = writeLumaSession,
+       _deleteLumaSession = deleteLumaSession,
        _exportDirectoryResolver = exportDirectoryResolver ?? _defaultExportDirectory,
        _saveFileCallback = saveFileCallback ?? _defaultSaveFile,
        _pickFileCallback = pickFileCallback ?? _defaultPickFile,
@@ -149,6 +160,9 @@ class ConfigurationBackupService {
   final ConfigurationBackupReplaceAccounts _replaceAccounts;
   final ConfigurationBackupWriteTokens _writeTokens;
   final ConfigurationBackupDeleteTokens _deleteTokens;
+  final ConfigurationBackupReadLumaSession? _readLumaSession;
+  final ConfigurationBackupWriteLumaSession? _writeLumaSession;
+  final ConfigurationBackupDeleteLumaSession? _deleteLumaSession;
   final ConfigurationBackupDirectoryResolver _exportDirectoryResolver;
   final ConfigurationBackupSaveFileCallback _saveFileCallback;
   final ConfigurationBackupPickFileCallback _pickFileCallback;
@@ -165,6 +179,7 @@ class ConfigurationBackupService {
       settings: settings,
       accounts: accounts,
       readTokens: _readTokens,
+      readLumaSession: _readLumaSession,
       readKiroManagedCredentialState: _readKiroManagedCredentialState,
     );
     final plainContents = _encodeDocument(document);
@@ -188,7 +203,11 @@ class ConfigurationBackupService {
         contents: contents,
         accountCount: document.accounts.length,
         accountsWithTokens: document.accounts
-            .where((account) => account.profile.usesSecretStoreTokens && account.tokens != null)
+            .where(
+              (account) =>
+                  (account.profile.usesSecretStoreTokens && account.tokens != null) ||
+                  (account.profile.provider == AccountProvider.luma && account.lumaSession != null),
+            )
             .length,
         protectedWithPassword: options.protectWithPassword,
       );
@@ -236,7 +255,7 @@ class ConfigurationBackupService {
 
     final importedTokenRefs = <String>{};
     for (final entry in restoredEntries) {
-      if (!entry.profile.usesSecretStoreTokens) {
+      if (!entry.profile.usesSecretStoreTokens && entry.profile.provider != AccountProvider.luma) {
         continue;
       }
       final tokenRef = entry.profile.tokenRef.trim();
@@ -250,11 +269,23 @@ class ConfigurationBackupService {
 
       var accountsWithTokens = 0;
       for (final entry in restoredEntries) {
-        if (!entry.profile.usesSecretStoreTokens) {
-          continue;
-        }
         final tokenRef = entry.profile.tokenRef.trim();
         if (tokenRef.isEmpty) {
+          continue;
+        }
+
+        if (entry.profile.provider == AccountProvider.luma) {
+          final session = entry.lumaSession;
+          if (session != null && _writeLumaSession != null) {
+            accountsWithTokens += 1;
+            await _writeLumaSession(tokenRef, session.encode());
+          } else if (_deleteLumaSession != null) {
+            await _deleteLumaSession(tokenRef);
+          }
+          continue;
+        }
+
+        if (!entry.profile.usesSecretStoreTokens) {
           continue;
         }
         if (entry.tokens == null) {
@@ -266,6 +297,15 @@ class ConfigurationBackupService {
       }
 
       for (final account in existingAccounts) {
+        if (account.provider == AccountProvider.luma) {
+          final tokenRef = account.tokenRef.trim();
+          if (tokenRef.isNotEmpty &&
+              !importedTokenRefs.contains(tokenRef) &&
+              _deleteLumaSession != null) {
+            await _deleteLumaSession(tokenRef);
+          }
+          continue;
+        }
         if (!account.usesSecretStoreTokens) {
           final sourcePath = account.credentialSourcePath?.trim();
           if (sourcePath == null ||
@@ -293,7 +333,11 @@ class ConfigurationBackupService {
         accountCount: document.accounts.length,
         accountsWithTokens: accountsWithTokens,
         accountsWithoutTokens: document.accounts
-            .where((entry) => entry.profile.usesSecretStoreTokens && entry.tokens == null)
+            .where(
+              (entry) =>
+                  (entry.profile.usesSecretStoreTokens && entry.tokens == null) ||
+                  (entry.profile.provider == AccountProvider.luma && entry.lumaSession == null),
+            )
             .length,
         settings: document.settings,
         wasPasswordProtected: decodedPayload.wasPasswordProtected,
@@ -454,7 +498,11 @@ class ConfigurationBackupService {
       contents: contents,
       accountCount: document.accounts.length,
       accountsWithTokens: document.accounts
-          .where((account) => account.profile.usesSecretStoreTokens && account.tokens != null)
+          .where(
+            (account) =>
+                (account.profile.usesSecretStoreTokens && account.tokens != null) ||
+                (account.profile.provider == AccountProvider.luma && account.lumaSession != null),
+          )
           .length,
       protectedWithPassword: protectedWithPassword,
       file: file,
@@ -694,16 +742,22 @@ class _ConfigurationBackupDocument {
     required AppSettings settings,
     required List<AccountProfile> accounts,
     required ConfigurationBackupReadTokens readTokens,
+    ConfigurationBackupReadLumaSession? readLumaSession,
     required Future<_KiroManagedCredentialBackupState?> Function(AccountProfile account)
     readKiroManagedCredentialState,
   }) async {
     final exportedAccounts = <_ConfigurationBackupAccount>[];
     for (final account in accounts) {
+      LumaSession? lumaSession;
+      if (account.provider == AccountProvider.luma && readLumaSession != null) {
+        lumaSession = LumaSession.tryDecode(await readLumaSession(account.tokenRef));
+      }
       exportedAccounts.add(
         _ConfigurationBackupAccount(
           profile: account,
           tokens: account.usesSecretStoreTokens ? await readTokens(account.tokenRef) : null,
           kiroManagedCredentialState: await readKiroManagedCredentialState(account),
+          lumaSession: lumaSession,
         ),
       );
     }
@@ -772,15 +826,18 @@ class _ConfigurationBackupAccount {
     required this.profile,
     required this.tokens,
     this.kiroManagedCredentialState,
+    this.lumaSession,
   });
 
   final AccountProfile profile;
   final OAuthTokens? tokens;
   final _KiroManagedCredentialBackupState? kiroManagedCredentialState;
+  final LumaSession? lumaSession;
 
   factory _ConfigurationBackupAccount.fromJson(Map<String, Object?> json) {
     final tokensJson = json['tokens'];
     final providerStateJson = json['provider_state'];
+    final lumaSessionJson = json['luma_session'];
     return _ConfigurationBackupAccount(
       profile: AccountProfile.fromBackupJson(json),
       tokens: tokensJson is Map<String, Object?>
@@ -793,12 +850,16 @@ class _ConfigurationBackupAccount {
           : providerStateJson is Map
           ? _KiroManagedCredentialBackupState.fromJson(providerStateJson.cast<String, Object?>())
           : null,
+      lumaSession: lumaSessionJson is Map
+          ? LumaSession.fromJson(lumaSessionJson.cast<String, Object?>())
+          : null,
     );
   }
 
   Map<String, Object?> toJson() {
     return {
       ...profile.toBackupJson(tokens: tokens),
+      if (lumaSession != null) 'luma_session': lumaSession!.toJson(),
       if (kiroManagedCredentialState != null)
         'provider_state': kiroManagedCredentialState!.toJson(),
     };

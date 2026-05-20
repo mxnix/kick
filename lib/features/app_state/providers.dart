@@ -235,12 +235,18 @@ final configurationBackupServiceProvider = Provider<ConfigurationBackupService>(
     replaceAccounts: bootstrap.accountsRepository.replaceAll,
     writeTokens: bootstrap.secretStore.writeOAuthTokens,
     deleteTokens: bootstrap.secretStore.deleteOAuthTokens,
+    readLumaSession: bootstrap.secretStore.readLumaSession,
+    writeLumaSession: bootstrap.secretStore.writeLumaSession,
+    deleteLumaSession: bootstrap.secretStore.deleteLumaSession,
   );
 });
 
 final accountShareServiceProvider = Provider<AccountShareService>((ref) {
   final bootstrap = ref.watch(appBootstrapProvider);
-  return AccountShareService(readTokens: bootstrap.secretStore.readOAuthTokens);
+  return AccountShareService(
+    readTokens: bootstrap.secretStore.readOAuthTokens,
+    readLumaSession: bootstrap.secretStore.readLumaSession,
+  );
 });
 
 final accountsControllerProvider = AsyncNotifierProvider<AccountsController, List<AccountProfile>>(
@@ -563,7 +569,9 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
         );
       }
     } else if (source.provider == AccountProvider.luma) {
-      // Luma stub does not persist any secret material yet.
+      if (shared.lumaSession != null) {
+        await bootstrap.secretStore.writeLumaSession(newTokenRef, shared.lumaSession!.encode());
+      }
     } else if (shared.tokens != null) {
       await bootstrap.secretStore.writeOAuthTokens(newTokenRef, shared.tokens!);
     }

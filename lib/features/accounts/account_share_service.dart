@@ -10,10 +10,12 @@ import 'package:share_plus/share_plus.dart';
 import '../../data/models/account_profile.dart';
 import '../../data/models/oauth_tokens.dart';
 import '../../proxy/kiro/kiro_auth_source.dart';
+import '../../proxy/luma/luma_session.dart';
 
 typedef AccountShareDirectoryResolver = Future<Directory> Function();
 typedef AccountShareReadTokens = Future<OAuthTokens?> Function(String tokenRef);
 typedef AccountShareWriteTokens = Future<void> Function(String tokenRef, OAuthTokens tokens);
+typedef AccountShareReadLumaSession = Future<String?> Function(String tokenRef);
 typedef AccountShareSaveFileCallback =
     Future<String?> Function({
       required String fileName,
@@ -61,12 +63,14 @@ class AccountShareImportResult {
     required this.account,
     required this.tokens,
     required this.kiroManagedCredentialState,
+    this.lumaSession,
   });
 
   final String fileName;
   final AccountProfile account;
   final OAuthTokens? tokens;
   final SharedKiroManagedCredentialState? kiroManagedCredentialState;
+  final LumaSession? lumaSession;
 }
 
 const _accountShareSchema = 'kick.account_share';
@@ -76,6 +80,7 @@ const _accountShareFileExtension = 'kickacc';
 class AccountShareService {
   AccountShareService({
     required AccountShareReadTokens readTokens,
+    AccountShareReadLumaSession? readLumaSession,
     AccountShareDirectoryResolver? exportDirectoryResolver,
     AccountShareSaveFileCallback? saveFileCallback,
     AccountSharePickFileCallback? pickFileCallback,
@@ -83,6 +88,7 @@ class AccountShareService {
     bool? useNativeSaveDialog,
     Future<Directory> Function()? supportDirectoryProvider,
   }) : _readTokens = readTokens,
+       _readLumaSession = readLumaSession,
        _exportDirectoryResolver = exportDirectoryResolver ?? _defaultExportDirectory,
        _saveFileCallback = saveFileCallback ?? _defaultSaveFile,
        _pickFileCallback = pickFileCallback ?? _defaultPickFile,
@@ -91,6 +97,7 @@ class AccountShareService {
        _supportDirectoryProvider = supportDirectoryProvider ?? getApplicationSupportDirectory;
 
   final AccountShareReadTokens _readTokens;
+  final AccountShareReadLumaSession? _readLumaSession;
   final AccountShareDirectoryResolver _exportDirectoryResolver;
   final AccountShareSaveFileCallback _saveFileCallback;
   final AccountSharePickFileCallback _pickFileCallback;
@@ -105,11 +112,15 @@ class AccountShareService {
     String? shareText,
   }) async {
     final tokens = account.usesSecretStoreTokens ? await _readTokens(account.tokenRef) : null;
+    final lumaSession = account.provider == AccountProvider.luma && _readLumaSession != null
+        ? LumaSession.tryDecode(await _readLumaSession(account.tokenRef))
+        : null;
     final managedKiroState = await _readKiroManagedCredentialState(account);
     final document = _AccountShareDocument(
       exportedAt: DateTime.now(),
       account: account,
       tokens: tokens,
+      lumaSession: lumaSession,
       kiroManagedCredentialState: managedKiroState,
     );
     final contents = _encodeDocument(document);
@@ -127,7 +138,7 @@ class AccountShareService {
       return AccountShareExportResult(
         fileName: _extractFileName(savedLocation, fallback: fileName),
         contents: contents,
-        tokensIncluded: tokens != null || managedKiroState != null,
+        tokensIncluded: tokens != null || managedKiroState != null || lumaSession != null,
       );
     }
 
@@ -145,7 +156,7 @@ class AccountShareService {
     return AccountShareExportResult(
       fileName: result.fileName,
       contents: contents,
-      tokensIncluded: tokens != null || managedKiroState != null,
+      tokensIncluded: tokens != null || managedKiroState != null || lumaSession != null,
       file: result.file,
     );
   }
@@ -162,6 +173,7 @@ class AccountShareService {
       account: document.account,
       tokens: document.tokens,
       kiroManagedCredentialState: document.kiroManagedCredentialState,
+      lumaSession: document.lumaSession,
     );
   }
 
@@ -354,12 +366,14 @@ class _AccountShareDocument {
     required this.account,
     required this.tokens,
     required this.kiroManagedCredentialState,
+    this.lumaSession,
   });
 
   final DateTime exportedAt;
   final AccountProfile account;
   final OAuthTokens? tokens;
   final SharedKiroManagedCredentialState? kiroManagedCredentialState;
+  final LumaSession? lumaSession;
 
   factory _AccountShareDocument.fromJson(Map<String, Object?> json) {
     if (json['schema'] != _accountShareSchema) {
@@ -402,11 +416,18 @@ class _AccountShareDocument {
       );
     }
 
+    final lumaSessionJson = accountMap['luma_session'];
+    LumaSession? lumaSession;
+    if (lumaSessionJson is Map) {
+      lumaSession = LumaSession.fromJson(lumaSessionJson.cast<String, Object?>());
+    }
+
     return _AccountShareDocument(
       exportedAt: DateTime.tryParse(json['exported_at']?.toString() ?? '') ?? DateTime.now(),
       account: profile,
       tokens: tokens,
       kiroManagedCredentialState: providerState,
+      lumaSession: lumaSession,
     );
   }
 
@@ -417,6 +438,7 @@ class _AccountShareDocument {
       'exported_at': exportedAt.toIso8601String(),
       'account': {
         ...account.toBackupJson(tokens: tokens),
+        if (lumaSession != null) 'luma_session': lumaSession!.toJson(),
         if (kiroManagedCredentialState != null)
           'provider_state': kiroManagedCredentialState!.toJson(),
       },
