@@ -700,6 +700,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsGoogleSectionSummary => 'Web search and provider-specific options';
 
   @override
+  String get experimentalChannelBadge => 'experimental';
+
+  @override
   String get settingsBackupSectionTitle => 'Backup and restore';
 
   @override

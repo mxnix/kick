@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:m3e_collection/m3e_collection.dart' as m3e;
 
+import '../../app/app_metadata.dart';
 import '../../core/theme/kick_icons.dart';
 import '../../core/theme/kick_theme.dart';
 import '../../l10n/kick_localizations.dart';
@@ -99,6 +100,7 @@ class AppShell extends StatelessWidget {
                                   destinations: destinations,
                                   selectedIndex: selectedIndex,
                                   onSelected: (value) => _navigate(context, destinations[value]),
+                                  isExperimental: kickIsExperimentalBuild,
                                 ),
                                 const SizedBox(width: 24),
                                 Expanded(
@@ -408,11 +410,13 @@ class _ShellRail extends StatelessWidget {
     required this.destinations,
     required this.selectedIndex,
     required this.onSelected,
+    this.isExperimental = false,
   });
 
   final List<_ShellDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final bool isExperimental;
 
   @override
   Widget build(BuildContext context) {
@@ -434,7 +438,12 @@ class _ShellRail extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.appTitle, style: textTheme.headlineMedium),
+                  Row(
+                    children: [
+                      Text(l10n.appTitle, style: textTheme.headlineMedium),
+                      if (isExperimental) ...[const SizedBox(width: 8), _ShellExperimentalBadge()],
+                    ],
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     l10n.shellSubtitle,
@@ -486,4 +495,21 @@ class _ShellDestination {
   final String label;
   final Widget icon;
   final Widget selectedIcon;
+}
+
+class _ShellExperimentalBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: scheme.tertiary.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: scheme.tertiary.withValues(alpha: 0.32)),
+      ),
+      child: Icon(KickIcons.science, size: 14, color: scheme.tertiary),
+    );
+  }
 }

@@ -1336,6 +1336,12 @@ abstract class AppLocalizations {
   /// **'Web search and provider-specific options'**
   String get settingsGoogleSectionSummary;
 
+  /// No description provided for @experimentalChannelBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'experimental'**
+  String get experimentalChannelBadge;
+
   /// No description provided for @settingsBackupSectionTitle.
   ///
   /// In en, this message translates to:

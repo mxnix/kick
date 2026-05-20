@@ -403,6 +403,7 @@
   "settingsModelsSectionSummary": "Custom model IDs",
   "settingsGoogleSectionTitle": "Provider features",
   "settingsGoogleSectionSummary": "Web search and provider-specific options",
+  "experimentalChannelBadge": "experimental",
   "settingsBackupSectionTitle": "Backup and restore",
   "settingsBackupSectionSummary": "Transfer settings and accounts between devices",
   "settingsBackupInfoTitle": "The backup will include settings, the API key, and OAuth tokens",

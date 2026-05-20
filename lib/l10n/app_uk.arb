@@ -403,6 +403,7 @@
   "settingsModelsSectionSummary": "Користувацькі ID моделей",
   "settingsGoogleSectionTitle": "Можливості провайдерів",
   "settingsGoogleSectionSummary": "Веб-пошук і параметри конкретних провайдерів",
+  "experimentalChannelBadge": "experimental",
   "settingsBackupSectionTitle": "Резервна копія та відновлення",
   "settingsBackupSectionSummary": "Перенос налаштувань і акаунтів між пристроями",
   "settingsBackupInfoTitle": "У резервну копію потраплять налаштування, API-ключ і OAuth-токени",

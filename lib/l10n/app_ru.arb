@@ -364,6 +364,7 @@
     "settingsModelsSectionSummary": "Пользовательские ID моделей",
     "settingsGoogleSectionTitle": "Возможности провайдеров",
     "settingsGoogleSectionSummary": "Веб-поиск и параметры конкретных провайдеров",
+    "experimentalChannelBadge": "experimental",
     "settingsBackupSectionTitle": "Резервная копия и восстановление",
     "settingsBackupSectionSummary": "Перенос настроек и аккаунтов между устройствами",
     "settingsBackupInfoTitle": "В резервную копию попадут настройки, API-ключ и OAuth-токены",

@@ -58,4 +58,5 @@ class KickIcons {
   static const IconData warning = Symbols.warning_amber_rounded;
   static const IconData verified = Symbols.verified_rounded;
   static const IconData verifiedUser = Symbols.verified_user_rounded;
+  static const IconData science = Symbols.science_rounded;
 }

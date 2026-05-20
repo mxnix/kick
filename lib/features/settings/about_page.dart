@@ -68,6 +68,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
               versionLabel: versionLabel,
               description: l10n.aboutDescription,
               onIconTap: _handleAppIconTap,
+              isExperimental: kickIsExperimentalBuild,
             ),
             const SizedBox(height: 14),
             _AboutUpdatesCard(
@@ -404,12 +405,14 @@ class _AboutHeroCard extends StatelessWidget {
     required this.versionLabel,
     required this.description,
     this.onIconTap,
+    this.isExperimental = false,
   });
 
   final String appTitle;
   final String versionLabel;
   final String description;
   final VoidCallback? onIconTap;
+  final bool isExperimental;
 
   @override
   Widget build(BuildContext context) {
@@ -451,13 +454,18 @@ class _AboutHeroCard extends StatelessWidget {
                   children: [
                     Text(appTitle, style: textTheme.headlineMedium),
                     const SizedBox(height: 4),
-                    Text(
-                      'v$versionLabel',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                        fontFamily: 'monospace',
-                        letterSpacing: 0.2,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'v$versionLabel',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontFamily: 'monospace',
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        if (isExperimental) ...[const SizedBox(width: 8), _ExperimentalBadge()],
+                      ],
                     ),
                   ],
                 ),
@@ -498,4 +506,36 @@ void _showAboutLinkOpenFailedMessage(ScaffoldMessengerState? messenger, String f
   }
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(SnackBar(content: Text(failureMessage)));
+}
+
+class _ExperimentalBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: scheme.tertiary.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.tertiary.withValues(alpha: 0.32)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(KickIcons.science, size: 14, color: scheme.tertiary),
+          const SizedBox(width: 4),
+          Text(
+            l10n.experimentalChannelBadge,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.tertiary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

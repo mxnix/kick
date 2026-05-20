@@ -4,6 +4,7 @@ const kickBuildAppVersion = String.fromEnvironment(
   'FLUTTER_BUILD_NAME',
   defaultValue: kickDefaultAppVersion,
 );
+const kickIsExperimentalBuild = bool.fromEnvironment('KICK_EXPERIMENTAL');
 const kickAppIconAssetPath = 'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png';
 const kickWindowsTrayIconAssetPath = 'windows/runner/resources/app_icon.ico';
 const kickLinuxTrayIconAssetPath = 'static/github/logo/logo.png';

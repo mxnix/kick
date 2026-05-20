@@ -701,6 +701,9 @@ class AppLocalizationsUk extends AppLocalizations {
   String get settingsGoogleSectionSummary => 'Веб-пошук і параметри конкретних провайдерів';
 
   @override
+  String get experimentalChannelBadge => 'experimental';
+
+  @override
   String get settingsBackupSectionTitle => 'Резервна копія та відновлення';
 
   @override

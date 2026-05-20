@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/app_metadata.dart';
 import '../../core/errors/user_facing_error_formatter.dart';
 import '../../core/theme/kick_icons.dart';
 import '../../data/models/app_settings.dart';
@@ -88,7 +89,10 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeading(title: l10n.homeTitle),
+          SectionHeading(
+            title: l10n.homeTitle,
+            trailing: kickIsExperimentalBuild ? const _ExperimentalHomeBadge() : null,
+          ),
           const SizedBox(height: 28),
           _HomeDashboardLayout(
             hero: _ProxyStatusHero(
@@ -976,4 +980,36 @@ String _sillyTavernPushFailureKind(Object error) {
     return error.failure.name;
   }
   return error.runtimeType.toString();
+}
+
+class _ExperimentalHomeBadge extends StatelessWidget {
+  const _ExperimentalHomeBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: scheme.tertiary.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: scheme.tertiary.withValues(alpha: 0.32)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(KickIcons.science, size: 16, color: scheme.tertiary),
+          const SizedBox(width: 6),
+          Text(
+            l10n.experimentalChannelBadge,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: scheme.tertiary, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
 }

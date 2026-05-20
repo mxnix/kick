@@ -701,6 +701,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsGoogleSectionSummary => 'Веб-поиск и параметры конкретных провайдеров';
 
   @override
+  String get experimentalChannelBadge => 'experimental';
+
+  @override
   String get settingsBackupSectionTitle => 'Резервная копия и восстановление';
 
   @override
