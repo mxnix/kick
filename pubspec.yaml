@@ -1,5 +1,5 @@
 name: kick
-description: "Kick: a local OpenAI-compatible proxy for Gemini CLI and Kiro with a Flutter shell"
+description: "Kick: a local OpenAI-compatible proxy for Antigravity and Kiro with a Flutter shell"
 publish_to: "none"
 version: 1.5.3+24
 
@@ -85,8 +85,8 @@ flutter:
           weight: 700
           style: italic
   assets:
-    - assets/icons/providers/gemini.svg
-    - assets/icons/providers/gemini_brand.png
+    - assets/icons/providers/antigravity.svg
+    - assets/icons/providers/antigravity_brand.png
     - assets/icons/providers/kiro.svg
     - assets/icons/providers/kiro_brand.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png

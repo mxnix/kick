@@ -59,7 +59,7 @@ class GeminiGatewayException implements Exception {
     required this.kind,
     required this.message,
     required this.statusCode,
-    this.provider = AccountProvider.gemini,
+    this.provider = AccountProvider.antigravity,
     this.quotaSnapshot,
     this.retryAfter,
     this.detail,
@@ -1011,7 +1011,14 @@ class GeminiCodeAssistClient {
   }
 
   Uri _methodUri(String method) {
-    return Uri.parse('$geminiCodeAssistEndpoint/$geminiCodeAssistApiVersion:$method');
+    final endpoint = _isGenerateMethod(method)
+        ? geminiCodeAssistDailyEndpoint
+        : geminiCodeAssistEndpoint;
+    return Uri.parse('$endpoint/$geminiCodeAssistApiVersion:$method');
+  }
+
+  static bool _isGenerateMethod(String method) {
+    return method == 'generateContent' || method == 'streamGenerateContent';
   }
 
   Uri _operationUri(String operationName) {
@@ -1108,7 +1115,7 @@ class GeminiCodeAssistClient {
             _methodUri('streamGenerateContent').replace(queryParameters: {'alt': 'sse'}),
             abortTrigger: cancellation?.trigger,
           )
-          ..headers.addAll(<String, String>{...headers, HttpHeaders.acceptHeader: '*/*'})
+          ..headers.addAll(headers)
           ..body = jsonEncode(
             _buildRequestEnvelope(
               model: model,

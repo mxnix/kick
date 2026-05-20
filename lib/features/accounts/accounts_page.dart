@@ -532,7 +532,7 @@ class _AccountProviderInlineBadge extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final label = switch (provider) {
       AccountProvider.kiro => l10n.accountProviderKiro,
-      AccountProvider.gemini => l10n.accountProviderGemini,
+      AccountProvider.antigravity => l10n.accountProviderGemini,
       AccountProvider.luma => l10n.accountProviderLuma,
     };
 
@@ -672,7 +672,7 @@ class _AccountCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (account.provider == AccountProvider.gemini) ...[
+                    if (account.provider == AccountProvider.antigravity) ...[
                       const SizedBox(height: 4),
                       Text(
                         account.projectId.trim().isEmpty
@@ -987,7 +987,7 @@ class _AccountAvatar extends StatefulWidget {
 class _AccountAvatarState extends State<_AccountAvatar> {
   bool _pressed = false;
 
-  bool get _supportsCustomAvatar => widget.account.provider != AccountProvider.gemini;
+  bool get _supportsCustomAvatar => widget.account.provider != AccountProvider.antigravity;
 
   void _showPreview() {
     setState(() => _pressed = true);
@@ -2060,13 +2060,14 @@ class _AccountMoreActionsButton extends StatelessWidget {
         ),
       ),
       menuChildren: [
-        if (account.provider == AccountProvider.gemini || account.provider == AccountProvider.luma)
+        if (account.provider == AccountProvider.antigravity ||
+            account.provider == AccountProvider.luma)
           MenuItemButton(
             leadingIcon: const Icon(Icons.manage_accounts_rounded, size: 18),
             onPressed: () => onSelected(_AccountMenuAction.reauthorize),
             child: Text(l10n.reauthorizeButton),
           ),
-        if (account.provider == AccountProvider.gemini)
+        if (account.provider == AccountProvider.antigravity)
           MenuItemButton(
             leadingIcon: const Icon(Icons.fact_check_rounded, size: 18),
             onPressed: () => onSelected(_AccountMenuAction.diagnose),

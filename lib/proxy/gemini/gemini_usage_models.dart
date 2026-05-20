@@ -216,7 +216,7 @@ class GeminiUsageSnapshot {
 
     return GeminiUsageSnapshot(
       fetchedAt: fetchedAt?.toLocal() ?? DateTime.now(),
-      subscriptionTitle: 'Gemini CLI OAuth',
+      subscriptionTitle: 'Antigravity',
       buckets: List.unmodifiable(buckets),
     );
   }

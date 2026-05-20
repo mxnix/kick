@@ -14,7 +14,7 @@ GeminiErrorAction? primaryActionForError(Object error) {
   if (error is! GeminiGatewayException) {
     return null;
   }
-  if (error.provider != AccountProvider.gemini) {
+  if (error.provider != AccountProvider.antigravity) {
     return null;
   }
 

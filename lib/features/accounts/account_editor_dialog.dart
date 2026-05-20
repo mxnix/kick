@@ -75,7 +75,7 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
     _modelsController = TextEditingController(
       text: widget.initial?.notSupportedModels.join('\n') ?? '',
     );
-    _selectedProvider = widget.initial?.provider ?? widget.provider ?? AccountProvider.gemini;
+    _selectedProvider = widget.initial?.provider ?? widget.provider ?? AccountProvider.antigravity;
     _selectedPriority = AccountPriorityLevel.fromStoredValue(
       widget.initial?.priority ?? AccountPriorityLevel.normal.storedValue,
     );
@@ -100,7 +100,7 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
     final providerLabel = switch (_selectedProvider) {
-      AccountProvider.gemini => l10n.accountProviderGemini,
+      AccountProvider.antigravity => l10n.accountProviderGemini,
       AccountProvider.kiro => l10n.accountProviderKiro,
       AccountProvider.luma => l10n.accountProviderLuma,
     };
@@ -176,7 +176,7 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
                       showSelectedIcon: false,
                       segments: [
                         ButtonSegment(
-                          value: AccountProvider.gemini,
+                          value: AccountProvider.antigravity,
                           label: Text(l10n.accountProviderGemini),
                         ),
                         ButtonSegment(
@@ -196,7 +196,7 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
                   ),
                 ],
                 const SizedBox(height: 14),
-                if (_selectedProvider == AccountProvider.gemini) ...[
+                if (_selectedProvider == AccountProvider.antigravity) ...[
                   TextFormField(
                     controller: _projectController,
                     decoration: InputDecoration(

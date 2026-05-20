@@ -160,7 +160,7 @@ final accountUsageQueryProvider = FutureProvider.autoDispose.family<GeminiUsageS
     }
 
     final snapshot = await switch (account.provider) {
-      AccountProvider.gemini => ref.watch(geminiUsageServiceProvider).fetchUsage(account),
+      AccountProvider.antigravity => ref.watch(geminiUsageServiceProvider).fetchUsage(account),
       AccountProvider.kiro => ref.watch(kiroUsageServiceProvider).fetchUsage(account),
       AccountProvider.luma => ref.watch(lumaUsageServiceProvider).fetchUsage(account),
     };
@@ -521,7 +521,7 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
 
     final newId = _uuid.v4();
     final newTokenRef = switch (source.provider) {
-      AccountProvider.gemini => 'kick.oauth.${_uuid.v4()}',
+      AccountProvider.antigravity => 'kick.oauth.${_uuid.v4()}',
       AccountProvider.kiro => 'kick.kiro.${_uuid.v4()}',
       AccountProvider.luma => 'kick.luma.${_uuid.v4()}',
     };

@@ -44,11 +44,15 @@ void main() {
   test('supports dynamic Gemini CLI prefixes from client names', () {
     expect(
       buildGeminiCliUserAgent('gemini-2.5-pro', clientName: 'a2a-server', surface: 'vscode'),
-      startsWith('GeminiCLI-a2a-server/$geminiCodeAssistCliVersion/gemini-2.5-pro '),
+      startsWith(
+        '$geminiCodeAssistUserAgentPrefix-a2a-server/$geminiCodeAssistCliVersion/gemini-2.5-pro ',
+      ),
     );
     expect(
       buildGeminiCliUserAgent('gemini-2.5-pro', clientName: 'acp-zed', surface: 'zed'),
-      startsWith('GeminiCLI-acp-zed/$geminiCodeAssistCliVersion/gemini-2.5-pro '),
+      startsWith(
+        '$geminiCodeAssistUserAgentPrefix-acp-zed/$geminiCodeAssistCliVersion/gemini-2.5-pro ',
+      ),
     );
   });
 
@@ -72,13 +76,11 @@ void main() {
 
     expect(headers[HttpHeaders.authorizationHeader], 'Bearer access-token');
     expect(headers[HttpHeaders.contentTypeHeader], 'application/json');
-    expect(headers[HttpHeaders.acceptHeader], 'application/json');
-    expect(headers['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
+    expect(headers.containsKey(HttpHeaders.acceptHeader), isFalse);
+    expect(headers.containsKey('x-goog-api-client'), isFalse);
     expect(
       headers[HttpHeaders.userAgentHeader],
-      startsWith(
-        '$geminiCodeAssistUserAgentPrefix-$geminiCodeAssistDefaultClientName/$geminiCodeAssistCliVersion/gemini-2.5-pro ',
-      ),
+      '$geminiCodeAssistUserAgentPrefix ${antigravityPlatformSuffix()}',
     );
     expect(headers.containsKey('x-gemini-api-privileged-user-id'), isFalse);
   });

@@ -276,7 +276,7 @@ class _UsageAccountCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              if (account.provider == AccountProvider.gemini)
+              if (account.provider == AccountProvider.antigravity)
                 KickBadge(
                   label: account.projectId.trim().isEmpty
                       ? l10n.projectIdAutoChip

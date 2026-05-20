@@ -99,7 +99,7 @@ class _AccountProviderPickerDialog extends StatelessWidget {
                           ),
                         ),
                         _ProviderChoiceCard(
-                          provider: AccountProvider.gemini,
+                          provider: AccountProvider.antigravity,
                           width: cardWidth,
                           aspectRatio: cardAspectRatio,
                           labelStyle: _ProviderChoiceLabelStyle(
@@ -169,7 +169,7 @@ class _ProviderChoiceCardState extends State<_ProviderChoiceCard> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final label = switch (widget.provider) {
-      AccountProvider.gemini => context.l10n.accountProviderGeminiCli,
+      AccountProvider.antigravity => context.l10n.accountProviderGeminiCli,
       AccountProvider.kiro => context.l10n.accountProviderKiro,
       AccountProvider.luma => context.l10n.accountProviderLuma,
     };

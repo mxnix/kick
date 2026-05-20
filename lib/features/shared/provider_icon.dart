@@ -4,8 +4,8 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../data/models/account_profile.dart';
 
-const _geminiProviderIconAssetPath = 'assets/icons/providers/gemini.svg';
-const _geminiProviderBrandIconAssetPath = 'assets/icons/providers/gemini_brand.png';
+const _geminiProviderIconAssetPath = 'assets/icons/providers/antigravity.svg';
+const _geminiProviderBrandIconAssetPath = 'assets/icons/providers/antigravity_brand.png';
 const _kiroProviderIconAssetPath = 'assets/icons/providers/kiro.svg';
 const _kiroProviderBrandIconAssetPath = 'assets/icons/providers/kiro_brand.png';
 
@@ -33,7 +33,7 @@ class ProviderIcon extends StatelessWidget {
     final resolvedColor = color ?? iconTheme.color ?? scheme.onSurfaceVariant;
 
     return switch (provider) {
-      AccountProvider.gemini =>
+      AccountProvider.antigravity =>
         variant == ProviderIconVariant.brand
             ? Image.asset(
                 _geminiProviderBrandIconAssetPath,

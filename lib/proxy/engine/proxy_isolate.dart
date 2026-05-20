@@ -1650,7 +1650,7 @@ class _ProxyIsolateHost {
         request: request,
         onRetry: onRetry,
       ),
-      AccountProvider.gemini => _geminiClient.generateContent(
+      AccountProvider.antigravity => _geminiClient.generateContent(
         account: account,
         request: request,
         onRetry: onRetry,
@@ -1670,7 +1670,7 @@ class _ProxyIsolateHost {
         request: request,
         onRetry: onRetry,
       ),
-      AccountProvider.gemini => _geminiClient.generateContentStream(
+      AccountProvider.antigravity => _geminiClient.generateContentStream(
         account: account,
         request: request,
         onRetry: onRetry,

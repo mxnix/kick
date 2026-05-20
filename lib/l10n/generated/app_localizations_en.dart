@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'KiCk';
 
   @override
-  String get shellSubtitle => 'Local proxy for Gemini CLI and Kiro';
+  String get shellSubtitle => 'Local proxy for Antigravity and Kiro';
 
   @override
   String get connectGoogleAccountTitle => 'Connect Google account';
@@ -90,7 +90,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountsTitle => 'Accounts';
 
   @override
-  String get accountsSubtitle => 'Connect Gemini CLI and Kiro accounts and manage them';
+  String get accountsSubtitle => 'Connect Antigravity and Kiro accounts and manage them';
 
   @override
   String get accountsSearchHint => 'Search by name, email, or project ID';
@@ -117,7 +117,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountsEmptyTitle => 'No accounts yet';
 
   @override
-  String get accountsEmptyMessage => 'Connect at least one Gemini CLI or Kiro account.';
+  String get accountsEmptyMessage => 'Connect at least one Antigravity or Kiro account.';
 
   @override
   String get connectAccountButton => 'Connect account';
@@ -178,10 +178,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountProviderLabel => 'Account type';
 
   @override
-  String get accountProviderGemini => 'Gemini CLI';
+  String get accountProviderGemini => 'Antigravity';
 
   @override
-  String get accountProviderGeminiCli => 'Gemini CLI';
+  String get accountProviderGeminiCli => 'Antigravity';
 
   @override
   String get accountProviderKiro => 'Kiro';
@@ -445,7 +445,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountUsageTitle => 'Account quotas';
 
   @override
-  String get accountUsageProviderLabel => 'Gemini CLI authorization (OAuth)';
+  String get accountUsageProviderLabel => 'Antigravity authorization (OAuth)';
 
   @override
   String get accountUsageRefreshTooltip => 'Refresh';
@@ -512,7 +512,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountUsageUnavailableMessage =>
-      'The quotas page only works for Gemini CLI and Kiro accounts.';
+      'The quotas page only works for Antigravity and Kiro accounts.';
 
   @override
   String get accountUsageMissingTitle => 'Account not found';
@@ -822,7 +822,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get defaultGoogleVisibleReasoningSubtitle =>
-      'Adds include_reasoning for Gemini CLI requests when the client did not set reasoning options. Helps Custom OpenAI-Compatible clients show reasoning blocks.';
+      'Adds include_reasoning for Antigravity requests when the client did not set reasoning options. Helps Custom OpenAI-Compatible clients show reasoning blocks.';
 
   @override
   String get renderGoogleGroundingInMessageTitle => 'Show citations and sources in the response';
@@ -832,7 +832,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'If disabled, source links will remain in metadata and will not be added to the response text itself';
 
   @override
-  String get settingsGeminiSubsectionTitle => 'Gemini CLI';
+  String get settingsGeminiSubsectionTitle => 'Antigravity';
 
   @override
   String get settingsKiroSubsectionTitle => 'Kiro';
@@ -981,7 +981,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'A local OpenAI-compatible proxy for Gemini CLI and Kiro in a native Flutter app';
+      'A local OpenAI-compatible proxy for Antigravity and Kiro in a native Flutter app';
 
   @override
   String get aboutUpdatesTitle => 'Updates';
@@ -1174,7 +1174,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeOnboardingAccountsMessage =>
-      'Without an active Gemini CLI or Kiro account, KiCk will not be able to process requests.';
+      'Without an active Antigravity or Kiro account, KiCk will not be able to process requests.';
 
   @override
   String get homeOnboardingEndpointTitle => 'Check the proxy address';
@@ -1235,14 +1235,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get welcomeSubtitle =>
-      'KiCk helps you run a local proxy for Gemini CLI and Kiro without terminal commands or extra setup.';
+      'KiCk helps you run a local proxy for Antigravity and Kiro without terminal commands or extra setup.';
 
   @override
   String get welcomeStepAccountsTitle => 'Connect an account';
 
   @override
   String get welcomeStepAccountsMessage =>
-      'You can do this on the accounts screen. You can connect Gemini CLI or Kiro.';
+      'You can do this on the accounts screen. You can connect Antigravity or Kiro.';
 
   @override
   String get welcomeStepHomeTitle => 'Open Home';

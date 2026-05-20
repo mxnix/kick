@@ -145,7 +145,7 @@ void main() {
     expect(requestBody, {'project': 'project-1'});
     expect(
       requestHeaders?[HttpHeaders.userAgentHeader],
-      contains('/$geminiCodeAssistAuxiliaryHeaderModel '),
+      '$geminiCodeAssistUserAgentPrefix ${antigravityPlatformSuffix()}',
     );
   });
 
@@ -211,24 +211,12 @@ void main() {
     final nestedRequest = (capturedBody?['request'] as Map?)?.cast<String, Object?>();
     expect(nestedRequest?['session_id'], sessionId);
     expect(capturedBody?['project'], 'project-1');
-    final expectedPlatform = Platform.isWindows
-        ? 'win32'
-        : Platform.isMacOS
-        ? 'darwin'
-        : Platform.operatingSystem;
-    final currentAbi = Abi.current().toString();
-    final separatorIndex = currentAbi.indexOf('_');
-    final expectedArchitecture = separatorIndex == -1 || separatorIndex == currentAbi.length - 1
-        ? currentAbi
-        : currentAbi.substring(separatorIndex + 1);
     expect(
       capturedHeaders?[HttpHeaders.userAgentHeader],
-      '$geminiCodeAssistUserAgentPrefix-$geminiCodeAssistDefaultClientName/$geminiCodeAssistCliVersion/gemini-2.5-pro '
-      '($expectedPlatform; $expectedArchitecture; ${determineGeminiCliSurface()}) '
-      'google-api-nodejs-client/$geminiCodeAssistGoogleApiNodeClientVersion',
+      '$geminiCodeAssistUserAgentPrefix ${antigravityPlatformSuffix()}',
     );
     expect(capturedBody?.containsKey('metadata'), isFalse);
-    expect(capturedHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
+    expect(capturedHeaders?.containsKey('x-goog-api-client'), isFalse);
     expect(capturedHeaders?.containsKey('x-gemini-api-privileged-user-id'), isFalse);
   });
 

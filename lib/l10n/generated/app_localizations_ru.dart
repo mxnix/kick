@@ -12,7 +12,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appTitle => 'KiCk';
 
   @override
-  String get shellSubtitle => 'Локальный прокси для Gemini CLI и Kiro';
+  String get shellSubtitle => 'Локальный прокси для Antigravity и Kiro';
 
   @override
   String get connectGoogleAccountTitle => 'Подключить Google-аккаунт';
@@ -90,7 +90,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountsTitle => 'Аккаунты';
 
   @override
-  String get accountsSubtitle => 'Подключайте аккаунты Gemini CLI и Kiro и управляйте ими';
+  String get accountsSubtitle => 'Подключайте аккаунты Antigravity и Kiro и управляйте ими';
 
   @override
   String get accountsSearchHint => 'Поиск по имени, почте или ID проекта';
@@ -117,7 +117,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountsEmptyTitle => 'Аккаунтов пока нет';
 
   @override
-  String get accountsEmptyMessage => 'Подключите хотя бы один аккаунт Gemini CLI или Kiro.';
+  String get accountsEmptyMessage => 'Подключите хотя бы один аккаунт Antigravity или Kiro.';
 
   @override
   String get connectAccountButton => 'Подключить аккаунт';
@@ -178,10 +178,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountProviderLabel => 'Тип аккаунта';
 
   @override
-  String get accountProviderGemini => 'Gemini CLI';
+  String get accountProviderGemini => 'Antigravity';
 
   @override
-  String get accountProviderGeminiCli => 'Gemini CLI';
+  String get accountProviderGeminiCli => 'Antigravity';
 
   @override
   String get accountProviderKiro => 'Kiro';
@@ -444,7 +444,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountUsageTitle => 'Лимиты аккаунта';
 
   @override
-  String get accountUsageProviderLabel => 'Авторизация Gemini CLI (OAuth)';
+  String get accountUsageProviderLabel => 'Авторизация Antigravity (OAuth)';
 
   @override
   String get accountUsageRefreshTooltip => 'Обновить';
@@ -512,7 +512,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accountUsageUnavailableMessage =>
-      'Страница лимитов работает только для аккаунтов Gemini CLI и Kiro.';
+      'Страница лимитов работает только для аккаунтов Antigravity и Kiro.';
 
   @override
   String get accountUsageMissingTitle => 'Аккаунт не найден';
@@ -823,7 +823,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get defaultGoogleVisibleReasoningSubtitle =>
-      'Добавляет include_reasoning для запросов Gemini CLI, если клиент не задал рассуждения сам. Помогает клиентам показывать блок рассуждений.';
+      'Добавляет include_reasoning для запросов Antigravity, если клиент не задал рассуждения сам. Помогает клиентам показывать блок рассуждений.';
 
   @override
   String get renderGoogleGroundingInMessageTitle => 'Показывать цитаты и источники в ответе';
@@ -833,7 +833,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Если выключить, ссылки на источники останутся в метаданных и не будут добавляться в текст ответа';
 
   @override
-  String get settingsGeminiSubsectionTitle => 'Gemini CLI';
+  String get settingsGeminiSubsectionTitle => 'Antigravity';
 
   @override
   String get settingsKiroSubsectionTitle => 'Kiro';
@@ -981,7 +981,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get aboutDescription =>
-      'Локальный OpenAI-совместимый прокси для Gemini CLI и Kiro в нативном приложении Flutter';
+      'Локальный OpenAI-совместимый прокси для Antigravity и Kiro в нативном приложении Flutter';
 
   @override
   String get aboutUpdatesTitle => 'Обновления';
@@ -1173,7 +1173,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get homeOnboardingAccountsMessage =>
-      'KiCk не сможет обрабатывать запросы без активного аккаунта Gemini CLI или Kiro.';
+      'KiCk не сможет обрабатывать запросы без активного аккаунта Antigravity или Kiro.';
 
   @override
   String get homeOnboardingEndpointTitle => 'Посмотрите адрес прокси';
@@ -1234,14 +1234,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get welcomeSubtitle =>
-      'KiCk помогает запустить локальный прокси для Gemini CLI и Kiro без терминала и лишних настроек.';
+      'KiCk помогает запустить локальный прокси для Antigravity и Kiro без терминала и лишних настроек.';
 
   @override
   String get welcomeStepAccountsTitle => 'Подключите аккаунт';
 
   @override
   String get welcomeStepAccountsMessage =>
-      'Сделайте это на экране аккаунтов. Можно подключить Gemini CLI или Kiro.';
+      'Сделайте это на экране аккаунтов. Можно подключить Antigravity или Kiro.';
 
   @override
   String get welcomeStepHomeTitle => 'Откройте главную';

@@ -43,6 +43,7 @@ class AppSettings {
     'log_retention_count',
     'unsafe_raw_logging_enabled',
     'custom_models',
+    'use_antigravity_daily_endpoint',
   };
 
   const AppSettings({
@@ -66,6 +67,7 @@ class AppSettings {
     this.defaultGoogleVisibleReasoningEnabled = false,
     this.renderGoogleGroundingInMessage = false,
     this.defaultKiroServerToolsEnabled = false,
+    this.useAntigravityDailyEndpoint = false,
     required this.loggingVerbosity,
     required this.logRetentionCount,
     required this.unsafeRawLoggingEnabled,
@@ -92,6 +94,7 @@ class AppSettings {
   final bool defaultGoogleVisibleReasoningEnabled;
   final bool renderGoogleGroundingInMessage;
   final bool defaultKiroServerToolsEnabled;
+  final bool useAntigravityDailyEndpoint;
   final KickLogVerbosity loggingVerbosity;
   final int logRetentionCount;
   final bool unsafeRawLoggingEnabled;
@@ -119,6 +122,7 @@ class AppSettings {
       defaultGoogleVisibleReasoningEnabled: false,
       renderGoogleGroundingInMessage: false,
       defaultKiroServerToolsEnabled: false,
+      useAntigravityDailyEndpoint: false,
       loggingVerbosity: KickLogVerbosity.normal,
       logRetentionCount: defaultLogRetentionCount,
       unsafeRawLoggingEnabled: false,
@@ -147,6 +151,7 @@ class AppSettings {
     bool? defaultGoogleVisibleReasoningEnabled,
     bool? renderGoogleGroundingInMessage,
     bool? defaultKiroServerToolsEnabled,
+    bool? useAntigravityDailyEndpoint,
     KickLogVerbosity? loggingVerbosity,
     int? logRetentionCount,
     bool? unsafeRawLoggingEnabled,
@@ -182,6 +187,7 @@ class AppSettings {
           renderGoogleGroundingInMessage ?? this.renderGoogleGroundingInMessage,
       defaultKiroServerToolsEnabled:
           defaultKiroServerToolsEnabled ?? this.defaultKiroServerToolsEnabled,
+      useAntigravityDailyEndpoint: useAntigravityDailyEndpoint ?? this.useAntigravityDailyEndpoint,
       loggingVerbosity: loggingVerbosity ?? this.loggingVerbosity,
       logRetentionCount: normalizeLogRetentionCount(logRetentionCount ?? this.logRetentionCount),
       unsafeRawLoggingEnabled: unsafeRawLoggingEnabled ?? this.unsafeRawLoggingEnabled,
@@ -210,6 +216,7 @@ class AppSettings {
       'default_google_visible_reasoning_enabled': defaultGoogleVisibleReasoningEnabled.toString(),
       'render_google_grounding_in_message': renderGoogleGroundingInMessage.toString(),
       'default_kiro_server_tools_enabled': defaultKiroServerToolsEnabled.toString(),
+      'use_antigravity_daily_endpoint': useAntigravityDailyEndpoint.toString(),
       'logging_verbosity': loggingVerbosity.name,
       'log_retention_count': logRetentionCount.toString(),
       'unsafe_raw_logging_enabled': unsafeRawLoggingEnabled.toString(),
@@ -239,6 +246,7 @@ class AppSettings {
       'default_google_visible_reasoning_enabled': defaultGoogleVisibleReasoningEnabled,
       'render_google_grounding_in_message': renderGoogleGroundingInMessage,
       'default_kiro_server_tools_enabled': defaultKiroServerToolsEnabled,
+      'use_antigravity_daily_endpoint': useAntigravityDailyEndpoint,
       'logging_verbosity': loggingVerbosity.name,
       'log_retention_count': logRetentionCount,
       'unsafe_raw_logging_enabled': unsafeRawLoggingEnabled,
@@ -290,6 +298,10 @@ class AppSettings {
         json['default_kiro_server_tools_enabled'],
         defaultValue: false,
       ),
+      useAntigravityDailyEndpoint: _readBool(
+        json['use_antigravity_daily_endpoint'],
+        defaultValue: false,
+      ),
       loggingVerbosity: KickLogVerbosity.values.firstWhere(
         (value) => value.name == json['logging_verbosity'],
         orElse: () => KickLogVerbosity.normal,
@@ -331,6 +343,7 @@ class AppSettings {
           values['default_google_visible_reasoning_enabled'] == 'true',
       renderGoogleGroundingInMessage: values['render_google_grounding_in_message'] == 'true',
       defaultKiroServerToolsEnabled: values['default_kiro_server_tools_enabled'] == 'true',
+      useAntigravityDailyEndpoint: values['use_antigravity_daily_endpoint'] == 'true',
       loggingVerbosity: KickLogVerbosity.values.firstWhere(
         (value) => value.name == values['logging_verbosity'],
         orElse: () => KickLogVerbosity.normal,

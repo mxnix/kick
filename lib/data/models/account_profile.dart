@@ -1,15 +1,20 @@
 import 'oauth_tokens.dart';
 
 enum AccountProvider {
-  gemini,
+  antigravity,
   kiro,
   luma;
+
+  /// Legacy alias so that existing code referencing [AccountProvider.gemini]
+  /// continues to compile during the migration. Points to [antigravity].
+  static const AccountProvider gemini = antigravity;
 
   static AccountProvider fromValue(String? value) {
     return switch (value?.trim().toLowerCase()) {
       'kiro' => AccountProvider.kiro,
       'luma' || 'lumalabs' || 'luma_labs' => AccountProvider.luma,
-      _ => AccountProvider.gemini,
+      'antigravity' || 'gemini' || 'google' => AccountProvider.antigravity,
+      _ => AccountProvider.antigravity,
     };
   }
 }
@@ -20,7 +25,7 @@ class AccountProfile {
     required this.label,
     required this.email,
     required this.projectId,
-    this.provider = AccountProvider.gemini,
+    this.provider = AccountProvider.antigravity,
     this.providerRegion,
     this.credentialSourceType,
     this.credentialSourcePath,

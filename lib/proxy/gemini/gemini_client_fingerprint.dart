@@ -66,14 +66,7 @@ Map<String, String> buildGeminiCodeAssistHeaders({
   return {
     HttpHeaders.authorizationHeader: '$tokenType $accessToken',
     HttpHeaders.contentTypeHeader: 'application/json',
-    HttpHeaders.userAgentHeader: buildGeminiCliUserAgent(
-      model,
-      surface: surface ?? determineGeminiCliSurface(),
-      clientName: clientName,
-      clientPrefix: clientPrefix,
-    ),
-    HttpHeaders.acceptHeader: accept,
-    'x-goog-api-client': geminiCodeAssistGoogApiClientHeader,
+    HttpHeaders.userAgentHeader: buildAntigravityUserAgent(),
     if (shouldIncludePrivilegedUserId &&
         resolvedPrivilegedUserId != null &&
         resolvedPrivilegedUserId.isNotEmpty)
@@ -206,4 +199,39 @@ String? _normalizeUserAgentValue(String? value, {String? fallback}) {
     return normalized;
   }
   return fallback;
+}
+
+/// Returns the Antigravity-style platform suffix for the User-Agent header.
+///
+/// Maps the current OS and architecture to one of:
+/// `windows/amd64`, `darwin/amd64`, `darwin/arm64`, `linux/amd64`, `linux/arm64`.
+/// Falls back to `unknown/unknown` for unrecognized combinations.
+String antigravityPlatformSuffix() {
+  final platform = nodeStylePlatform();
+  final architecture = nodeStyleArchitecture();
+
+  final os = switch (platform) {
+    'win32' => 'windows',
+    'darwin' => 'darwin',
+    'linux' => 'linux',
+    _ => null,
+  };
+
+  final arch = switch (architecture) {
+    'x64' => 'amd64',
+    'arm64' => 'arm64',
+    _ => null,
+  };
+
+  if (os == null || arch == null) {
+    return 'unknown/unknown';
+  }
+  return '$os/$arch';
+}
+
+/// Builds the Antigravity User-Agent header value.
+///
+/// Format: `antigravity/hub/2.0.1 {platform_suffix}`
+String buildAntigravityUserAgent() {
+  return '$geminiCodeAssistUserAgentPrefix ${antigravityPlatformSuffix()}';
 }

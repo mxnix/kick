@@ -5,11 +5,11 @@
 <h1>KiCk</h1>
 
 <p>
-  <strong>A native local OpenAI-compatible proxy for Gemini CLI and Kiro.</strong>
+  <strong>A native local OpenAI-compatible proxy for Antigravity and Kiro.</strong>
 </p>
 
 <p>
-  Connect your accounts, start a local <code>/v1</code> endpoint, and use Gemini CLI or Kiro from tools that already speak the OpenAI API.
+  Connect your accounts, start a local <code>/v1</code> endpoint, and use Antigravity or Kiro from tools that already speak the OpenAI API.
 </p>
 
 <p>
@@ -54,12 +54,12 @@
 
 ## What KiCk Does
 
-KiCk runs a local OpenAI-compatible server on your device and forwards requests to Gemini CLI through connected Google accounts, or to Kiro through a signed-in Kiro account. It is built for people who want a native app around local AI proxying: account management, keys, logs, retries, model routing, and one-button startup.
+KiCk runs a local OpenAI-compatible server on your device and forwards requests to Antigravity through connected Google accounts, or to Kiro through a signed-in Kiro account. It is built for people who want a native app around local AI proxying: account management, keys, logs, retries, model routing, and one-button startup.
 
 | Area | What you get |
 | --- | --- |
 | Local API | OpenAI-compatible `http://127.0.0.1:3000/v1` endpoint |
-| Providers | Gemini CLI via Google sign-in, Kiro via GitHub or Google sign-in |
+| Providers | Antigravity via Google sign-in, Kiro via GitHub or Google sign-in |
 | Platforms | Windows, Linux, and Android |
 | Accounts | Multiple accounts with priority ordering and availability handling |
 | Privacy | Tokens, settings, keys, and logs stay on your device |
@@ -67,17 +67,17 @@ KiCk runs a local OpenAI-compatible server on your device and forwards requests 
 ## Quickstart
 
 1. Download the latest build from [Releases](https://github.com/mxnix/kick/releases/latest), or install from a Linux repository below.
-2. Open **Accounts** and connect a Gemini CLI or Kiro account.
-3. For Gemini CLI, enter your `Google Cloud` project ID. For Kiro, sign in through GitHub or Google in the browser.
+2. Open **Accounts** and connect an Antigravity or Kiro account.
+3. For Antigravity, enter your `Google Cloud` project ID. For Kiro, sign in through GitHub or Google in the browser.
 4. Return to **Home**, start the proxy, and copy the local endpoint plus API key.
-5. Use them in Gemini CLI, SillyTavern, another OpenAI-compatible client, or your own app.
+5. Use them in Antigravity, SillyTavern, another OpenAI-compatible client, or your own app.
 
 The default endpoint is `http://127.0.0.1:3000/v1`. You can change the host, port, LAN access, and API key behavior in settings.
 
 ## Features
 
 - Local OpenAI-compatible proxy with `/v1/chat/completions` and `/v1/responses`, including SSE streaming via `"stream": true`.
-- Account pool for Gemini CLI and Kiro with priorities, retries, cooldowns, and model filters.
+- Account pool for Antigravity and Kiro with priorities, retries, cooldowns, and model filters.
 - Native account connection flows for Google sign-in and Kiro sign-in via GitHub or Google.
 - Configurable address, port, LAN access, access key, retry policy, and custom model IDs.
 - One-click profile push to a running SillyTavern instance.
@@ -187,8 +187,8 @@ Read the full [Privacy Policy](docs/PRIVACY.md).
 <summary><strong>Common fixes</strong></summary>
 
 - Port already in use: choose a different port in settings.
-- No active accounts: connect a Gemini CLI or Kiro account, or re-enable an existing one.
-- Google sign-in expired: reconnect the Gemini CLI account.
+- No active accounts: connect an Antigravity or Kiro account, or re-enable an existing one.
+- Google sign-in expired: reconnect the Antigravity account.
 - Kiro session expired: sign in to Kiro again.
 - Google asks for verification: open the verification page and sign in with the same account.
 - Wrong `Google Cloud` project ID or disabled access: verify the project and its settings.

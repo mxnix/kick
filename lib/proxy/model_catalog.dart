@@ -212,7 +212,7 @@ class ModelCatalog {
 
   Set<String> _providerModels(AccountProvider provider) {
     return switch (provider) {
-      AccountProvider.gemini => _geminiKnownModels,
+      AccountProvider.antigravity => _geminiKnownModels,
       AccountProvider.kiro => _kiroKnownModels,
       AccountProvider.luma => const <String>{},
     };
@@ -220,7 +220,7 @@ class ModelCatalog {
 
   bool _providerEnabled(AccountProvider provider) {
     return switch (provider) {
-      AccountProvider.gemini => _enableGemini,
+      AccountProvider.antigravity => _enableGemini,
       AccountProvider.kiro => _enableKiro,
       // Luma is a stub provider without runtime support; never advertise its
       // models through the OpenAI-compatible catalog yet.
@@ -263,7 +263,7 @@ class ModelCatalog {
 
   static AccountProvider? _providerFromToken(String token) {
     return switch (token.trim().toLowerCase()) {
-      'google' || 'gemini' => AccountProvider.gemini,
+      'google' || 'gemini' || 'antigravity' => AccountProvider.antigravity,
       'kiro' => AccountProvider.kiro,
       'luma' || 'lumalabs' => AccountProvider.luma,
       _ => null,
@@ -294,7 +294,7 @@ class ModelCatalog {
       return '';
     }
     final providerId = switch (provider) {
-      AccountProvider.gemini => googleProviderId,
+      AccountProvider.antigravity => googleProviderId,
       AccountProvider.kiro => kiroProviderId,
       AccountProvider.luma => lumaProviderId,
     };
@@ -308,11 +308,13 @@ class ModelCatalog {
     }
 
     return switch (provider) {
-      AccountProvider.gemini => normalized.startsWith('gemini-'),
+      AccountProvider.antigravity =>
+        normalized.startsWith('gemini-') ||
+            normalized.startsWith('claude-') ||
+            normalized.startsWith('gpt-oss-'),
       AccountProvider.kiro =>
         normalized == 'auto' ||
             normalized == 'simple-task' ||
-            normalized.startsWith('claude-') ||
             normalized.startsWith('anthropic.') ||
             normalized.startsWith('deepseek-') ||
             normalized.startsWith('minimax-') ||

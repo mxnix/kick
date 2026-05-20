@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:kick/data/models/account_profile.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/proxy/gemini/gemini_auth_constants.dart';
+import 'package:kick/proxy/gemini/gemini_client_fingerprint.dart';
 import 'package:kick/proxy/gemini/gemini_code_assist_client.dart';
 import 'package:kick/proxy/gemini/gemini_installation_identity.dart';
 import 'package:kick/proxy/gemini/gemini_project_diagnostics_service.dart';
@@ -87,13 +88,13 @@ void main() {
     expect(snapshot.traceId, 'trace-1');
     expect(snapshot.probeText, isNull);
     expect(requestHeaders?[HttpHeaders.authorizationHeader], 'Bearer access-token');
-    expect(requestHeaders?['x-goog-api-client'], geminiCodeAssistGoogApiClientHeader);
+    expect(requestHeaders?.containsKey('x-goog-api-client'), isFalse);
     expect(requestHeaders?.containsKey('x-gemini-api-privileged-user-id'), isFalse);
     expect(
       requestHeaders?[HttpHeaders.userAgentHeader],
-      contains('/${GeminiProjectDiagnosticsService.probeHeaderModelId} '),
+      '$geminiCodeAssistUserAgentPrefix ${antigravityPlatformSuffix()}',
     );
-    expect(requestHeaders?[HttpHeaders.acceptHeader], 'application/json');
+    expect(requestHeaders?.containsKey(HttpHeaders.acceptHeader), isFalse);
     expect(requestBody?['project'], 'project-1');
     expect(requestBody, {'project': 'project-1'});
   });

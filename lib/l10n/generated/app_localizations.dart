@@ -103,7 +103,7 @@ abstract class AppLocalizations {
   /// No description provided for @shellSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Local proxy for Gemini CLI and Kiro'**
+  /// **'Local proxy for Antigravity and Kiro'**
   String get shellSubtitle;
 
   /// No description provided for @connectGoogleAccountTitle.
@@ -247,7 +247,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Connect Gemini CLI and Kiro accounts and manage them'**
+  /// **'Connect Antigravity and Kiro accounts and manage them'**
   String get accountsSubtitle;
 
   /// No description provided for @accountsSearchHint.
@@ -301,7 +301,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountsEmptyMessage.
   ///
   /// In en, this message translates to:
-  /// **'Connect at least one Gemini CLI or Kiro account.'**
+  /// **'Connect at least one Antigravity or Kiro account.'**
   String get accountsEmptyMessage;
 
   /// No description provided for @connectAccountButton.
@@ -415,13 +415,13 @@ abstract class AppLocalizations {
   /// No description provided for @accountProviderGemini.
   ///
   /// In en, this message translates to:
-  /// **'Gemini CLI'**
+  /// **'Antigravity'**
   String get accountProviderGemini;
 
   /// No description provided for @accountProviderGeminiCli.
   ///
   /// In en, this message translates to:
-  /// **'Gemini CLI'**
+  /// **'Antigravity'**
   String get accountProviderGeminiCli;
 
   /// No description provided for @accountProviderKiro.
@@ -877,7 +877,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageProviderLabel.
   ///
   /// In en, this message translates to:
-  /// **'Gemini CLI authorization (OAuth)'**
+  /// **'Antigravity authorization (OAuth)'**
   String get accountUsageProviderLabel;
 
   /// No description provided for @accountUsageRefreshTooltip.
@@ -1003,7 +1003,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountUsageUnavailableMessage.
   ///
   /// In en, this message translates to:
-  /// **'The quotas page only works for Gemini CLI and Kiro accounts.'**
+  /// **'The quotas page only works for Antigravity and Kiro accounts.'**
   String get accountUsageUnavailableMessage;
 
   /// No description provided for @accountUsageMissingTitle.
@@ -1555,7 +1555,7 @@ abstract class AppLocalizations {
   /// No description provided for @defaultGoogleVisibleReasoningSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Adds include_reasoning for Gemini CLI requests when the client did not set reasoning options. Helps Custom OpenAI-Compatible clients show reasoning blocks.'**
+  /// **'Adds include_reasoning for Antigravity requests when the client did not set reasoning options. Helps Custom OpenAI-Compatible clients show reasoning blocks.'**
   String get defaultGoogleVisibleReasoningSubtitle;
 
   /// No description provided for @renderGoogleGroundingInMessageTitle.
@@ -1573,7 +1573,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsGeminiSubsectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Gemini CLI'**
+  /// **'Antigravity'**
   String get settingsGeminiSubsectionTitle;
 
   /// No description provided for @settingsKiroSubsectionTitle.
@@ -1825,7 +1825,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutDescription.
   ///
   /// In en, this message translates to:
-  /// **'A local OpenAI-compatible proxy for Gemini CLI and Kiro in a native Flutter app'**
+  /// **'A local OpenAI-compatible proxy for Antigravity and Kiro in a native Flutter app'**
   String get aboutDescription;
 
   /// No description provided for @aboutUpdatesTitle.
@@ -2167,7 +2167,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeOnboardingAccountsMessage.
   ///
   /// In en, this message translates to:
-  /// **'Without an active Gemini CLI or Kiro account, KiCk will not be able to process requests.'**
+  /// **'Without an active Antigravity or Kiro account, KiCk will not be able to process requests.'**
   String get homeOnboardingAccountsMessage;
 
   /// No description provided for @homeOnboardingEndpointTitle.
@@ -2275,7 +2275,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'KiCk helps you run a local proxy for Gemini CLI and Kiro without terminal commands or extra setup.'**
+  /// **'KiCk helps you run a local proxy for Antigravity and Kiro without terminal commands or extra setup.'**
   String get welcomeSubtitle;
 
   /// No description provided for @welcomeStepAccountsTitle.
@@ -2287,7 +2287,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeStepAccountsMessage.
   ///
   /// In en, this message translates to:
-  /// **'You can do this on the accounts screen. You can connect Gemini CLI or Kiro.'**
+  /// **'You can do this on the accounts screen. You can connect Antigravity or Kiro.'**
   String get welcomeStepAccountsMessage;
 
   /// No description provided for @welcomeStepHomeTitle.

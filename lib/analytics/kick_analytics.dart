@@ -975,7 +975,7 @@ class KickAnalytics {
   /// Returns the analytics provider tag for an [AccountProvider].
   static String providerName(AccountProvider provider) {
     return switch (provider) {
-      AccountProvider.gemini => 'google',
+      AccountProvider.antigravity => 'google',
       AccountProvider.kiro => 'kiro',
       AccountProvider.luma => 'luma',
     };
