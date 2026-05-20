@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/accounts/account_runtime_notice.dart';
 import '../../core/errors/gemini_error_actions.dart';
@@ -27,6 +28,7 @@ import 'account_editor_dialog.dart';
 import 'account_priority_presentation.dart';
 import 'account_provider_picker_dialog.dart';
 import 'account_share_service.dart';
+import 'luma_webview_login_dialog.dart';
 
 class AccountsPage extends ConsumerStatefulWidget {
   const AccountsPage({super.key});
@@ -205,6 +207,16 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         label: draft.label,
         kiroBuilderIdStartUrl: draft.kiroBuilderIdStartUrl,
         kiroRegion: draft.kiroRegion,
+        priority: draft.priority,
+        notSupportedModels: draft.notSupportedModels,
+      );
+      return;
+    }
+    if (draft.provider == AccountProvider.luma) {
+      await _connectLumaAccount(
+        context,
+        ref,
+        label: draft.label,
         priority: draft.priority,
         notSupportedModels: draft.notSupportedModels,
       );
@@ -518,9 +530,11 @@ class _AccountProviderInlineBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
-    final label = provider == AccountProvider.kiro
-        ? l10n.accountProviderKiro
-        : l10n.accountProviderGemini;
+    final label = switch (provider) {
+      AccountProvider.kiro => l10n.accountProviderKiro,
+      AccountProvider.gemini => l10n.accountProviderGemini,
+      AccountProvider.luma => l10n.accountProviderLuma,
+    };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -658,12 +672,24 @@ class _AccountCard extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (account.provider != AccountProvider.kiro) ...[
+                    if (account.provider == AccountProvider.gemini) ...[
                       const SizedBox(height: 4),
                       Text(
                         account.projectId.trim().isEmpty
                             ? l10n.projectIdAutoChip
                             : l10n.projectIdChip(account.projectId),
+                        style: textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontFamily: 'monospace',
+                          letterSpacing: 0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ] else if (account.provider == AccountProvider.luma) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.lumaSourceChip(_lumaSourceChipValue(account)),
                         style: textTheme.labelMedium?.copyWith(
                           color: scheme.onSurfaceVariant,
                           fontFamily: 'monospace',
@@ -779,6 +805,18 @@ class _AccountCard extends ConsumerWidget {
                     );
                     return;
                   }
+                  if (account.provider == AccountProvider.luma) {
+                    await ref
+                        .read(accountsControllerProvider.notifier)
+                        .saveAccount(
+                          account.copyWith(
+                            label: draft.label.isEmpty ? account.label : draft.label,
+                            priority: draft.priority,
+                            notSupportedModels: draft.notSupportedModels,
+                          ),
+                        );
+                    return;
+                  }
                   await ref
                       .read(accountsControllerProvider.notifier)
                       .saveAccount(
@@ -830,6 +868,17 @@ Future<void> _handleAccountMenuAction(
         title: context.l10n.reauthorizeAccountTitle,
       );
       if (!context.mounted || draft == null) {
+        return;
+      }
+      if (account.provider == AccountProvider.luma) {
+        await _connectLumaAccount(
+          context,
+          ref,
+          existing: account,
+          label: draft.label.isEmpty ? account.label : draft.label,
+          priority: draft.priority,
+          notSupportedModels: draft.notSupportedModels,
+        );
         return;
       }
       await _connectGoogleAccount(
@@ -1438,6 +1487,54 @@ Future<AccountProfile?> _connectGoogleAccount(
   return saved;
 }
 
+Future<void> _connectLumaAccount(
+  BuildContext context,
+  WidgetRef ref, {
+  required String label,
+  required int priority,
+  required List<String> notSupportedModels,
+  AccountProfile? existing,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = context.l10n;
+  final service = ref.read(lumaConnectServiceProvider);
+  final tokenRef = existing?.tokenRef ?? 'kick.luma.${const Uuid().v4()}';
+
+  final dialogResult = await showLumaConnectFlow(
+    context,
+    service: service,
+    tokenRef: tokenRef,
+    labelHint: label,
+  );
+  if (!context.mounted || dialogResult == null) {
+    return;
+  }
+
+  try {
+    await ref
+        .read(accountsControllerProvider.notifier)
+        .connectLumaAccount(
+          existing: existing,
+          connect: dialogResult.connect,
+          priority: priority,
+          notSupportedModels: notSupportedModels,
+        );
+    if (!context.mounted) {
+      return;
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.lumaConnectSuccessMessage)));
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(formatUserFacingError(l10n, error))));
+  }
+}
+
 Future<void> _connectKiroAccount(
   BuildContext context,
   WidgetRef ref, {
@@ -1668,6 +1765,18 @@ String _kiroSourceChipValue(AccountProfile account) {
     defaultKiroCredentialSourceType => 'Kiro local session',
     _ => defaultKiroRegion,
   };
+}
+
+String _lumaSourceChipValue(AccountProfile account) {
+  final region = account.providerRegion?.trim();
+  if (region != null && region.isNotEmpty) {
+    return region;
+  }
+  final method = account.credentialSourceType?.trim();
+  if (method != null && method.isNotEmpty) {
+    return method;
+  }
+  return 'WorkOS';
 }
 
 String _accountSubtitle(AccountProfile account) {
@@ -1951,7 +2060,7 @@ class _AccountMoreActionsButton extends StatelessWidget {
         ),
       ),
       menuChildren: [
-        if (account.provider == AccountProvider.gemini)
+        if (account.provider == AccountProvider.gemini || account.provider == AccountProvider.luma)
           MenuItemButton(
             leadingIcon: const Icon(Icons.manage_accounts_rounded, size: 18),
             onPressed: () => onSelected(_AccountMenuAction.reauthorize),

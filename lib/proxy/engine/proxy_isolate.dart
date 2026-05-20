@@ -9,6 +9,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/accounts/account_priority.dart';
 import '../../core/accounts/account_runtime_notice.dart';
 import '../../core/logging/log_sanitizer.dart';
 import '../../data/models/account_profile.dart';
@@ -17,6 +18,8 @@ import '../gemini/gemini_code_assist_client.dart';
 import '../gemini/gemini_installation_identity.dart';
 import '../kiro/kiro_code_assist_client.dart';
 import '../kiro/kiro_ide_runtime_version.dart';
+import '../luma/luma_image_engine.dart';
+import '../luma/luma_session.dart';
 import '../model_catalog.dart';
 import '../openai/openai_request_parser.dart';
 import '../openai/openai_response_mapper.dart';
@@ -601,6 +604,7 @@ class _ProxyIsolateHost {
     });
     router.post('/v1/chat/completions', _handleChatCompletions);
     router.post('/v1/responses', _handleResponses);
+    router.post('/v1/images/generations', _handleImageGenerations);
     return router;
   }
 
@@ -1016,6 +1020,252 @@ class _ProxyIsolateHost {
     }
   }
 
+  Future<Response> _handleImageGenerations(Request request) async {
+    final authResult = _authorizeRequest(request);
+    if (authResult != null) {
+      return authResult;
+    }
+
+    final route = request.requestedUri.path;
+    final requestId = _uuid.v4().replaceAll('-', '');
+
+    Map<String, Object?>? body;
+    String requestedModel = lumaDefaultImageModel;
+    ProxyRuntimeAccount? selectedAccount;
+    try {
+      body = await _readJson(request);
+      if (body == null) {
+        return _errorResponse(400, 'invalid_request_error', 'Request body must be valid JSON.');
+      }
+      final prompt = _readString(body['prompt']);
+      if (prompt.isEmpty) {
+        return _errorResponse(
+          400,
+          'invalid_request_error',
+          '`prompt` is required for /v1/images/generations.',
+        );
+      }
+      final modelOverride = _readString(body['model']);
+      requestedModel = modelOverride.isNotEmpty ? modelOverride : lumaDefaultImageModel;
+      final size = _readNullableString(body['size']);
+      final quality = _readNullableString(body['quality']);
+      final responseFormat = _readNullableString(body['response_format']);
+      final n = _readInt(body['n']) ?? 1;
+      if (n < 1) {
+        return _errorResponse(400, 'invalid_request_error', '`n` must be >= 1.');
+      }
+      final references = _readStringList(body['references']);
+      final primarySource = _readNullableString(body['source']);
+
+      await _logRequest('images.generations', request, body);
+      _recordAcceptedRequest();
+
+      final account = _selectLumaAccount();
+      if (account == null) {
+        return _errorResponse(
+          503,
+          'service_unavailable',
+          'No Luma account is connected. Add one in Settings → Accounts.',
+        );
+      }
+      selectedAccount = account;
+
+      final session = LumaSession.fromJson(account.lumaSessionJson!);
+      _pool.markUsed(account);
+      await _publishAccounts();
+
+      await _logTrace(
+        category: 'images.generations',
+        route: route,
+        message: 'Dispatching Luma image generation',
+        details: {
+          'request_id': requestId,
+          'provider': 'luma',
+          'model': requestedModel,
+          'account_id': account.id,
+          'image_count': n,
+          'has_references': references.isNotEmpty,
+        },
+      );
+
+      final stopwatch = Stopwatch()..start();
+      final engine = LumaImageEngine();
+      try {
+        final results = <LumaImageResult>[];
+        for (var i = 0; i < n; i++) {
+          final result = await engine.generate(
+            session: session,
+            prompt: prompt,
+            model: requestedModel,
+            size: size,
+            quality: quality,
+            referenceArtifactIds: references,
+            primarySourceArtifactId: primarySource,
+          );
+          results.add(result);
+        }
+        stopwatch.stop();
+
+        final wantsBase64 = responseFormat?.toLowerCase() == 'b64_json';
+        final data = <Map<String, Object?>>[];
+        for (final result in results) {
+          if (wantsBase64) {
+            final bytes = await engine.downloadBytes(result.url);
+            data.add({
+              'b64_json': base64Encode(bytes),
+              if (result.revisedPrompt != null) 'revised_prompt': result.revisedPrompt,
+            });
+          } else {
+            data.add({
+              'url': result.url,
+              if (result.revisedPrompt != null) 'revised_prompt': result.revisedPrompt,
+            });
+          }
+        }
+
+        if (_pool.markSuccess(account)) {
+          await _publishAccounts();
+        }
+        _publishStatus();
+
+        final firstArtifact = results.isNotEmpty ? results.first.artifactId : '';
+        final usedAction = lumaImageModelActions[requestedModel.toLowerCase()] ?? requestedModel;
+        await _logTrace(
+          category: 'images.generations',
+          route: route,
+          message:
+              'provider=luma model=$usedAction credits=${results.fold<double>(0, (sum, r) => sum + r.creditsUsed).toStringAsFixed(0)} '
+              'seconds=${(stopwatch.elapsedMilliseconds / 1000).toStringAsFixed(1)}'
+              '${firstArtifact.isEmpty ? '' : ' artifact=$firstArtifact'}',
+          details: {
+            'request_id': requestId,
+            'provider': 'luma',
+            'model': requestedModel,
+            'account_id': account.id,
+            'images': data.length,
+            'duration_ms': stopwatch.elapsedMilliseconds,
+            'artifact_ids': [for (final r in results) r.artifactId],
+          },
+        );
+
+        return _jsonResponse({
+          'created': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'data': data,
+        });
+      } finally {
+        engine.close();
+      }
+    } on _RequestBodyTooLargeException catch (error, stackTrace) {
+      await _logFailure(
+        category: 'images.generations',
+        route: route,
+        message: error.message,
+        stackTrace: stackTrace,
+      );
+      return _errorResponse(413, 'request_too_large', error.message);
+    } on FormatException catch (error, stackTrace) {
+      await _logFailure(
+        category: 'images.generations',
+        route: route,
+        message: error.message,
+        stackTrace: stackTrace,
+      );
+      return _errorResponse(400, 'invalid_request_error', error.message);
+    } on GeminiGatewayException catch (error, stackTrace) {
+      // Surface auth/quota/etc. failures to the matched account so the pool
+      // applies cooldown the same way as for Gemini/Kiro.
+      if (selectedAccount != null) {
+        _registerFailure(selectedAccount, requestedModel, error);
+      }
+      await _logFailure(
+        category: 'images.generations',
+        route: route,
+        message: error.message,
+        stackTrace: stackTrace,
+        rawPayload: error.rawResponseBody,
+      );
+      return _gatewayErrorResponse(error);
+    } catch (error, stackTrace) {
+      await _logFailure(
+        category: 'images.generations',
+        route: route,
+        message: error.toString(),
+        stackTrace: stackTrace,
+      );
+      return _errorResponse(500, 'proxy_error', error.toString());
+    }
+  }
+
+  ProxyRuntimeAccount? _selectLumaAccount() {
+    final candidates = <ProxyRuntimeAccount>[];
+    for (final account in _pool.accounts) {
+      if (account.provider != AccountProvider.luma) continue;
+      if (!account.enabled) continue;
+      if (account.isCoolingDown) continue;
+      final raw = account.lumaSessionJson;
+      if (raw == null) continue;
+      final session = LumaSession.fromJson(raw);
+      if (!session.hasSession) continue;
+      if (session.realmId == null || session.realmId!.isEmpty) continue;
+      candidates.add(account);
+    }
+    if (candidates.isEmpty) {
+      return null;
+    }
+    candidates.sort((left, right) {
+      final leftPriority = normalizeAccountPriority(left.priority);
+      final rightPriority = normalizeAccountPriority(right.priority);
+      if (leftPriority != rightPriority) {
+        return rightPriority.compareTo(leftPriority);
+      }
+      final leftUsed = left.lastUsedAt?.millisecondsSinceEpoch ?? 0;
+      final rightUsed = right.lastUsedAt?.millisecondsSinceEpoch ?? 0;
+      if (leftUsed != rightUsed) {
+        return leftUsed.compareTo(rightUsed);
+      }
+      return left.usageCount.compareTo(right.usageCount);
+    });
+    return candidates.first;
+  }
+
+  String _readString(Object? value) {
+    if (value is String) {
+      return value.trim();
+    }
+    return '';
+  }
+
+  String? _readNullableString(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return value.trim();
+    }
+    return null;
+  }
+
+  int? _readInt(Object? value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value.trim());
+    }
+    return null;
+  }
+
+  List<String> _readStringList(Object? value) {
+    if (value is! List) {
+      return const <String>[];
+    }
+    return value
+        .whereType<String>()
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+
   Future<Map<String, Object?>> _executeNonStreamRequest(
     UnifiedPromptRequest request, {
     _RequestRetryTracker? retryTracker,
@@ -1405,6 +1655,7 @@ class _ProxyIsolateHost {
         request: request,
         onRetry: onRetry,
       ),
+      AccountProvider.luma => _throwLumaUnsupported(account),
     };
   }
 
@@ -1424,7 +1675,19 @@ class _ProxyIsolateHost {
         request: request,
         onRetry: onRetry,
       ),
+      AccountProvider.luma => _throwLumaUnsupported(account),
     };
+  }
+
+  Never _throwLumaUnsupported(ProxyRuntimeAccount account) {
+    throw GeminiGatewayException(
+      provider: AccountProvider.luma,
+      kind: GeminiGatewayFailureKind.unsupportedModel,
+      message:
+          'Luma provider is not wired into the runtime yet. '
+          'Account "${account.label}" cannot serve chat or completion requests.',
+      statusCode: 501,
+    );
   }
 
   void _refreshModelCatalogInBackgroundIfStale() {

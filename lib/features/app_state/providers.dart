@@ -27,6 +27,8 @@ import '../../proxy/gemini/gemini_usage_service.dart';
 import '../../proxy/kiro/kiro_auth_source.dart';
 import '../../proxy/kiro/kiro_link_auth_service.dart';
 import '../../proxy/kiro/kiro_usage_service.dart';
+import '../../proxy/luma/luma_connect_service.dart';
+import '../../proxy/luma/luma_usage_service.dart';
 import '../accounts/account_share_service.dart';
 import '../home/silly_tavern_push_service.dart';
 import '../logs/log_display_items.dart';
@@ -124,6 +126,18 @@ final kiroUsageServiceProvider = Provider<KiroUsageService>((ref) {
   return service;
 });
 
+final lumaUsageServiceProvider = Provider<LumaUsageService>((ref) {
+  final bootstrap = ref.watch(appBootstrapProvider);
+  final service = LumaUsageService(secretStore: bootstrap.secretStore);
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final lumaConnectServiceProvider = Provider<LumaConnectService>((ref) {
+  final bootstrap = ref.watch(appBootstrapProvider);
+  return LumaConnectService(secretStore: bootstrap.secretStore);
+});
+
 final accountUsageQueryProvider = FutureProvider.autoDispose.family<GeminiUsageSnapshot, String>((
   ref,
   accountId,
@@ -148,6 +162,7 @@ final accountUsageQueryProvider = FutureProvider.autoDispose.family<GeminiUsageS
     final snapshot = await switch (account.provider) {
       AccountProvider.gemini => ref.watch(geminiUsageServiceProvider).fetchUsage(account),
       AccountProvider.kiro => ref.watch(kiroUsageServiceProvider).fetchUsage(account),
+      AccountProvider.luma => ref.watch(lumaUsageServiceProvider).fetchUsage(account),
     };
 
     if (snapshot.resolvedEmail != null &&
@@ -402,6 +417,64 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
     }
   }
 
+  Future<AccountProfile> connectLumaAccount({
+    required LumaConnectResult connect,
+    int priority = defaultAccountPriority,
+    List<String> notSupportedModels = const [],
+    AccountProfile? existing,
+  }) async {
+    final bootstrap = ref.read(appBootstrapProvider);
+    final reauthorization = existing != null;
+    unawaited(bootstrap.analytics.trackAccountConnectStarted(reauthorization: reauthorization));
+    try {
+      final profile = AccountProfile(
+        id: existing?.id ?? _uuid.v4(),
+        label: connect.label.trim().isNotEmpty ? connect.label.trim() : (existing?.label ?? 'Luma'),
+        email: connect.email.trim().isNotEmpty ? connect.email.trim() : (existing?.email ?? ''),
+        projectId: '',
+        provider: AccountProvider.luma,
+        providerRegion: connect.tier ?? existing?.providerRegion,
+        credentialSourceType: 'workos',
+        credentialSourcePath: existing?.credentialSourcePath,
+        providerProfileArn: connect.session.realmId ?? existing?.providerProfileArn,
+        avatarUrl: existing?.avatarUrl,
+        enabled: true,
+        priority: normalizeAccountPriority(priority),
+        notSupportedModels: notSupportedModels,
+        runtimeNotSupportedModels: existing?.runtimeNotSupportedModels ?? const <String>[],
+        lastUsedAt: existing?.lastUsedAt,
+        usageCount: existing?.usageCount ?? 0,
+        errorCount: existing?.errorCount ?? 0,
+        cooldownUntil: existing?.cooldownUntil,
+        lastQuotaSnapshot: existing?.lastQuotaSnapshot,
+        tokenRef: connect.tokenRef,
+      );
+      await bootstrap.accountsRepository.upsert(profile);
+      await refreshState();
+
+      final enabledAccounts = (state.asData?.value ?? const <AccountProfile>[])
+          .where((account) => account.enabled)
+          .length;
+      unawaited(
+        bootstrap.analytics.trackAccountConnectSucceeded(
+          reauthorization: reauthorization,
+          enabledAccounts: enabledAccounts,
+          provider: KickAnalytics.providerName(AccountProvider.luma),
+        ),
+      );
+      return profile;
+    } catch (error) {
+      unawaited(
+        bootstrap.analytics.trackAccountConnectFailed(
+          reauthorization: reauthorization,
+          errorKind: _analyticsErrorKind(error),
+          provider: KickAnalytics.providerName(AccountProvider.luma),
+        ),
+      );
+      rethrow;
+    }
+  }
+
   Future<void> saveAccount(AccountProfile account) async {
     final bootstrap = ref.read(appBootstrapProvider);
     final previous = await _findAccount(account.id);
@@ -420,7 +493,9 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
   Future<void> deleteAccount(AccountProfile account) async {
     final bootstrap = ref.read(appBootstrapProvider);
     await bootstrap.accountsRepository.delete(account.id);
-    if (account.usesSecretStoreTokens) {
+    if (account.provider == AccountProvider.luma) {
+      await bootstrap.secretStore.deleteLumaSession(account.tokenRef);
+    } else if (account.usesSecretStoreTokens) {
       await bootstrap.secretStore.deleteOAuthTokens(account.tokenRef);
     } else {
       await deleteManagedKiroCredentialSource(account.credentialSourcePath);
@@ -445,9 +520,11 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
     final source = shared.account;
 
     final newId = _uuid.v4();
-    final newTokenRef = source.usesSecretStoreTokens
-        ? 'kick.oauth.${_uuid.v4()}'
-        : 'kick.kiro.${_uuid.v4()}';
+    final newTokenRef = switch (source.provider) {
+      AccountProvider.gemini => 'kick.oauth.${_uuid.v4()}',
+      AccountProvider.kiro => 'kick.kiro.${_uuid.v4()}',
+      AccountProvider.luma => 'kick.luma.${_uuid.v4()}',
+    };
 
     var profile = source.copyWith(
       id: newId,
@@ -485,6 +562,8 @@ class AccountsController extends AsyncNotifier<List<AccountProfile>> {
           clearCredentialSourcePath: defaultPath == null,
         );
       }
+    } else if (source.provider == AccountProvider.luma) {
+      // Luma stub does not persist any secret material yet.
     } else if (shared.tokens != null) {
       await bootstrap.secretStore.writeOAuthTokens(newTokenRef, shared.tokens!);
     }

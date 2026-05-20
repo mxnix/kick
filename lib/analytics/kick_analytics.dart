@@ -977,6 +977,7 @@ class KickAnalytics {
     return switch (provider) {
       AccountProvider.gemini => 'google',
       AccountProvider.kiro => 'kiro',
+      AccountProvider.luma => 'luma',
     };
   }
 }

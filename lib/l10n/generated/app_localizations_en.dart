@@ -187,6 +187,111 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountProviderKiro => 'Kiro';
 
   @override
+  String get accountProviderLuma => 'Luma';
+
+  @override
+  String get accountLumaComingSoonHelperText =>
+      'Sign in to Luma in the next step. KiCk opens an embedded browser, picks up the session, and uses it for image generation.';
+
+  @override
+  String get accountLumaStubAddedMessage => 'Luma account added.';
+
+  @override
+  String get lumaConnectDialogTitle => 'Connect Luma account';
+
+  @override
+  String get lumaConnectDialogIntro =>
+      'Sign in to lumalabs.ai in your browser, then paste the session cookies below. KiCk uses them to talk to the Luma Vespa API on your behalf.';
+
+  @override
+  String get lumaConnectWebViewTitle => 'Sign in to Luma';
+
+  @override
+  String get lumaConnectWebViewSubtitle =>
+      'Sign in like you would in a browser. KiCk picks up the session cookies once Luma redirects you to the home page.';
+
+  @override
+  String get lumaConnectWebViewIdleHint => 'Loading lumalabs.ai…';
+
+  @override
+  String lumaConnectWebViewLocationHint(String url) {
+    return 'Page: $url';
+  }
+
+  @override
+  String get lumaConnectWebViewClearSessionButton => 'Clear session';
+
+  @override
+  String get lumaConnectWebViewManualFallbackButton => 'Paste cookie manually';
+
+  @override
+  String get lumaConnectWebViewSubmitButton => 'Continue';
+
+  @override
+  String get lumaConnectWebViewNoSessionYetHint =>
+      'Couldn\'t find a Luma session yet. Finish signing in and try again.';
+
+  @override
+  String get lumaConnectStepsTitle => 'How to copy the cookies';
+
+  @override
+  String get lumaConnectStepsBody =>
+      'Open lumalabs.ai → DevTools (F12) → Application → Cookies → app.lumalabs.ai. Copy every row whose name starts with wos- or session and paste the entire `Cookie:` header.';
+
+  @override
+  String get lumaConnectOpenBrowserButton => 'Open lumalabs.ai';
+
+  @override
+  String get lumaConnectOpenBrowserFailed =>
+      'Could not open the browser. Visit https://app.lumalabs.ai/ manually.';
+
+  @override
+  String get lumaConnectCookieFieldLabel => 'Cookie header';
+
+  @override
+  String get lumaConnectCookieFieldHelper =>
+      'Paste the entire `Cookie:` header (cookies separated by `; `). Only the wos-session, workos-access-token and access-token entries are kept.';
+
+  @override
+  String get lumaConnectPasteFromClipboardButton => 'Paste from clipboard';
+
+  @override
+  String get lumaConnectClipboardEmpty => 'Clipboard is empty.';
+
+  @override
+  String get lumaConnectSubmitButton => 'Connect';
+
+  @override
+  String get lumaConnectSuccessMessage => 'Luma account connected.';
+
+  @override
+  String get lumaConnectInvalidCookieError =>
+      'Couldn\'t parse the cookie header. Make sure the value comes from app.lumalabs.ai.';
+
+  @override
+  String get lumaConnectCookieMissingError => 'The `wos-session` cookie is required.';
+
+  @override
+  String get lumaConnectUnauthorizedError =>
+      'Luma rejected the cookies. Sign in again and copy the latest values.';
+
+  @override
+  String get lumaConnectNetworkFailureError =>
+      'Network error talking to Luma. Try again in a moment.';
+
+  @override
+  String get lumaConnectNoTeamsError =>
+      'Sign-in succeeded but no Luma team is associated with this account.';
+
+  @override
+  String get lumaConnectUnknownError => 'Could not connect to Luma. Check the logs for details.';
+
+  @override
+  String lumaSourceChip(String value) {
+    return 'Source: $value';
+  }
+
+  @override
   String get kiroBuilderIdStartUrlLabel => 'Builder ID URL';
 
   @override

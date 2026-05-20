@@ -100,6 +100,50 @@
   "accountProviderGemini": "Gemini CLI",
   "accountProviderGeminiCli": "Gemini CLI",
   "accountProviderKiro": "Kiro",
+  "accountProviderLuma": "Luma",
+  "accountLumaComingSoonHelperText": "Увійдіть у Luma на наступному кроці. KiCk відкриє вбудований браузер, підхопить сесію й використовуватиме її для генерації зображень.",
+  "accountLumaStubAddedMessage": "Акаунт Luma додано.",
+  "lumaConnectDialogTitle": "Підключити акаунт Luma",
+  "lumaConnectDialogIntro": "Увійдіть на lumalabs.ai у браузері та вставте куки сесії нижче. KiCk використовує їх для запитів до Luma Vespa API від вашого імені.",
+  "lumaConnectWebViewTitle": "Увійти в Luma",
+  "lumaConnectWebViewSubtitle": "Увійдіть як у звичайному браузері. KiCk автоматично підхопить куки сесії, коли Luma перенаправить вас на головну.",
+  "lumaConnectWebViewIdleHint": "Завантажую lumalabs.ai…",
+  "lumaConnectWebViewLocationHint": "Сторінка: {url}",
+  "@lumaConnectWebViewLocationHint": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "lumaConnectWebViewClearSessionButton": "Очистити сесію",
+  "lumaConnectWebViewManualFallbackButton": "Вставити cookie вручну",
+  "lumaConnectWebViewSubmitButton": "Продовжити",
+  "lumaConnectWebViewNoSessionYetHint": "Сесія Luma ще не отримана. Завершіть вхід і спробуйте знову.",
+  "lumaConnectStepsTitle": "Як скопіювати куки",
+  "lumaConnectStepsBody": "Відкрийте lumalabs.ai → DevTools (F12) → Application → Cookies → app.lumalabs.ai. Скопіюйте всі рядки з іменами на wos- або session і вставте сюди весь рядок заголовка `Cookie:`.",
+  "lumaConnectOpenBrowserButton": "Відкрити lumalabs.ai",
+  "lumaConnectOpenBrowserFailed": "Не вдалося відкрити браузер. Зайдіть на https://app.lumalabs.ai/ вручну.",
+  "lumaConnectCookieFieldLabel": "Заголовок Cookie",
+  "lumaConnectCookieFieldHelper": "Вставте увесь рядок `Cookie:` (куки через `; `). Зберігаємо лише wos-session, workos-access-token та access-token.",
+  "lumaConnectPasteFromClipboardButton": "Вставити з буфера обміну",
+  "lumaConnectClipboardEmpty": "Буфер обміну порожній.",
+  "lumaConnectSubmitButton": "Підключити",
+  "lumaConnectSuccessMessage": "Акаунт Luma підключено.",
+  "lumaConnectInvalidCookieError": "Не вдалося розібрати заголовок Cookie. Переконайтесь, що значення з app.lumalabs.ai.",
+  "lumaConnectCookieMissingError": "Куки `wos-session` обов'язкові.",
+  "lumaConnectUnauthorizedError": "Luma відхилила куки. Увійдіть ще раз і скопіюйте свіжі значення.",
+  "lumaConnectNetworkFailureError": "Мережева помилка при зверненні до Luma. Спробуйте трохи пізніше.",
+  "lumaConnectNoTeamsError": "Вхід пройшов, але до Luma не прив'язана жодна команда.",
+  "lumaConnectUnknownError": "Не вдалося підключити Luma. Деталі — у журналі.",
+  "lumaSourceChip": "Джерело: {value}",
+  "@lumaSourceChip": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "kiroBuilderIdStartUrlLabel": "Посилання Builder ID",
   "kiroBuilderIdStartUrlHelperText": "Зазвичай змінювати не потрібно",
   "kiroRegionLabel": "Регіон AWS",

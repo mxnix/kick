@@ -32,7 +32,7 @@ Build configs and release tooling live in:
 - Flutter SDK matching the version pinned in `.github/workflows/ci.yml` (`FLUTTER_VERSION`).
 - Platform tooling for the targets you build:
   - Android: Android Studio with the latest SDK and a working JDK 17.
-  - Windows: Visual Studio with the "Desktop development with C++" workload.
+  - Windows: Visual Studio with the "Desktop development with C++" workload, plus `nuget.exe` on `PATH` (install via `winget install Microsoft.NuGet`). The `flutter_inappwebview_windows` plugin uses NuGet to fetch the WebView2 SDK at build time.
   - Linux: build dependencies listed under [Linux packages](#linux-packages).
 
 ### First run

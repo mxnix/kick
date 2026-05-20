@@ -131,6 +131,9 @@ jobs:
         shell: pwsh
         run: flutter config --enable-windows-desktop
 
+      - name: Set up NuGet
+        uses: NuGet/setup-nuget@v2
+
       - name: Install dependencies
         shell: pwsh
         run: flutter pub get

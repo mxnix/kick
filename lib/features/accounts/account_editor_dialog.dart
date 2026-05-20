@@ -102,6 +102,7 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
     final providerLabel = switch (_selectedProvider) {
       AccountProvider.gemini => l10n.accountProviderGemini,
       AccountProvider.kiro => l10n.accountProviderKiro,
+      AccountProvider.luma => l10n.accountProviderLuma,
     };
 
     return AlertDialog(
@@ -176,25 +177,15 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
                       segments: [
                         ButtonSegment(
                           value: AccountProvider.gemini,
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const ProviderIcon(provider: AccountProvider.gemini, size: 16),
-                              const SizedBox(width: 8),
-                              Text(l10n.accountProviderGemini),
-                            ],
-                          ),
+                          label: Text(l10n.accountProviderGemini),
                         ),
                         ButtonSegment(
                           value: AccountProvider.kiro,
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const ProviderIcon(provider: AccountProvider.kiro, size: 16),
-                              const SizedBox(width: 8),
-                              Text(l10n.accountProviderKiro),
-                            ],
-                          ),
+                          label: Text(l10n.accountProviderKiro),
+                        ),
+                        ButtonSegment(
+                          value: AccountProvider.luma,
+                          label: Text(l10n.accountProviderLuma),
                         ),
                       ],
                       selected: {_selectedProvider},
@@ -226,6 +217,31 @@ class _AccountEditorDialogState extends State<_AccountEditorDialog> {
                     ),
                     icon: const Icon(Icons.open_in_new_rounded, size: 18),
                     label: Text(l10n.projectIdConsoleLinkLabel),
+                  ),
+                ] else if (_selectedProvider == AccountProvider.luma) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.42)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.hourglass_top_rounded, size: 18, color: scheme.tertiary),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            l10n.accountLumaComingSoonHelperText,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ] else ...[
                   TextField(

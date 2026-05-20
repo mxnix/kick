@@ -46,77 +46,95 @@ class _AccountProviderPickerDialog extends StatelessWidget {
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 520;
               final stacked = constraints.maxWidth < 320;
-              final cardSpacing = compact ? 12.0 : 28.0;
+              final cardSpacing = compact ? 12.0 : 24.0;
+              const cardCount = 3;
               final cardWidth = stacked
                   ? constraints.maxWidth
                   : compact
                   ? ((constraints.maxWidth - cardSpacing) / 2).clamp(148.0, 172.0)
-                  : 228.0;
+                  : ((constraints.maxWidth - cardSpacing * (cardCount - 1)) / cardCount).clamp(
+                      168.0,
+                      196.0,
+                    );
               final cardAspectRatio = compact ? 0.88 : 228 / 296;
               final titleStyle = textTheme.displaySmall?.copyWith(
-                fontSize: compact ? 28 : 40,
+                fontSize: compact ? 28 : 36,
                 fontWeight: FontWeight.w400,
                 color: scheme.onSurface,
                 height: 1,
               );
 
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: compact ? 290 : 420),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        l10n.connectAccountProviderPickerTitle,
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
-                        style: titleStyle,
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: compact ? 290 : 420),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          l10n.connectAccountProviderPickerTitle,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          style: titleStyle,
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: compact ? 16 : 36),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: cardSpacing,
-                    runSpacing: cardSpacing,
-                    children: [
-                      _ProviderChoiceCard(
-                        provider: AccountProvider.kiro,
-                        width: cardWidth,
-                        aspectRatio: cardAspectRatio,
-                        labelStyle: _ProviderChoiceLabelStyle(
-                          fontSize: compact ? 22 : 39,
-                          iconSize: compact ? 62 : 82,
-                          iconSlotHeight: compact ? 74 : 96,
-                          labelGap: compact ? 18 : 34,
-                          labelSlotHeight: compact ? 22 : 39,
+                    SizedBox(height: compact ? 16 : 28),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: cardSpacing,
+                      runSpacing: cardSpacing,
+                      children: [
+                        _ProviderChoiceCard(
+                          provider: AccountProvider.kiro,
+                          width: cardWidth,
+                          aspectRatio: cardAspectRatio,
+                          labelStyle: _ProviderChoiceLabelStyle(
+                            fontSize: compact ? 22 : 32,
+                            iconSize: compact ? 62 : 72,
+                            iconSlotHeight: compact ? 74 : 88,
+                            labelGap: compact ? 18 : 28,
+                            labelSlotHeight: compact ? 22 : 32,
+                          ),
                         ),
-                      ),
-                      _ProviderChoiceCard(
-                        provider: AccountProvider.gemini,
-                        width: cardWidth,
-                        aspectRatio: cardAspectRatio,
-                        labelStyle: _ProviderChoiceLabelStyle(
-                          fontSize: compact ? 18 : 32,
-                          iconSize: compact ? 62 : 82,
-                          iconSlotHeight: compact ? 74 : 96,
-                          labelGap: compact ? 18 : 34,
-                          labelSlotHeight: compact ? 22 : 39,
+                        _ProviderChoiceCard(
+                          provider: AccountProvider.gemini,
+                          width: cardWidth,
+                          aspectRatio: cardAspectRatio,
+                          labelStyle: _ProviderChoiceLabelStyle(
+                            fontSize: compact ? 18 : 26,
+                            iconSize: compact ? 62 : 72,
+                            iconSlotHeight: compact ? 74 : 88,
+                            labelGap: compact ? 18 : 28,
+                            labelSlotHeight: compact ? 22 : 32,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: compact ? 18 : 28),
-                  KickSecondaryAction(
-                    icon: KickIcons.fileUpload,
-                    label: l10n.accountImportFromFileButton,
-                    fullWidth: true,
-                    variant: KickSecondaryActionVariant.text,
-                    onPressed: () =>
-                        Navigator.of(context).pop(const AccountProviderPickerImportFromFile()),
-                  ),
-                ],
+                        _ProviderChoiceCard(
+                          provider: AccountProvider.luma,
+                          width: cardWidth,
+                          aspectRatio: cardAspectRatio,
+                          labelStyle: _ProviderChoiceLabelStyle(
+                            fontSize: compact ? 22 : 32,
+                            iconSize: compact ? 62 : 72,
+                            iconSlotHeight: compact ? 74 : 88,
+                            labelGap: compact ? 18 : 28,
+                            labelSlotHeight: compact ? 22 : 32,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: compact ? 18 : 24),
+                    KickSecondaryAction(
+                      icon: KickIcons.fileUpload,
+                      label: l10n.accountImportFromFileButton,
+                      fullWidth: true,
+                      variant: KickSecondaryActionVariant.text,
+                      onPressed: () =>
+                          Navigator.of(context).pop(const AccountProviderPickerImportFromFile()),
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -153,6 +171,7 @@ class _ProviderChoiceCardState extends State<_ProviderChoiceCard> {
     final label = switch (widget.provider) {
       AccountProvider.gemini => context.l10n.accountProviderGeminiCli,
       AccountProvider.kiro => context.l10n.accountProviderKiro,
+      AccountProvider.luma => context.l10n.accountProviderLuma,
     };
     final highlighted = _hovered || _focused;
     final borderColor = highlighted

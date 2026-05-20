@@ -430,6 +430,186 @@ abstract class AppLocalizations {
   /// **'Kiro'**
   String get accountProviderKiro;
 
+  /// No description provided for @accountProviderLuma.
+  ///
+  /// In en, this message translates to:
+  /// **'Luma'**
+  String get accountProviderLuma;
+
+  /// No description provided for @accountLumaComingSoonHelperText.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to Luma in the next step. KiCk opens an embedded browser, picks up the session, and uses it for image generation.'**
+  String get accountLumaComingSoonHelperText;
+
+  /// No description provided for @accountLumaStubAddedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Luma account added.'**
+  String get accountLumaStubAddedMessage;
+
+  /// No description provided for @lumaConnectDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Luma account'**
+  String get lumaConnectDialogTitle;
+
+  /// No description provided for @lumaConnectDialogIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to lumalabs.ai in your browser, then paste the session cookies below. KiCk uses them to talk to the Luma Vespa API on your behalf.'**
+  String get lumaConnectDialogIntro;
+
+  /// No description provided for @lumaConnectWebViewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to Luma'**
+  String get lumaConnectWebViewTitle;
+
+  /// No description provided for @lumaConnectWebViewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in like you would in a browser. KiCk picks up the session cookies once Luma redirects you to the home page.'**
+  String get lumaConnectWebViewSubtitle;
+
+  /// No description provided for @lumaConnectWebViewIdleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading lumalabs.ai…'**
+  String get lumaConnectWebViewIdleHint;
+
+  /// No description provided for @lumaConnectWebViewLocationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Page: {url}'**
+  String lumaConnectWebViewLocationHint(String url);
+
+  /// No description provided for @lumaConnectWebViewClearSessionButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear session'**
+  String get lumaConnectWebViewClearSessionButton;
+
+  /// No description provided for @lumaConnectWebViewManualFallbackButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste cookie manually'**
+  String get lumaConnectWebViewManualFallbackButton;
+
+  /// No description provided for @lumaConnectWebViewSubmitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get lumaConnectWebViewSubmitButton;
+
+  /// No description provided for @lumaConnectWebViewNoSessionYetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find a Luma session yet. Finish signing in and try again.'**
+  String get lumaConnectWebViewNoSessionYetHint;
+
+  /// No description provided for @lumaConnectStepsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How to copy the cookies'**
+  String get lumaConnectStepsTitle;
+
+  /// No description provided for @lumaConnectStepsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Open lumalabs.ai → DevTools (F12) → Application → Cookies → app.lumalabs.ai. Copy every row whose name starts with wos- or session and paste the entire `Cookie:` header.'**
+  String get lumaConnectStepsBody;
+
+  /// No description provided for @lumaConnectOpenBrowserButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Open lumalabs.ai'**
+  String get lumaConnectOpenBrowserButton;
+
+  /// No description provided for @lumaConnectOpenBrowserFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the browser. Visit https://app.lumalabs.ai/ manually.'**
+  String get lumaConnectOpenBrowserFailed;
+
+  /// No description provided for @lumaConnectCookieFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cookie header'**
+  String get lumaConnectCookieFieldLabel;
+
+  /// No description provided for @lumaConnectCookieFieldHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the entire `Cookie:` header (cookies separated by `; `). Only the wos-session, workos-access-token and access-token entries are kept.'**
+  String get lumaConnectCookieFieldHelper;
+
+  /// No description provided for @lumaConnectPasteFromClipboardButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste from clipboard'**
+  String get lumaConnectPasteFromClipboardButton;
+
+  /// No description provided for @lumaConnectClipboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard is empty.'**
+  String get lumaConnectClipboardEmpty;
+
+  /// No description provided for @lumaConnectSubmitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get lumaConnectSubmitButton;
+
+  /// No description provided for @lumaConnectSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Luma account connected.'**
+  String get lumaConnectSuccessMessage;
+
+  /// No description provided for @lumaConnectInvalidCookieError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t parse the cookie header. Make sure the value comes from app.lumalabs.ai.'**
+  String get lumaConnectInvalidCookieError;
+
+  /// No description provided for @lumaConnectCookieMissingError.
+  ///
+  /// In en, this message translates to:
+  /// **'The `wos-session` cookie is required.'**
+  String get lumaConnectCookieMissingError;
+
+  /// No description provided for @lumaConnectUnauthorizedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Luma rejected the cookies. Sign in again and copy the latest values.'**
+  String get lumaConnectUnauthorizedError;
+
+  /// No description provided for @lumaConnectNetworkFailureError.
+  ///
+  /// In en, this message translates to:
+  /// **'Network error talking to Luma. Try again in a moment.'**
+  String get lumaConnectNetworkFailureError;
+
+  /// No description provided for @lumaConnectNoTeamsError.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in succeeded but no Luma team is associated with this account.'**
+  String get lumaConnectNoTeamsError;
+
+  /// No description provided for @lumaConnectUnknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not connect to Luma. Check the logs for details.'**
+  String get lumaConnectUnknownError;
+
+  /// No description provided for @lumaSourceChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: {value}'**
+  String lumaSourceChip(String value);
+
   /// No description provided for @kiroBuilderIdStartUrlLabel.
   ///
   /// In en, this message translates to:

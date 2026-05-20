@@ -2,11 +2,13 @@ import 'oauth_tokens.dart';
 
 enum AccountProvider {
   gemini,
-  kiro;
+  kiro,
+  luma;
 
   static AccountProvider fromValue(String? value) {
     return switch (value?.trim().toLowerCase()) {
       'kiro' => AccountProvider.kiro,
+      'luma' || 'lumalabs' || 'luma_labs' => AccountProvider.luma,
       _ => AccountProvider.gemini,
     };
   }
@@ -62,7 +64,9 @@ class AccountProfile {
   bool get isCoolingDown => cooldownUntil != null && cooldownUntil!.isAfter(DateTime.now());
   bool get usesSecretStoreTokens => provider == AccountProvider.gemini;
   bool get supportsUsageDiagnostics =>
-      provider == AccountProvider.gemini || provider == AccountProvider.kiro;
+      provider == AccountProvider.gemini ||
+      provider == AccountProvider.kiro ||
+      provider == AccountProvider.luma;
   String get displayIdentity {
     if (provider == AccountProvider.kiro) {
       final path = credentialSourcePath?.trim();
@@ -70,6 +74,9 @@ class AccountProfile {
           ? null
           : path.replaceAll('\\', '/').split('/').last.trim();
       return _firstNonEmpty(email, providerProfileArn, sourceName, 'Kiro local session');
+    }
+    if (provider == AccountProvider.luma) {
+      return _firstNonEmpty(email, label, 'Luma');
     }
     return email;
   }
@@ -166,7 +173,7 @@ class AccountProfile {
     };
   }
 
-  Map<String, Object?> toRuntimeJson({OAuthTokens? tokens}) {
+  Map<String, Object?> toRuntimeJson({OAuthTokens? tokens, Map<String, Object?>? lumaSession}) {
     return {
       'id': id,
       'label': label,
@@ -189,6 +196,7 @@ class AccountProfile {
       'last_quota_snapshot': lastQuotaSnapshot,
       'token_ref': tokenRef,
       'tokens': tokens?.toJson(),
+      if (lumaSession != null) 'luma_session': lumaSession,
     };
   }
 

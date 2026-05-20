@@ -283,6 +283,11 @@ class _UsageAccountCard extends StatelessWidget {
                       : l10n.projectIdChip(account.projectId),
                   leading: const Icon(KickIcons.badge),
                 )
+              else if (account.provider == AccountProvider.luma)
+                KickBadge(
+                  label: l10n.lumaSourceChip(_lumaUsageSourceValue(account)),
+                  leading: const Icon(KickIcons.badge),
+                )
               else
                 KickBadge(
                   label: '${l10n.kiroRegionLabel}: ${_kiroRegionValue(account.providerRegion)}',
@@ -666,6 +671,18 @@ String _formatUsageQuantity(double value) {
 String _kiroRegionValue(String? region) {
   final trimmed = region?.trim();
   return trimmed == null || trimmed.isEmpty ? defaultKiroRegion : trimmed;
+}
+
+String _lumaUsageSourceValue(AccountProfile account) {
+  final region = account.providerRegion?.trim();
+  if (region != null && region.isNotEmpty) {
+    return region;
+  }
+  final method = account.credentialSourceType?.trim();
+  if (method != null && method.isNotEmpty) {
+    return method;
+  }
+  return 'WorkOS';
 }
 
 String _formatDateTime(KickLocalizations l10n, DateTime value) {

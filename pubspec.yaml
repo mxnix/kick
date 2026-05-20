@@ -43,6 +43,7 @@ dependencies:
   sentry_flutter: ^9.16.0
   cryptography_plus: ^3.0.0
   flutter_svg: ^2.2.4
+  flutter_inappwebview: ^6.1.5
 
 dev_dependencies:
   flutter_test:

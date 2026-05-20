@@ -41,6 +41,7 @@ class ModelCatalog {
 
   static const String googleProviderId = 'google';
   static const String kiroProviderId = 'kiro';
+  static const String lumaProviderId = 'luma';
 
   final List<String> _customModels;
   final List<String> _geminiModels;
@@ -213,6 +214,7 @@ class ModelCatalog {
     return switch (provider) {
       AccountProvider.gemini => _geminiKnownModels,
       AccountProvider.kiro => _kiroKnownModels,
+      AccountProvider.luma => const <String>{},
     };
   }
 
@@ -220,6 +222,9 @@ class ModelCatalog {
     return switch (provider) {
       AccountProvider.gemini => _enableGemini,
       AccountProvider.kiro => _enableKiro,
+      // Luma is a stub provider without runtime support; never advertise its
+      // models through the OpenAI-compatible catalog yet.
+      AccountProvider.luma => false,
     };
   }
 
@@ -260,6 +265,7 @@ class ModelCatalog {
     return switch (token.trim().toLowerCase()) {
       'google' || 'gemini' => AccountProvider.gemini,
       'kiro' => AccountProvider.kiro,
+      'luma' || 'lumalabs' => AccountProvider.luma,
       _ => null,
     };
   }
@@ -290,6 +296,7 @@ class ModelCatalog {
     final providerId = switch (provider) {
       AccountProvider.gemini => googleProviderId,
       AccountProvider.kiro => kiroProviderId,
+      AccountProvider.luma => lumaProviderId,
     };
     return '$providerId/$trimmed';
   }
@@ -310,6 +317,8 @@ class ModelCatalog {
             normalized.startsWith('deepseek-') ||
             normalized.startsWith('minimax-') ||
             normalized.startsWith('qwen'),
+      // Luma is a stub provider; nothing routes through it yet.
+      AccountProvider.luma => false,
     };
   }
 }

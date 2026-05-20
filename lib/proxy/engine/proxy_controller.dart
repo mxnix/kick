@@ -20,6 +20,7 @@ import '../../data/repositories/secret_store.dart';
 import '../../observability/glitchtip.dart';
 import '../engine/proxy_isolate.dart';
 import '../kiro/kiro_auth_source.dart';
+import '../luma/luma_session.dart';
 
 typedef ProxyIsolateSpawner =
     Future<Isolate> Function(SendPort messagePort, SendPort errorPort, SendPort exitPort);
@@ -340,6 +341,7 @@ class KickProxyController {
     final runtimeAccounts = <Map<String, Object?>>[];
     for (final account in accounts) {
       OAuthTokens? tokens;
+      Map<String, Object?>? lumaSessionJson;
       var runtimeAccount = account;
       if (account.provider == AccountProvider.kiro) {
         final KiroAuthSourceSnapshot? source;
@@ -366,13 +368,26 @@ class KickProxyController {
           ),
           email: account.email.trim().isNotEmpty ? account.email : source.displayIdentity,
         );
+      } else if (account.provider == AccountProvider.luma) {
+        // Luma carries its session through the secret store under a JSON
+        // blob keyed by the account's tokenRef. We pass that blob into the
+        // isolate untouched; OAuthTokens stays as a placeholder.
+        final raw = await _secretStore.readLumaSession(account.tokenRef);
+        final session = LumaSession.tryDecode(raw);
+        if (session == null || !session.hasSession) {
+          continue;
+        }
+        lumaSessionJson = session.toJson();
+        tokens = OAuthTokens.fromJson(const <String, Object?>{});
       } else {
         tokens = await _secretStore.readOAuthTokens(account.tokenRef);
       }
       if (tokens == null) {
         continue;
       }
-      runtimeAccounts.add(runtimeAccount.toRuntimeJson(tokens: tokens));
+      runtimeAccounts.add(
+        runtimeAccount.toRuntimeJson(tokens: tokens, lumaSession: lumaSessionJson),
+      );
     }
 
     final payload = {

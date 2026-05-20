@@ -26,6 +26,7 @@ class ProxyRuntimeAccount {
     required this.lastQuotaSnapshot,
     required this.tokenRef,
     required this.tokens,
+    this.lumaSessionJson,
   });
 
   final String id;
@@ -49,6 +50,11 @@ class ProxyRuntimeAccount {
   String? lastQuotaSnapshot;
   final String tokenRef;
   OAuthTokens tokens;
+
+  /// Optional serialized Luma session blob. Carried only for Luma accounts;
+  /// the JSON shape matches `LumaSession.toJson()`. Transient — used inside
+  /// the proxy isolate so we don't have to read the secret store from there.
+  Map<String, Object?>? lumaSessionJson;
 
   Set<String>? _normalizedNotSupportedModels;
   Set<String> get normalizedNotSupportedModels =>
@@ -104,6 +110,7 @@ class ProxyRuntimeAccount {
       'last_quota_snapshot': lastQuotaSnapshot,
       'token_ref': tokenRef,
       'tokens': tokens.toJson(),
+      if (lumaSessionJson != null) 'luma_session': lumaSessionJson,
     };
   }
 
@@ -135,6 +142,7 @@ class ProxyRuntimeAccount {
       tokens: OAuthTokens.fromJson(
         (json['tokens'] as Map?)?.cast<String, Object?>() ?? const <String, Object?>{},
       ),
+      lumaSessionJson: (json['luma_session'] as Map?)?.cast<String, Object?>(),
     );
   }
 }

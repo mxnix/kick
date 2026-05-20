@@ -66,4 +66,19 @@ class SecretStore {
   Future<void> deleteOAuthTokens(String tokenRef) {
     return _backend.delete(tokenRef);
   }
+
+  /// Persists a serialized Luma session payload under the given [tokenRef].
+  /// The payload is opaque JSON owned by `LumaSession`; the secret store only
+  /// guarantees encryption-at-rest provided by the platform backend.
+  Future<void> writeLumaSession(String tokenRef, String payload) {
+    return _backend.write(tokenRef, payload);
+  }
+
+  Future<String?> readLumaSession(String tokenRef) {
+    return _backend.read(tokenRef);
+  }
+
+  Future<void> deleteLumaSession(String tokenRef) {
+    return _backend.delete(tokenRef);
+  }
 }

@@ -187,6 +187,110 @@ class AppLocalizationsUk extends AppLocalizations {
   String get accountProviderKiro => 'Kiro';
 
   @override
+  String get accountProviderLuma => 'Luma';
+
+  @override
+  String get accountLumaComingSoonHelperText =>
+      'Увійдіть у Luma на наступному кроці. KiCk відкриє вбудований браузер, підхопить сесію й використовуватиме її для генерації зображень.';
+
+  @override
+  String get accountLumaStubAddedMessage => 'Акаунт Luma додано.';
+
+  @override
+  String get lumaConnectDialogTitle => 'Підключити акаунт Luma';
+
+  @override
+  String get lumaConnectDialogIntro =>
+      'Увійдіть на lumalabs.ai у браузері та вставте куки сесії нижче. KiCk використовує їх для запитів до Luma Vespa API від вашого імені.';
+
+  @override
+  String get lumaConnectWebViewTitle => 'Увійти в Luma';
+
+  @override
+  String get lumaConnectWebViewSubtitle =>
+      'Увійдіть як у звичайному браузері. KiCk автоматично підхопить куки сесії, коли Luma перенаправить вас на головну.';
+
+  @override
+  String get lumaConnectWebViewIdleHint => 'Завантажую lumalabs.ai…';
+
+  @override
+  String lumaConnectWebViewLocationHint(String url) {
+    return 'Сторінка: $url';
+  }
+
+  @override
+  String get lumaConnectWebViewClearSessionButton => 'Очистити сесію';
+
+  @override
+  String get lumaConnectWebViewManualFallbackButton => 'Вставити cookie вручну';
+
+  @override
+  String get lumaConnectWebViewSubmitButton => 'Продовжити';
+
+  @override
+  String get lumaConnectWebViewNoSessionYetHint =>
+      'Сесія Luma ще не отримана. Завершіть вхід і спробуйте знову.';
+
+  @override
+  String get lumaConnectStepsTitle => 'Як скопіювати куки';
+
+  @override
+  String get lumaConnectStepsBody =>
+      'Відкрийте lumalabs.ai → DevTools (F12) → Application → Cookies → app.lumalabs.ai. Скопіюйте всі рядки з іменами на wos- або session і вставте сюди весь рядок заголовка `Cookie:`.';
+
+  @override
+  String get lumaConnectOpenBrowserButton => 'Відкрити lumalabs.ai';
+
+  @override
+  String get lumaConnectOpenBrowserFailed =>
+      'Не вдалося відкрити браузер. Зайдіть на https://app.lumalabs.ai/ вручну.';
+
+  @override
+  String get lumaConnectCookieFieldLabel => 'Заголовок Cookie';
+
+  @override
+  String get lumaConnectCookieFieldHelper =>
+      'Вставте увесь рядок `Cookie:` (куки через `; `). Зберігаємо лише wos-session, workos-access-token та access-token.';
+
+  @override
+  String get lumaConnectPasteFromClipboardButton => 'Вставити з буфера обміну';
+
+  @override
+  String get lumaConnectClipboardEmpty => 'Буфер обміну порожній.';
+
+  @override
+  String get lumaConnectSubmitButton => 'Підключити';
+
+  @override
+  String get lumaConnectSuccessMessage => 'Акаунт Luma підключено.';
+
+  @override
+  String get lumaConnectInvalidCookieError =>
+      'Не вдалося розібрати заголовок Cookie. Переконайтесь, що значення з app.lumalabs.ai.';
+
+  @override
+  String get lumaConnectCookieMissingError => 'Куки `wos-session` обов\'язкові.';
+
+  @override
+  String get lumaConnectUnauthorizedError =>
+      'Luma відхилила куки. Увійдіть ще раз і скопіюйте свіжі значення.';
+
+  @override
+  String get lumaConnectNetworkFailureError =>
+      'Мережева помилка при зверненні до Luma. Спробуйте трохи пізніше.';
+
+  @override
+  String get lumaConnectNoTeamsError => 'Вхід пройшов, але до Luma не прив\'язана жодна команда.';
+
+  @override
+  String get lumaConnectUnknownError => 'Не вдалося підключити Luma. Деталі — у журналі.';
+
+  @override
+  String lumaSourceChip(String value) {
+    return 'Джерело: $value';
+  }
+
+  @override
   String get kiroBuilderIdStartUrlLabel => 'Посилання Builder ID';
 
   @override

@@ -88,7 +88,7 @@ String? effectiveAccountAvatarUrl(AccountProfile account) {
   if (stored != null && stored.isNotEmpty) {
     return stored;
   }
-  if (account.provider == AccountProvider.kiro) {
+  if (account.provider == AccountProvider.kiro || account.provider == AccountProvider.luma) {
     return diceBearAccountAvatarUrl(account.id);
   }
   return null;

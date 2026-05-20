@@ -170,6 +170,73 @@ void main() {
     });
   });
 
+  test('image generations returns 503 when no Luma account is connected', () async {
+    final harness = await _ControllerHarness.create();
+    addTearDown(harness.dispose);
+    final settings = AppSettings.defaults(
+      apiKey: 'expected-key',
+    ).copyWith(port: 0, androidBackgroundRuntime: false);
+
+    await harness.controller.configure(settings: settings, accounts: const <AccountProfile>[]);
+    final runningState = harness.controller.states.firstWhere((state) => state.running);
+    await harness.controller.start();
+    final state = await runningState.timeout(const Duration(seconds: 2));
+
+    await runWithRealHttpClient(() async {
+      final client = HttpClient();
+      try {
+        final request = await client.postUrl(
+          Uri.http('127.0.0.1:${state.port}', '/v1/images/generations'),
+        );
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer expected-key');
+        request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+        request.write(jsonEncode({'prompt': 'A cat'}));
+
+        final response = await request.close();
+        final body = await utf8.decoder.bind(response).join();
+
+        expect(response.statusCode, HttpStatus.serviceUnavailable);
+        expect(body, contains('service_unavailable'));
+      } finally {
+        client.close(force: true);
+      }
+    });
+  });
+
+  test('image generations rejects bodies that omit the prompt', () async {
+    final harness = await _ControllerHarness.create();
+    addTearDown(harness.dispose);
+    final settings = AppSettings.defaults(
+      apiKey: 'expected-key',
+    ).copyWith(port: 0, androidBackgroundRuntime: false);
+
+    await harness.controller.configure(settings: settings, accounts: const <AccountProfile>[]);
+    final runningState = harness.controller.states.firstWhere((state) => state.running);
+    await harness.controller.start();
+    final state = await runningState.timeout(const Duration(seconds: 2));
+
+    await runWithRealHttpClient(() async {
+      final client = HttpClient();
+      try {
+        final request = await client.postUrl(
+          Uri.http('127.0.0.1:${state.port}', '/v1/images/generations'),
+        );
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer expected-key');
+        request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+        request.write(jsonEncode({'model': 'nano-banana-pro'}));
+
+        final response = await request.close();
+        final body = await utf8.decoder.bind(response).join();
+
+        expect(response.statusCode, HttpStatus.badRequest);
+        expect(body, contains('invalid_request_error'));
+        expect(body, contains('prompt'));
+      } finally {
+        client.close(force: true);
+      }
+    });
+  });
+
   test('configure skips malformed Kiro sources while keeping valid accounts', () async {
     final tempDirectory = await Directory.systemTemp.createTemp('kick_kiro_configure_bad_source');
     addTearDown(() => tempDirectory.delete(recursive: true));
