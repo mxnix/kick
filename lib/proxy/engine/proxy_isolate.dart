@@ -462,6 +462,13 @@ class _ProxyIsolateHost {
   ModelCatalog _catalog = ModelCatalog(customModels: const []);
   List<String> _geminiModels = const <String>[];
   List<String> _kiroModels = const <String>[];
+
+  /// Luma models are statically known (no discovery API). Derived from
+  /// [lumaImageModelActions] keys, excluding the prefixed duplicates.
+  static final List<String> _lumaStaticModels = lumaImageModelActions.keys
+      .where((key) => !key.contains('/'))
+      .toList(growable: false);
+
   DateTime? _modelCatalogRefreshAttemptedAt;
   Future<void>? _modelCatalogRefreshTask;
   ProxyAccountPool _pool = ProxyAccountPool(<ProxyRuntimeAccount>[]);
@@ -1743,6 +1750,9 @@ class _ProxyIsolateHost {
     final hasKiroAccounts = _pool.accounts.any(
       (account) => account.provider == AccountProvider.kiro && account.enabled,
     );
+    final hasLumaAccounts = _pool.accounts.any(
+      (account) => account.provider == AccountProvider.luma && account.enabled,
+    );
 
     if (hasGeminiAccounts) {
       _geminiModels = await _discoverGeminiModels() ?? _geminiModels;
@@ -1759,8 +1769,10 @@ class _ProxyIsolateHost {
       customModels: ((settings['custom_models'] as List?) ?? const []).cast<String>(),
       geminiModels: _geminiModels,
       kiroModels: _kiroModels,
+      lumaModels: hasLumaAccounts ? _lumaStaticModels : const <String>[],
       enableGemini: hasGeminiAccounts,
       enableKiro: hasKiroAccounts,
+      enableLuma: hasLumaAccounts,
     );
     _modelCatalogRefreshAttemptedAt = DateTime.now();
   }

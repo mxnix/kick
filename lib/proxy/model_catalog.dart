@@ -31,13 +31,17 @@ class ModelCatalog {
     required List<String> customModels,
     List<String> geminiModels = const [],
     List<String> kiroModels = const [],
+    List<String> lumaModels = const [],
     bool enableGemini = true,
     bool? enableKiro,
+    bool? enableLuma,
   }) : _customModels = customModels,
        _geminiModels = geminiModels,
        _kiroModels = kiroModels,
+       _lumaModels = lumaModels,
        _enableGemini = enableGemini,
-       _enableKiro = enableKiro ?? kiroModels.isNotEmpty;
+       _enableKiro = enableKiro ?? kiroModels.isNotEmpty,
+       _enableLuma = enableLuma ?? lumaModels.isNotEmpty;
 
   static const String googleProviderId = 'google';
   static const String kiroProviderId = 'kiro';
@@ -46,8 +50,10 @@ class ModelCatalog {
   final List<String> _customModels;
   final List<String> _geminiModels;
   final List<String> _kiroModels;
+  final List<String> _lumaModels;
   final bool _enableGemini;
   final bool _enableKiro;
+  final bool _enableLuma;
 
   List<String> all() {
     final values = <String>{};
@@ -59,6 +65,11 @@ class ModelCatalog {
     if (_enableKiro) {
       values.addAll({
         for (final model in _publicKiroModels) _publicModelId(AccountProvider.kiro, model),
+      });
+    }
+    if (_enableLuma) {
+      values.addAll({
+        for (final model in _publicLumaModels) _publicModelId(AccountProvider.luma, model),
       });
     }
     final list = values.where((item) => item.isNotEmpty).toList()..sort();
@@ -99,6 +110,9 @@ class ModelCatalog {
       if (explicitProvider == AccountProvider.kiro) {
         return parsed.modelId.trim().isNotEmpty;
       }
+      if (explicitProvider == AccountProvider.luma) {
+        return parsed.modelId.trim().isNotEmpty;
+      }
       final normalized = _normalizeForProvider(parsed.modelId, explicitProvider);
       if (_providerModels(explicitProvider).contains(normalized)) {
         return true;
@@ -113,6 +127,15 @@ class ModelCatalog {
 
     final kiroModel = _normalizeForProvider(parsed.modelId, AccountProvider.kiro);
     if (_kiroKnownModels.contains(kiroModel)) {
+      return true;
+    }
+
+    final lumaModel = _normalizeForProvider(parsed.modelId, AccountProvider.luma);
+    if (_lumaKnownModels.contains(lumaModel)) {
+      return true;
+    }
+
+    if (_enableLuma && _isLikelyProviderModel(AccountProvider.luma, lumaModel)) {
       return true;
     }
 
@@ -137,9 +160,19 @@ class ModelCatalog {
 
     final geminiModel = _normalizeForProvider(parsed.modelId, AccountProvider.gemini);
     final kiroModel = _normalizeForProvider(parsed.modelId, AccountProvider.kiro);
+    final lumaModel = _normalizeForProvider(parsed.modelId, AccountProvider.luma);
     final geminiKnown = _geminiKnownModels.contains(geminiModel);
     final kiroKnown = _kiroKnownModels.contains(kiroModel);
+    final lumaKnown = _lumaKnownModels.contains(lumaModel);
 
+    if (lumaKnown && !geminiKnown && !kiroKnown) {
+      return ResolvedProxyModel(
+        provider: AccountProvider.luma,
+        upstreamModel: lumaModel,
+        publicModel: _publicModelId(AccountProvider.luma, lumaModel),
+        explicitProvider: false,
+      );
+    }
     if (geminiKnown && !kiroKnown) {
       return ResolvedProxyModel(
         provider: AccountProvider.gemini,
@@ -161,6 +194,14 @@ class ModelCatalog {
         provider: AccountProvider.kiro,
         upstreamModel: kiroModel,
         publicModel: _publicModelId(AccountProvider.kiro, kiroModel),
+        explicitProvider: false,
+      );
+    }
+    if (_isLikelyProviderModel(AccountProvider.luma, lumaModel)) {
+      return ResolvedProxyModel(
+        provider: AccountProvider.luma,
+        upstreamModel: lumaModel,
+        publicModel: _publicModelId(AccountProvider.luma, lumaModel),
         explicitProvider: false,
       );
     }
@@ -206,15 +247,24 @@ class ModelCatalog {
         _normalizeForProvider(_parseModelReference(model).modelId, AccountProvider.kiro),
   };
 
+  Set<String> get _publicLumaModels => {
+    for (final model in _lumaModels) _normalizeForProvider(model, AccountProvider.luma),
+    for (final model in _customModels)
+      if (_parseModelReference(model).provider == AccountProvider.luma)
+        _normalizeForProvider(_parseModelReference(model).modelId, AccountProvider.luma),
+  };
+
   Set<String> get _geminiKnownModels => _enableGemini ? _geminiPublicModels : const <String>{};
 
   Set<String> get _kiroKnownModels => _enableKiro ? _publicKiroModels : const <String>{};
+
+  Set<String> get _lumaKnownModels => _enableLuma ? _publicLumaModels : const <String>{};
 
   Set<String> _providerModels(AccountProvider provider) {
     return switch (provider) {
       AccountProvider.antigravity => _geminiKnownModels,
       AccountProvider.kiro => _kiroKnownModels,
-      AccountProvider.luma => const <String>{},
+      AccountProvider.luma => _lumaKnownModels,
     };
   }
 
@@ -222,9 +272,7 @@ class ModelCatalog {
     return switch (provider) {
       AccountProvider.antigravity => _enableGemini,
       AccountProvider.kiro => _enableKiro,
-      // Luma is a stub provider without runtime support; never advertise its
-      // models through the OpenAI-compatible catalog yet.
-      AccountProvider.luma => false,
+      AccountProvider.luma => _enableLuma,
     };
   }
 
@@ -319,8 +367,11 @@ class ModelCatalog {
             normalized.startsWith('deepseek-') ||
             normalized.startsWith('minimax-') ||
             normalized.startsWith('qwen'),
-      // Luma is a stub provider; nothing routes through it yet.
-      AccountProvider.luma => false,
+      AccountProvider.luma =>
+        normalized.startsWith('nano-banana') ||
+            normalized.startsWith('gpt-image') ||
+            normalized == 'seedream' ||
+            normalized.startsWith('uni-'),
     };
   }
 }
