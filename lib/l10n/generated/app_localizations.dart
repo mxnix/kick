@@ -466,12 +466,6 @@ abstract class AppLocalizations {
   /// **'Sign in to Luma'**
   String get lumaConnectWebViewTitle;
 
-  /// No description provided for @lumaConnectWebViewSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign in like you would in a browser. KiCk picks up the session cookies once Luma redirects you to the home page.'**
-  String get lumaConnectWebViewSubtitle;
-
   /// No description provided for @lumaConnectWebViewIdleHint.
   ///
   /// In en, this message translates to:

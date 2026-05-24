@@ -73,7 +73,6 @@
     "lumaConnectDialogTitle": "Подключить аккаунт Luma",
     "lumaConnectDialogIntro": "Войдите на lumalabs.ai в браузере и вставьте куки сессии ниже. KiCk использует их для запросов к Luma Vespa API от вашего имени.",
     "lumaConnectWebViewTitle": "Войти в Luma",
-    "lumaConnectWebViewSubtitle": "Войдите как в обычном браузере. KiCk автоматически подхватит куки сессии, когда Luma перенаправит вас на главную.",
     "lumaConnectWebViewIdleHint": "Загружаю lumalabs.ai…",
     "lumaConnectWebViewLocationHint": "Страница: {url}",
     "@lumaConnectWebViewLocationHint": {

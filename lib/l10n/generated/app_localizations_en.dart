@@ -207,10 +207,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lumaConnectWebViewTitle => 'Sign in to Luma';
 
   @override
-  String get lumaConnectWebViewSubtitle =>
-      'Sign in like you would in a browser. KiCk picks up the session cookies once Luma redirects you to the home page.';
-
-  @override
   String get lumaConnectWebViewIdleHint => 'Loading lumalabs.ai…';
 
   @override

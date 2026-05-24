@@ -14,6 +14,16 @@ import 'luma_connect_dialog.dart';
 
 const String _lumaLoginEntryUrl = 'https://app.lumalabs.ai/';
 
+/// Hosts whose cookies we wipe before showing the sign-in webview, so the user
+/// always lands on a fresh login screen instead of being silently re-logged
+/// into the previously connected account.
+const List<String> _lumaCookieHosts = [
+  lumaPrimaryHost,
+  lumaAuthHost,
+  lumaAuthApiHost,
+  'lumalabs.ai',
+];
+
 /// Returns `true` when the current platform has a working `flutter_inappwebview`
 /// backend that can drive the auto-login flow. We deliberately disable it on
 /// Linux because the upstream Linux backend uses WebKit2GTK, which Google's
@@ -23,20 +33,22 @@ bool isLumaWebViewLoginSupported() {
   return Platform.isAndroid || Platform.isWindows;
 }
 
-/// Opens the Luma sign-in webview. Returns a [LumaConnectDialogResult] on
-/// success, the [LumaWebViewLoginManualFallback] sentinel when the user asks
-/// to switch to manual paste, or `null` when the dialog is dismissed.
+/// Opens the Luma sign-in webview as a full-screen route. Returns a
+/// [LumaConnectDialogResult] on success, the [LumaWebViewLoginManualFallback]
+/// sentinel when the user asks to switch to manual paste, or `null` when the
+/// route is dismissed.
 Future<Object?> showLumaWebViewLoginDialog(
   BuildContext context, {
   required LumaConnectService service,
   required String tokenRef,
   String? labelHint,
 }) {
-  return showDialog<Object?>(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) =>
-        _LumaWebViewLoginDialog(service: service, tokenRef: tokenRef, labelHint: labelHint),
+  return Navigator.of(context, rootNavigator: true).push<Object?>(
+    MaterialPageRoute<Object?>(
+      fullscreenDialog: true,
+      builder: (routeContext) =>
+          _LumaWebViewLoginDialog(service: service, tokenRef: tokenRef, labelHint: labelHint),
+    ),
   );
 }
 
@@ -71,173 +83,190 @@ class _LumaWebViewLoginDialogState extends State<_LumaWebViewLoginDialog> {
   InAppWebViewController? _controller;
   bool _busy = false;
   bool _capturing = false;
+  bool _preparing = true;
   String? _errorText;
   String? _currentUrl;
 
   String get _userAgent => Platform.isAndroid ? _androidChromeUa : _desktopChromeUa;
 
   @override
+  void initState() {
+    super.initState();
+    unawaited(_prepareFreshSession());
+  }
+
+  /// Wipes any Luma cookies left over from a previous sign-in so the embedded
+  /// webview lands on the actual login screen instead of silently restoring
+  /// the previously connected account.
+  Future<void> _prepareFreshSession() async {
+    try {
+      await _clearLumaCookies();
+    } catch (_) {
+      // Cookie clearing is best-effort; if the platform refuses we still want
+      // the webview to load so the user can sign in (or use the manual reset
+      // button below).
+    }
+    if (!mounted) return;
+    setState(() => _preparing = false);
+  }
+
+  Future<void> _clearLumaCookies() async {
+    final manager = CookieManager.instance();
+    for (final host in _lumaCookieHosts) {
+      final url = WebUri('https://$host/');
+      final cookies = await manager.getCookies(url: url);
+      for (final cookie in cookies) {
+        await manager.deleteCookie(url: url, name: cookie.name);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final scheme = Theme.of(context).colorScheme;
-    final mediaSize = MediaQuery.sizeOf(context);
-    final maxWidth = (mediaSize.width - 48).clamp(320.0, 980.0);
-    final maxHeight = (mediaSize.height - 96).clamp(420.0, 760.0);
 
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _DialogHeader(
-              title: l10n.lumaConnectWebViewTitle,
-              subtitle: l10n.lumaConnectWebViewSubtitle,
-              onClose: _busy ? null : () => Navigator.of(context).pop(),
-            ),
-            if (_errorText != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: scheme.errorContainer.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.error_rounded, size: 18, color: scheme.onErrorContainer),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _errorText!,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(color: scheme.onErrorContainer),
+    return PopScope(
+      canPop: !_busy,
+      child: Scaffold(
+        backgroundColor: scheme.surface,
+        body: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              _DialogHeader(
+                title: l10n.lumaConnectWebViewTitle,
+                onClose: _busy ? null : () => Navigator.of(context).pop(),
+              ),
+              if (_errorText != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: scheme.errorContainer.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.error_rounded, size: 18, color: scheme.onErrorContainer),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _errorText!,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(color: scheme.onErrorContainer),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            Expanded(
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: InAppWebView(
-                        initialUrlRequest: URLRequest(url: WebUri(_lumaLoginEntryUrl)),
-                        initialSettings: InAppWebViewSettings(
-                          userAgent: _userAgent,
-                          javaScriptEnabled: true,
-                          isInspectable: kDebugMode,
-                          incognito: false,
-                          useShouldOverrideUrlLoading: false,
-                          thirdPartyCookiesEnabled: true,
-                          // Required for Google sign-in popup screens, which
-                          // some IdP flows (MFA, captcha) rely on.
-                          supportMultipleWindows: false,
+              Expanded(
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: _preparing
+                            ? const SizedBox.shrink()
+                            : InAppWebView(
+                                initialUrlRequest: URLRequest(url: WebUri(_lumaLoginEntryUrl)),
+                                initialSettings: InAppWebViewSettings(
+                                  userAgent: _userAgent,
+                                  javaScriptEnabled: true,
+                                  isInspectable: kDebugMode,
+                                  incognito: false,
+                                  useShouldOverrideUrlLoading: false,
+                                  thirdPartyCookiesEnabled: true,
+                                  // Required for Google sign-in popup screens, which
+                                  // some IdP flows (MFA, captcha) rely on.
+                                  supportMultipleWindows: false,
+                                ),
+                                onWebViewCreated: (controller) {
+                                  _controller = controller;
+                                },
+                                onLoadStop: (controller, url) async {
+                                  if (!mounted) return;
+                                  setState(() => _currentUrl = url?.toString());
+                                  await _maybeCaptureSession(url);
+                                },
+                                onReceivedError: (controller, request, error) {
+                                  if (!mounted) return;
+                                  // Filter out subresource errors (favicons, ads, etc.).
+                                  if (request.isForMainFrame == true) {
+                                    setState(() {
+                                      _errorText = '${error.type}: ${error.description}';
+                                    });
+                                  }
+                                },
+                              ),
+                      ),
+                    ),
+                    if (_busy || _capturing || _preparing)
+                      Positioned.fill(
+                        child: ColoredBox(
+                          color: scheme.surface.withValues(alpha: 0.55),
+                          child: const Center(child: KickLoadingIndicator(size: 32)),
                         ),
-                        onWebViewCreated: (controller) {
-                          _controller = controller;
-                        },
-                        onLoadStop: (controller, url) async {
-                          if (!mounted) return;
-                          setState(() => _currentUrl = url?.toString());
-                          await _maybeCaptureSession(url);
-                        },
-                        onReceivedError: (controller, request, error) {
-                          if (!mounted) return;
-                          // Filter out subresource errors (favicons, ads, etc.).
-                          if (request.isForMainFrame == true) {
-                            setState(() {
-                              _errorText = '${error.type}: ${error.description}';
-                            });
-                          }
-                        },
                       ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Text(
+                  _currentUrl == null
+                      ? l10n.lumaConnectWebViewIdleHint
+                      : l10n.lumaConnectWebViewLocationHint(_shortUrl(_currentUrl!)),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 6, 12, 10),
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: l10n.lumaConnectWebViewClearSessionButton,
+                      onPressed: _busy ? null : _resetSession,
+                      icon: const Icon(KickIcons.deleteSweep),
                     ),
-                  ),
-                  if (_busy || _capturing)
-                    Positioned.fill(
-                      child: ColoredBox(
-                        color: scheme.surface.withValues(alpha: 0.55),
-                        child: const Center(child: KickLoadingIndicator(size: 32)),
-                      ),
+                    IconButton(
+                      tooltip: l10n.lumaConnectWebViewManualFallbackButton,
+                      onPressed: _busy ? null : _switchToManualPaste,
+                      icon: const Icon(KickIcons.copy),
                     ),
-                ],
+                    const Spacer(),
+                    TextButton(
+                      onPressed: _busy ? null : () => Navigator.of(context).pop(),
+                      child: Text(l10n.cancelButton),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: _busy || _capturing ? null : _retryCapture,
+                      icon: _capturing
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: KickLoadingIndicator(size: 18, contained: false),
+                            )
+                          : const Icon(KickIcons.check, size: 18),
+                      label: Text(l10n.lumaConnectWebViewSubmitButton),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Text(
-                _currentUrl == null
-                    ? l10n.lumaConnectWebViewIdleHint
-                    : l10n.lumaConnectWebViewLocationHint(_shortUrl(_currentUrl!)),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
-              child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      TextButton.icon(
-                        onPressed: _busy ? null : _resetSession,
-                        icon: const Icon(KickIcons.deleteSweep, size: 18),
-                        label: Text(l10n.lumaConnectWebViewClearSessionButton),
-                      ),
-                      TextButton.icon(
-                        onPressed: _busy ? null : _switchToManualPaste,
-                        icon: const Icon(KickIcons.copy, size: 18),
-                        label: Text(l10n.lumaConnectWebViewManualFallbackButton),
-                      ),
-                    ],
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: _busy ? null : () => Navigator.of(context).pop(),
-                        child: Text(l10n.cancelButton),
-                      ),
-                      FilledButton.icon(
-                        onPressed: _busy || _capturing ? null : _retryCapture,
-                        icon: _capturing
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: KickLoadingIndicator(size: 18, contained: false),
-                              )
-                            : const Icon(KickIcons.check, size: 18),
-                        label: Text(l10n.lumaConnectWebViewSubmitButton),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -339,8 +368,7 @@ class _LumaWebViewLoginDialogState extends State<_LumaWebViewLoginDialog> {
       _errorText = null;
     });
     try {
-      final manager = CookieManager.instance();
-      await manager.deleteAllCookies();
+      await _clearLumaCookies();
       await InAppWebViewController.clearAllCache();
       await controller.loadUrl(urlRequest: URLRequest(url: WebUri(_lumaLoginEntryUrl)));
     } finally {
@@ -405,35 +433,19 @@ Future<LumaConnectDialogResult?> showLumaConnectFlow(
 }
 
 class _DialogHeader extends StatelessWidget {
-  const _DialogHeader({required this.title, required this.subtitle, this.onClose});
+  const _DialogHeader({required this.title, this.onClose});
 
   final String title;
-  final String subtitle;
   final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 8, 10),
+      padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ],
-            ),
-          ),
+          Expanded(child: Text(title, style: Theme.of(context).textTheme.titleLarge)),
           IconButton(
             tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
             onPressed: onClose,

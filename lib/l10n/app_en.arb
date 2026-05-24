@@ -106,7 +106,6 @@
   "lumaConnectDialogTitle": "Connect Luma account",
   "lumaConnectDialogIntro": "Sign in to lumalabs.ai in your browser, then paste the session cookies below. KiCk uses them to talk to the Luma Vespa API on your behalf.",
   "lumaConnectWebViewTitle": "Sign in to Luma",
-  "lumaConnectWebViewSubtitle": "Sign in like you would in a browser. KiCk picks up the session cookies once Luma redirects you to the home page.",
   "lumaConnectWebViewIdleHint": "Loading lumalabs.ai…",
   "lumaConnectWebViewLocationHint": "Page: {url}",
   "@lumaConnectWebViewLocationHint": {

@@ -207,10 +207,6 @@ class AppLocalizationsUk extends AppLocalizations {
   String get lumaConnectWebViewTitle => 'Увійти в Luma';
 
   @override
-  String get lumaConnectWebViewSubtitle =>
-      'Увійдіть як у звичайному браузері. KiCk автоматично підхопить куки сесії, коли Luma перенаправить вас на головну.';
-
-  @override
   String get lumaConnectWebViewIdleHint => 'Завантажую lumalabs.ai…';
 
   @override
