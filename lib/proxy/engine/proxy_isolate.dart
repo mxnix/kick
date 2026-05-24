@@ -516,7 +516,13 @@ class _ProxyIsolateHost {
             default429Delay: Duration(seconds: _settings?['retry_429_delay_seconds'] as int? ?? 30),
           ),
         );
-        await _refreshModelCatalog(force: true);
+        // Rebuild the catalog synchronously from the cached discovery and
+        // statically known providers (Luma) so the first `/v1/models` hit
+        // after configure already exposes the right set. Discovery refresh is
+        // kicked off in the background and updates the catalog when it
+        // completes.
+        _rebuildCatalogFromPool();
+        unawaited(_refreshModelCatalog(force: true));
         await _publishAccounts();
         if (_server != null &&
             _shouldRestartServerForConfigurationChange(previousSettings, _settings)) {
@@ -1754,17 +1760,79 @@ class _ProxyIsolateHost {
       (account) => account.provider == AccountProvider.luma && account.enabled,
     );
 
-    if (hasGeminiAccounts) {
-      _geminiModels = await _discoverGeminiModels() ?? _geminiModels;
-    } else {
+    if (!hasGeminiAccounts) {
       _geminiModels = const <String>[];
     }
-    if (hasKiroAccounts) {
-      _kiroModels = await _discoverKiroModels() ?? _kiroModels;
-    } else {
+    if (!hasKiroAccounts) {
       _kiroModels = const <String>[];
     }
 
+    // Publish a catalog snapshot synchronously so providers with statically
+    // known models (Luma) and providers backed by cached discovery results
+    // (Gemini/Kiro) are visible immediately, even while a fresh discovery is
+    // in flight. Without this Luma models would stay hidden behind the slowest
+    // Gemini/Kiro upstream call - including its retries and timeouts.
+    _rebuildCatalog(
+      settings: settings,
+      hasGeminiAccounts: hasGeminiAccounts,
+      hasKiroAccounts: hasKiroAccounts,
+      hasLumaAccounts: hasLumaAccounts,
+    );
+
+    // Run discoveries in parallel - one slow provider must not delay the
+    // others. Each `_discover*` call already swallows per-account failures.
+    final results = await Future.wait(<Future<List<String>?>>[
+      hasGeminiAccounts ? _discoverGeminiModels() : Future.value(null),
+      hasKiroAccounts ? _discoverKiroModels() : Future.value(null),
+    ]);
+
+    if (hasGeminiAccounts) {
+      _geminiModels = results[0] ?? _geminiModels;
+    }
+    if (hasKiroAccounts) {
+      _kiroModels = results[1] ?? _kiroModels;
+    }
+
+    _rebuildCatalog(
+      settings: settings,
+      hasGeminiAccounts: hasGeminiAccounts,
+      hasKiroAccounts: hasKiroAccounts,
+      hasLumaAccounts: hasLumaAccounts,
+    );
+    _modelCatalogRefreshAttemptedAt = DateTime.now();
+  }
+
+  /// Rebuilds the catalog using the current pool snapshot and cached
+  /// discovery results. Safe to call from message handlers because it does
+  /// no I/O.
+  void _rebuildCatalogFromPool() {
+    final settings = _settings;
+    if (settings == null) {
+      return;
+    }
+    final hasGeminiAccounts = _pool.accounts.any(
+      (account) => account.provider == AccountProvider.gemini && account.enabled,
+    );
+    final hasKiroAccounts = _pool.accounts.any(
+      (account) => account.provider == AccountProvider.kiro && account.enabled,
+    );
+    final hasLumaAccounts = _pool.accounts.any(
+      (account) => account.provider == AccountProvider.luma && account.enabled,
+    );
+    _rebuildCatalog(
+      settings: settings,
+      hasGeminiAccounts: hasGeminiAccounts,
+      hasKiroAccounts: hasKiroAccounts,
+      hasLumaAccounts: hasLumaAccounts,
+    );
+  }
+
+  void _rebuildCatalog({
+    required Map<String, Object?> settings,
+    required bool hasGeminiAccounts,
+    required bool hasKiroAccounts,
+    required bool hasLumaAccounts,
+  }) {
     _catalog = ModelCatalog(
       customModels: ((settings['custom_models'] as List?) ?? const []).cast<String>(),
       geminiModels: _geminiModels,
@@ -1774,7 +1842,6 @@ class _ProxyIsolateHost {
       enableKiro: hasKiroAccounts,
       enableLuma: hasLumaAccounts,
     );
-    _modelCatalogRefreshAttemptedAt = DateTime.now();
   }
 
   Future<List<String>?> _discoverKiroModels() async {
