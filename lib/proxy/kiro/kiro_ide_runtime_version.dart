@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 /// Pinned fallback used when no probe has succeeded yet, when the probe fails,
 /// or in tests. Kept aligned with the version embedded by the build matrix and
 /// rotated by the [Sync Kiro IDE Version] CI workflow.
-const String fallbackKiroIdeVersion = '0.12.224';
+const String fallbackKiroIdeVersion = '0.12.263';
 
 const Duration _kiroIdeVersionProbeMinInterval = Duration(hours: 12);
 const Duration _kiroIdeVersionProbeTimeout = Duration(seconds: 6);
