@@ -39,6 +39,15 @@ void main() {
       expect(session.email, 'tester@example.com');
     });
 
+    test('accepts a full Cookie header prefix', () {
+      final session = sessionFromRawCookieHeader(
+        'Cookie: wos-session=opaque; workos-access-token=jwt',
+      );
+
+      expect(session.cookies['wos-session'], 'opaque');
+      expect(session.cookies['workos-access-token'], 'jwt');
+    });
+
     test('throws when wos-session is missing', () {
       expect(
         () => sessionFromRawCookieHeader('_fbp=fb.123; access-token=blob'),

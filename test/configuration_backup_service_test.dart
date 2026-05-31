@@ -9,6 +9,7 @@ import 'package:kick/data/models/app_settings.dart';
 import 'package:kick/data/models/oauth_tokens.dart';
 import 'package:kick/features/settings/configuration_backup_service.dart';
 import 'package:kick/proxy/kiro/kiro_auth_source.dart';
+import 'package:kick/proxy/luma/luma_session.dart';
 
 void main() {
   AccountProfile buildAccount({
@@ -428,6 +429,155 @@ void main() {
     expect(writtenTokens.keys, ['primary-ref']);
     expect(writtenTokens['primary-ref']?.accessToken, 'access-primary');
     expect(deletedTokens, containsAll(['obsolete-ref', 'secondary-ref']));
+  });
+
+  test('restores Luma sessions from backup json', () async {
+    final savedSettings = <AppSettings>[];
+    final replacedAccounts = <List<AccountProfile>>[];
+    final writtenLumaSessions = <String, String>{};
+    final deletedLumaSessions = <String>[];
+    const lumaSession = LumaSession(
+      cookies: {'wos-session': 'cookie-blob'},
+      teamId: 'team-1',
+      realmId: 'realm-1',
+      email: 'luma@example.com',
+    );
+    final lumaAccount = buildAccount(
+      id: 'luma',
+      label: 'Luma',
+      email: 'luma@example.com',
+      projectId: '',
+      provider: AccountProvider.luma,
+      tokenRef: 'luma-ref',
+    );
+    final backupContents = jsonEncode({
+      'schema': 'kick.configuration_backup',
+      'version': 1,
+      'exported_at': '2026-03-29T10:00:00Z',
+      'settings': AppSettings.defaults(apiKey: 'restored-api-key').toBackupJson(),
+      'accounts': [
+        {...lumaAccount.toBackupJson(), 'luma_session': lumaSession.toJson()},
+      ],
+    });
+
+    final service = ConfigurationBackupService(
+      readTokens: (_) async => null,
+      readCurrentAccounts: () async => const <AccountProfile>[],
+      readCurrentSettings: () async => AppSettings.defaults(apiKey: 'old-api-key'),
+      saveSettings: (settings) async {
+        savedSettings.add(settings);
+      },
+      replaceAccounts: (accounts) async {
+        replacedAccounts.add(accounts);
+      },
+      writeTokens: (_, _) async {},
+      deleteTokens: (_) async {},
+      readLumaSession: (_) async => null,
+      writeLumaSession: (tokenRef, payload) async {
+        writtenLumaSessions[tokenRef] = payload;
+      },
+      deleteLumaSession: (tokenRef) async {
+        deletedLumaSessions.add(tokenRef);
+      },
+      pickFileCallback: ({String? dialogTitle}) async {
+        return ConfigurationBackupPickedFile(
+          fileName: 'kick-luma-restore.json',
+          bytes: Uint8List.fromList(utf8.encode(backupContents)),
+        );
+      },
+    );
+
+    final result = await service.restore(dialogTitle: 'Pick backup');
+
+    expect(result, isNotNull);
+    expect(result!.accountsWithTokens, 1);
+    expect(result.accountsWithoutTokens, 0);
+    expect(savedSettings.single.apiKey, 'restored-api-key');
+    expect(replacedAccounts.single.single.provider, AccountProvider.luma);
+    expect(writtenLumaSessions.keys, ['luma-ref']);
+    expect(LumaSession.tryDecode(writtenLumaSessions['luma-ref'])?.realmId, 'realm-1');
+    expect(deletedLumaSessions, isEmpty);
+  });
+
+  test('rolls back Luma sessions when restore fails after writing secrets', () async {
+    final previousSettings = AppSettings.defaults(apiKey: 'previous-key');
+    final restoredSettings = AppSettings.defaults(apiKey: 'restored-key');
+    final existingAccount = buildAccount(
+      id: 'existing-luma',
+      label: 'Existing Luma',
+      email: 'existing@example.com',
+      projectId: '',
+      provider: AccountProvider.luma,
+      tokenRef: 'existing-luma-ref',
+    );
+    final restoredAccount = buildAccount(
+      id: 'restored-luma',
+      label: 'Restored Luma',
+      email: 'restored@example.com',
+      projectId: '',
+      provider: AccountProvider.luma,
+      tokenRef: 'restored-luma-ref',
+    );
+    const existingSession = LumaSession(
+      cookies: {'wos-session': 'old-cookie'},
+      teamId: 'old-team',
+      realmId: 'old-realm',
+    );
+    const restoredSession = LumaSession(
+      cookies: {'wos-session': 'new-cookie'},
+      teamId: 'new-team',
+      realmId: 'new-realm',
+    );
+
+    final persistedSettings = previousSettings;
+    List<AccountProfile> persistedAccounts = [existingAccount];
+    final persistedLumaSessions = <String, String>{'existing-luma-ref': existingSession.encode()};
+
+    final service = ConfigurationBackupService(
+      readTokens: (_) async => null,
+      readCurrentAccounts: () async => List<AccountProfile>.from(persistedAccounts),
+      readCurrentSettings: () async => persistedSettings,
+      saveSettings: (_) async {
+        throw StateError('settings write failed');
+      },
+      replaceAccounts: (accounts) async {
+        persistedAccounts = List<AccountProfile>.from(accounts);
+      },
+      writeTokens: (_, _) async {},
+      deleteTokens: (_) async {},
+      readLumaSession: (tokenRef) async => persistedLumaSessions[tokenRef],
+      writeLumaSession: (tokenRef, payload) async {
+        persistedLumaSessions[tokenRef] = payload;
+      },
+      deleteLumaSession: (tokenRef) async {
+        persistedLumaSessions.remove(tokenRef);
+      },
+      pickFileCallback: ({String? dialogTitle}) async {
+        return ConfigurationBackupPickedFile(
+          fileName: 'kick-restore.json',
+          bytes: Uint8List.fromList(
+            utf8.encode(
+              jsonEncode({
+                'schema': 'kick.configuration_backup',
+                'version': 1,
+                'exported_at': '2026-03-29T10:00:00Z',
+                'settings': restoredSettings.toBackupJson(),
+                'accounts': [
+                  {...restoredAccount.toBackupJson(), 'luma_session': restoredSession.toJson()},
+                ],
+              }),
+            ),
+          ),
+        );
+      },
+    );
+
+    await expectLater(service.restore(), throwsA(isA<StateError>()));
+
+    expect(persistedSettings.apiKey, previousSettings.apiKey);
+    expect(persistedAccounts.map((account) => account.id), [existingAccount.id]);
+    expect(persistedLumaSessions.keys, ['existing-luma-ref']);
+    expect(LumaSession.tryDecode(persistedLumaSessions['existing-luma-ref'])?.realmId, 'old-realm');
   });
 
   test('restores password-protected backup after retrying invalid password', () async {

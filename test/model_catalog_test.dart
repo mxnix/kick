@@ -44,6 +44,24 @@ void main() {
     expect(resolved.publicModel, 'kiro/deepseek-3.2');
   });
 
+  test('keeps bare Claude model ids on Kiro unless a provider prefix is explicit', () {
+    final catalog = ModelCatalog(
+      customModels: const [],
+      geminiModels: const ['claude-opus-4-6-thinking'],
+      kiroModels: const ['claude-opus-4.7'],
+      enableGemini: true,
+      enableKiro: true,
+    );
+
+    final bare = catalog.resolve('claude-opus-4.7');
+    final explicitGoogle = catalog.resolve('google/claude-opus-4-6-thinking');
+
+    expect(bare.provider, AccountProvider.kiro);
+    expect(bare.publicModel, 'kiro/claude-opus-4.7');
+    expect(explicitGoogle.provider, AccountProvider.gemini);
+    expect(explicitGoogle.publicModel, 'google/claude-opus-4-6-thinking');
+  });
+
   test('does not advertise hardcoded Kiro models when discovery is empty', () {
     final catalog = ModelCatalog(customModels: const [], enableGemini: false, enableKiro: true);
 

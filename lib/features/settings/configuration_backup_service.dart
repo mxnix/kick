@@ -243,6 +243,7 @@ class ConfigurationBackupService {
     final currentSettings = await _readCurrentSettings();
     final existingAccounts = await _readCurrentAccounts();
     final previousTokensByRef = await _snapshotTokens(existingAccounts);
+    final previousLumaSessionsByRef = await _snapshotLumaSessions(existingAccounts);
     final preparedRestore = await _prepareAccountsForRestore(document.accounts);
     final restoredEntries = preparedRestore.accounts;
     final restoredAccounts = restoredEntries.map((entry) => entry.profile).toList(growable: false);
@@ -254,6 +255,7 @@ class ConfigurationBackupService {
     };
 
     final importedTokenRefs = <String>{};
+    final importedLumaSessionRefs = <String>{};
     for (final entry in restoredEntries) {
       if (!entry.profile.usesSecretStoreTokens && entry.profile.provider != AccountProvider.luma) {
         continue;
@@ -261,6 +263,9 @@ class ConfigurationBackupService {
       final tokenRef = entry.profile.tokenRef.trim();
       if (tokenRef.isNotEmpty) {
         importedTokenRefs.add(tokenRef);
+        if (entry.profile.provider == AccountProvider.luma) {
+          importedLumaSessionRefs.add(tokenRef);
+        }
       }
     }
 
@@ -347,7 +352,9 @@ class ConfigurationBackupService {
         settings: currentSettings,
         accounts: existingAccounts,
         tokensByRef: previousTokensByRef,
+        lumaSessionsByRef: previousLumaSessionsByRef,
         importedTokenRefs: importedTokenRefs,
+        importedLumaSessionRefs: importedLumaSessionRefs,
         createdManagedKiroSourcePaths: preparedRestore.createdManagedKiroSourcePaths,
       );
       Error.throwWithStackTrace(error, stackTrace);
@@ -524,6 +531,26 @@ class ConfigurationBackupService {
     return tokensByRef;
   }
 
+  Future<Map<String, String?>> _snapshotLumaSessions(List<AccountProfile> accounts) async {
+    final readLumaSession = _readLumaSession;
+    if (readLumaSession == null) {
+      return const <String, String?>{};
+    }
+
+    final sessionsByRef = <String, String?>{};
+    for (final account in accounts) {
+      if (account.provider != AccountProvider.luma) {
+        continue;
+      }
+      final tokenRef = account.tokenRef.trim();
+      if (tokenRef.isEmpty || sessionsByRef.containsKey(tokenRef)) {
+        continue;
+      }
+      sessionsByRef[tokenRef] = await readLumaSession(tokenRef);
+    }
+    return sessionsByRef;
+  }
+
   Future<_KiroManagedCredentialBackupState?> _readKiroManagedCredentialState(
     AccountProfile account,
   ) async {
@@ -568,6 +595,7 @@ class ConfigurationBackupService {
             profile: profile,
             tokens: entry.tokens,
             kiroManagedCredentialState: entry.kiroManagedCredentialState,
+            lumaSession: entry.lumaSession,
           ),
         );
         continue;
@@ -588,6 +616,7 @@ class ConfigurationBackupService {
           ),
           tokens: entry.tokens,
           kiroManagedCredentialState: providerState,
+          lumaSession: entry.lumaSession,
         ),
       );
     }
@@ -602,7 +631,9 @@ class ConfigurationBackupService {
     required AppSettings? settings,
     required List<AccountProfile> accounts,
     required Map<String, OAuthTokens?> tokensByRef,
+    required Map<String, String?> lumaSessionsByRef,
     required Set<String> importedTokenRefs,
+    required Set<String> importedLumaSessionRefs,
     required List<String> createdManagedKiroSourcePaths,
   }) async {
     try {
@@ -619,6 +650,20 @@ class ConfigurationBackupService {
           await _deleteTokens(tokenRef);
         } else {
           await _writeTokens(tokenRef, tokens);
+        }
+      } catch (_) {
+        // Best-effort rollback; preserve the original restore error.
+      }
+    }
+
+    final affectedLumaSessionRefs = <String>{...lumaSessionsByRef.keys, ...importedLumaSessionRefs};
+    for (final tokenRef in affectedLumaSessionRefs) {
+      try {
+        final session = lumaSessionsByRef[tokenRef];
+        if (session == null) {
+          await _deleteLumaSession?.call(tokenRef);
+        } else {
+          await _writeLumaSession?.call(tokenRef, session);
         }
       } catch (_) {
         // Best-effort rollback; preserve the original restore error.

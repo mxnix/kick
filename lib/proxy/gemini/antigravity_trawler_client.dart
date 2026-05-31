@@ -65,7 +65,12 @@ class AntigravityTrawlerClient {
     }
 
     if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
+      final Object? decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } on FormatException {
+        return response.body;
+      }
       if (decoded is Map<String, dynamic>) {
         final content =
             decoded['content'] as String? ??

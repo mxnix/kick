@@ -194,10 +194,7 @@ class LumaRealmClient {
       'source': source,
       'name': name,
       if (width != null || height != null)
-        'meta': <String, Object?>{
-          if (width != null) 'width': width,
-          if (height != null) 'height': height,
-        },
+        'meta': <String, Object?>{'width': ?width, 'height': ?height},
     };
     final json = await _postJson(
       session,

@@ -121,8 +121,12 @@ LumaSession sessionFromRawCookieHeader(
   Set<String> requiredCookies = const {'wos-session'},
   String? email,
 }) {
+  final normalizedHeader = rawCookieHeader.replaceFirst(
+    RegExp(r'^\s*cookie\s*:\s*', caseSensitive: false),
+    '',
+  );
   final cookies = <String, String>{};
-  for (final piece in rawCookieHeader.split(';')) {
+  for (final piece in normalizedHeader.split(';')) {
     final trimmed = piece.trim();
     if (trimmed.isEmpty) continue;
     final eq = trimmed.indexOf('=');

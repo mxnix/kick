@@ -201,7 +201,7 @@ class AccountProfile {
       'last_quota_snapshot': lastQuotaSnapshot,
       'token_ref': tokenRef,
       'tokens': tokens?.toJson(),
-      if (lumaSession != null) 'luma_session': lumaSession,
+      'luma_session': ?lumaSession,
     };
   }
 
