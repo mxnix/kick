@@ -70,6 +70,7 @@ class ModelCatalog {
     if (_enableLuma) {
       values.addAll({
         for (final model in _publicLumaModels) _publicModelId(AccountProvider.luma, model),
+        for (final model in _publicLumaModels) model,
       });
     }
     final list = values.where((item) => item.isNotEmpty).toList()..sort();
@@ -325,6 +326,9 @@ class ModelCatalog {
     if (_isLikelyProviderModel(AccountProvider.gemini, model)) {
       return AccountProvider.gemini;
     }
+    if (_isLikelyProviderModel(AccountProvider.luma, model)) {
+      return AccountProvider.luma;
+    }
     return null;
   }
 
@@ -372,6 +376,7 @@ class ModelCatalog {
         normalized.startsWith('nano-banana') ||
             normalized.startsWith('gpt-image') ||
             normalized == 'seedream' ||
+            normalized.startsWith('uni-image-') ||
             normalized.startsWith('uni-'),
     };
   }

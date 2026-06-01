@@ -31,6 +31,13 @@ void main() {
   }
 
   group('LumaImageEngine.generate', () {
+    test('advertised public models all map to Luma actions', () {
+      expect(lumaPublicImageModels, isNot(contains('uni-1')));
+      for (final model in lumaPublicImageModels) {
+        expect(lumaImageModelActions[model], isNotNull, reason: model);
+      }
+    });
+
     test('submits create_image action and returns the signed URL when the CDN is ready', () async {
       final requests = <Map<String, Object?>>[];
       final realmClient = LumaRealmClient(
@@ -75,7 +82,12 @@ void main() {
 
       final engine = LumaImageEngine(client: realmClient, httpClient: cdnClient());
 
-      final result = await engine.generate(session: session, prompt: 'A cat', size: '1920x1080');
+      final result = await engine.generate(
+        session: session,
+        prompt: 'A cat',
+        size: '1920x1080',
+        resolution: '4K',
+      );
 
       expect(result.url, 'https://cdn.example.test/ARTIFACT1.png');
       expect(result.artifactId, 'ARTIFACT1');
@@ -90,11 +102,67 @@ void main() {
       final fields = (body['fields'] as Map).cast<String, Object?>();
       expect(fields['prompt'], 'A cat');
       expect(fields['aspect_ratio'], '16:9');
-      expect(fields['resolution'], '2K');
+      expect(fields['resolution'], '4K');
       engine.close();
     });
 
-    test('translates create_image_* to modify_image_* when references are provided', () async {
+    test('keeps references on create_image actions when no source is provided', () async {
+      Map<String, Object?>? submittedBody;
+      final realmClient = LumaRealmClient(
+        httpClient: MockClient((request) async {
+          if (request.url.path == '/api/vespa/realms/realm-abc/actions') {
+            submittedBody = jsonDecode(request.body) as Map<String, Object?>;
+            return http.Response(
+              jsonEncode({
+                'action': {
+                  'id': 'action-1',
+                  'type': 'create_image_nano_banana_pro',
+                  'state': 'pending',
+                  'estimated_credits': 35,
+                  'params': <String, Object?>{},
+                },
+                'output_artifacts': {
+                  'image': ['ARTIFACT3'],
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path == '/api/vespa/realms/realm-abc/downloads') {
+            return http.Response(
+              jsonEncode({
+                'files': [
+                  {
+                    'url': 'https://cdn.example.test/ARTIFACT3.png',
+                    'filename': 'a.png',
+                    'artifact_id': 'ARTIFACT3',
+                    'size_bytes': 1,
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response('{}', 404);
+        }),
+      );
+
+      final engine = LumaImageEngine(client: realmClient, httpClient: cdnClient());
+      await engine.generate(
+        session: session,
+        prompt: 'Use these as style references',
+        referenceArtifactIds: const ['REF1', ' ', 'REF2'],
+      );
+
+      expect(submittedBody, isNotNull);
+      expect(submittedBody!['type'], 'create_image_nano_banana_pro');
+      final fields = (submittedBody!['fields'] as Map).cast<String, Object?>();
+      expect(fields['references'], const ['REF1', 'REF2']);
+      expect(fields.containsKey('source'), isFalse);
+      engine.close();
+    });
+
+    test('uses Luma source/references fields for modify_image actions', () async {
       Map<String, Object?>? submittedBody;
       final realmClient = LumaRealmClient(
         httpClient: MockClient((request) async {
@@ -146,8 +214,11 @@ void main() {
       expect(submittedBody, isNotNull);
       expect(submittedBody!['type'], 'modify_image_nano_banana_pro');
       final fields = (submittedBody!['fields'] as Map).cast<String, Object?>();
-      expect(fields['source_artifact_id'], 'SRC123');
-      expect(fields['reference_artifact_ids'], const ['REF1', 'REF2']);
+      expect(fields['source'], 'SRC123');
+      expect(fields['references'], const ['REF1', 'REF2']);
+      expect(fields.containsKey('aspect_ratio'), isFalse);
+      expect(fields.containsKey('source_artifact_id'), isFalse);
+      expect(fields.containsKey('reference_artifact_ids'), isFalse);
       engine.close();
     });
 

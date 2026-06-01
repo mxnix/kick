@@ -18,7 +18,9 @@ import '../gemini/gemini_code_assist_client.dart';
 import '../gemini/gemini_installation_identity.dart';
 import '../kiro/kiro_code_assist_client.dart';
 import '../kiro/kiro_ide_runtime_version.dart';
+import '../luma/luma_artifact_uploader.dart';
 import '../luma/luma_image_engine.dart';
+import '../luma/luma_realm_client.dart';
 import '../luma/luma_session.dart';
 import '../model_catalog.dart';
 import '../openai/openai_request_parser.dart';
@@ -466,11 +468,8 @@ class _ProxyIsolateHost {
   List<String> _geminiModels = const <String>[];
   List<String> _kiroModels = const <String>[];
 
-  /// Luma models are statically known (no discovery API). Derived from
-  /// [lumaImageModelActions] keys, excluding the prefixed duplicates.
-  static final List<String> _lumaStaticModels = lumaImageModelActions.keys
-      .where((key) => !key.contains('/'))
-      .toList(growable: false);
+  /// Luma models are statically known (no discovery API).
+  static const List<String> _lumaStaticModels = lumaPublicImageModels;
 
   DateTime? _modelCatalogRefreshAttemptedAt;
   Future<void>? _modelCatalogRefreshTask;
@@ -621,6 +620,7 @@ class _ProxyIsolateHost {
     router.post('/v1/chat/completions', _handleChatCompletions);
     router.post('/v1/responses', _handleResponses);
     router.post('/v1/images/generations', _handleImageGenerations);
+    router.post('/v1beta/models/<model|.*>', _handleGeminiCompatibleImageGeneration);
     return router;
   }
 
@@ -1210,6 +1210,244 @@ class _ProxyIsolateHost {
       );
       return _errorResponse(500, 'proxy_error', error.toString());
     }
+  }
+
+  Future<Response> _handleGeminiCompatibleImageGeneration(Request request, String modelPath) async {
+    final authResult = _authorizeRequest(request);
+    if (authResult != null) {
+      return authResult;
+    }
+
+    final route = request.requestedUri.path;
+    final requestedModel = _decodeGeminiGenerateContentModel(modelPath);
+    if (requestedModel == null || requestedModel.isEmpty) {
+      return _errorResponse(404, 'not_found', 'Unsupported Gemini-compatible image route.');
+    }
+
+    ProxyRuntimeAccount? selectedAccount;
+    try {
+      final body = await _readJson(request);
+      if (body == null) {
+        return _errorResponse(400, 'invalid_request_error', 'Request body must be valid JSON.');
+      }
+
+      final prompt = _extractGeminiImagePrompt(body);
+      if (prompt.isEmpty) {
+        return _errorResponse(
+          400,
+          'invalid_request_error',
+          '`contents[].parts[].text` is required for Gemini-compatible image generation.',
+        );
+      }
+
+      await _logRequest('v1beta.generateContent', request, body);
+      _recordAcceptedRequest();
+
+      final account = _selectLumaAccount();
+      if (account == null) {
+        return _errorResponse(
+          503,
+          'service_unavailable',
+          'No Luma account is connected. Add one in Settings → Accounts.',
+        );
+      }
+      selectedAccount = account;
+
+      final session = LumaSession.fromJson(account.lumaSessionJson!);
+      final realmId = session.realmId!;
+      _pool.markUsed(account);
+      await _publishAccounts();
+
+      final imageConfig = _readGeminiImageConfig(body);
+      final camelAspectRatio = _readString(imageConfig?['aspectRatio']);
+      final aspectRatio = camelAspectRatio.isNotEmpty
+          ? camelAspectRatio
+          : _readString(imageConfig?['aspect_ratio']);
+      final camelImageSize = _readString(imageConfig?['imageSize']);
+      final imageSize = camelImageSize.isNotEmpty
+          ? camelImageSize
+          : _readString(imageConfig?['image_size']);
+      final inlineImages = _extractGeminiInlineImages(body);
+
+      final realmClient = LumaRealmClient();
+      final uploader = LumaArtifactUploader(client: realmClient);
+      final engine = LumaImageEngine(client: realmClient);
+      try {
+        final references = <String>[];
+        for (var i = 0; i < inlineImages.length; i++) {
+          final image = inlineImages[i];
+          final artifact = await uploader.upload(
+            session: session,
+            realmId: realmId,
+            bytes: image.bytes,
+            contentType: image.contentType,
+            name: 'reference-${i + 1}.${_extensionForContentType(image.contentType)}',
+          );
+          references.add(artifact.id);
+        }
+
+        final primarySource = references.isNotEmpty ? references.first : null;
+        final extraReferences = references.skip(1).toList(growable: false);
+        final result = await engine.generate(
+          session: session,
+          prompt: prompt,
+          model: requestedModel,
+          size: aspectRatio.isEmpty ? null : aspectRatio,
+          resolution: imageSize.isEmpty ? null : imageSize,
+          referenceArtifactIds: extraReferences,
+          primarySourceArtifactId: primarySource,
+        );
+        final bytes = await engine.downloadBytes(result.url);
+
+        if (_pool.markSuccess(account)) {
+          await _publishAccounts();
+        }
+        _publishStatus();
+
+        return _jsonResponse({
+          'candidates': [
+            {
+              'content': {
+                'role': 'model',
+                'parts': [
+                  {
+                    'inlineData': {'mimeType': 'image/png', 'data': base64Encode(bytes)},
+                  },
+                ],
+              },
+              'finishReason': 'STOP',
+            },
+          ],
+        });
+      } finally {
+        uploader.close();
+        engine.close();
+      }
+    } on _RequestBodyTooLargeException catch (error, stackTrace) {
+      await _logFailure(
+        category: 'v1beta.generateContent',
+        route: route,
+        message: error.message,
+        stackTrace: stackTrace,
+      );
+      return _errorResponse(413, 'request_too_large', error.message);
+    } on FormatException catch (error, stackTrace) {
+      await _logFailure(
+        category: 'v1beta.generateContent',
+        route: route,
+        message: error.message,
+        stackTrace: stackTrace,
+      );
+      return _errorResponse(400, 'invalid_request_error', error.message);
+    } on GeminiGatewayException catch (error, stackTrace) {
+      if (selectedAccount != null) {
+        _registerFailure(selectedAccount, requestedModel, error);
+      }
+      await _logFailure(
+        category: 'v1beta.generateContent',
+        route: route,
+        message: error.message,
+        stackTrace: stackTrace,
+        rawPayload: error.rawResponseBody,
+      );
+      return _gatewayErrorResponse(error);
+    } catch (error, stackTrace) {
+      await _logFailure(
+        category: 'v1beta.generateContent',
+        route: route,
+        message: error.toString(),
+        stackTrace: stackTrace,
+      );
+      return _errorResponse(500, 'proxy_error', error.toString());
+    }
+  }
+
+  String? _decodeGeminiGenerateContentModel(String modelPath) {
+    const suffix = ':generateContent';
+    if (!modelPath.endsWith(suffix)) {
+      return null;
+    }
+    return Uri.decodeFull(modelPath.substring(0, modelPath.length - suffix.length)).trim();
+  }
+
+  Map<String, Object?>? _readGeminiImageConfig(Map<String, Object?> body) {
+    final generationConfig = body['generationConfig'] is Map
+        ? (body['generationConfig'] as Map).cast<String, Object?>()
+        : body['generation_config'] is Map
+        ? (body['generation_config'] as Map).cast<String, Object?>()
+        : null;
+    final imageConfig = generationConfig?['imageConfig'] is Map
+        ? (generationConfig!['imageConfig'] as Map).cast<String, Object?>()
+        : generationConfig?['image_config'] is Map
+        ? (generationConfig!['image_config'] as Map).cast<String, Object?>()
+        : null;
+    return imageConfig;
+  }
+
+  String _extractGeminiImagePrompt(Map<String, Object?> body) {
+    final fallbackPrompt = _readString(body['prompt']);
+    final texts = <String>[if (fallbackPrompt.isNotEmpty) fallbackPrompt];
+    for (final content in (body['contents'] as List?) ?? const []) {
+      if (content is! Map) {
+        continue;
+      }
+      for (final part in (content['parts'] as List?) ?? const []) {
+        if (part is! Map) {
+          continue;
+        }
+        final text = _readString(part['text']);
+        if (text.isNotEmpty) {
+          texts.add(text);
+        }
+      }
+    }
+    return texts.join('\n\n').trim();
+  }
+
+  List<_GeminiInlineImage> _extractGeminiInlineImages(Map<String, Object?> body) {
+    final images = <_GeminiInlineImage>[];
+    for (final content in (body['contents'] as List?) ?? const []) {
+      if (content is! Map) {
+        continue;
+      }
+      for (final part in (content['parts'] as List?) ?? const []) {
+        if (part is! Map) {
+          continue;
+        }
+        final inlineData = part['inlineData'] is Map
+            ? (part['inlineData'] as Map).cast<String, Object?>()
+            : part['inline_data'] is Map
+            ? (part['inline_data'] as Map).cast<String, Object?>()
+            : null;
+        if (inlineData == null) {
+          continue;
+        }
+
+        var data = _readString(inlineData['data']);
+        if (data.isEmpty) {
+          continue;
+        }
+        final comma = data.indexOf(',');
+        if (data.startsWith('data:') && comma >= 0) {
+          data = data.substring(comma + 1);
+        }
+        final bytes = base64Decode(data);
+        final rawContentType = _readString(inlineData['mimeType']).isNotEmpty
+            ? _readString(inlineData['mimeType'])
+            : _readString(inlineData['mime_type']);
+        final contentType = rawContentType.isNotEmpty ? rawContentType : 'image/png';
+        images.add(_GeminiInlineImage(bytes: bytes, contentType: contentType));
+      }
+    }
+    return images;
+  }
+
+  String _extensionForContentType(String contentType) {
+    return switch (contentType.trim().toLowerCase()) {
+      'image/jpeg' || 'image/jpg' => 'jpg',
+      'image/webp' => 'webp',
+      _ => 'png',
+    };
   }
 
   ProxyRuntimeAccount? _selectLumaAccount() {
@@ -3031,4 +3269,11 @@ class _RequestBodyTooLargeException implements Exception {
 
   @override
   String toString() => message;
+}
+
+class _GeminiInlineImage {
+  const _GeminiInlineImage({required this.bytes, required this.contentType});
+
+  final Uint8List bytes;
+  final String contentType;
 }

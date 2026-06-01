@@ -10,6 +10,16 @@ import 'luma_realm_models.dart';
 import 'luma_session.dart';
 
 /// Maps OpenAI model names to Luma action types for image generation.
+const List<String> lumaPublicImageModels = [
+  'nano-banana-pro',
+  'nano-banana-2',
+  'gpt-image-2',
+  'gpt-image-1.5',
+  'seedream',
+  'uni-1.1',
+  'uni-image-1.1',
+];
+
 const Map<String, String> lumaImageModelActions = {
   'nano-banana-pro': 'create_image_nano_banana_pro',
   'nano-banana-2': 'create_image_nano_banana_2',
@@ -18,6 +28,7 @@ const Map<String, String> lumaImageModelActions = {
   'seedream': 'create_image_seedream',
   'uni-1': 'create_image_uni_1',
   'uni-1.1': 'create_image_uni_1',
+  'uni-image-1.1': 'create_image_uni_1',
   'luma/nano-banana-pro': 'create_image_nano_banana_pro',
   'luma/nano-banana-2': 'create_image_nano_banana_2',
   'luma/gpt-image-2': 'create_image_gpt_image_2',
@@ -25,6 +36,7 @@ const Map<String, String> lumaImageModelActions = {
   'luma/seedream': 'create_image_seedream',
   'luma/uni-1': 'create_image_uni_1',
   'luma/uni-1.1': 'create_image_uni_1',
+  'luma/uni-image-1.1': 'create_image_uni_1',
 };
 
 /// Default model when none is specified.
@@ -67,13 +79,15 @@ class LumaImageEngine {
   ///
   /// [session] is the pre-loaded Luma session (cookies + realm).
   /// [referenceArtifactIds] are optional input artifact ids previously uploaded
-  /// via [LumaArtifactUploader.upload]. When non-empty the action becomes a
-  /// `modify_image_*` flavor (requires the corresponding modify action type).
+  /// via [LumaArtifactUploader.upload]. They are forwarded as Luma's
+  /// `references` field. [primarySourceArtifactId] selects the source image for
+  /// `modify_image_*` actions.
   Future<LumaImageResult> generate({
     required LumaSession session,
     required String prompt,
     String? model,
     String? size,
+    String? resolution,
     String? quality,
     String? responseFormat,
     int n = 1,
@@ -82,8 +96,8 @@ class LumaImageEngine {
   }) async {
     final effectiveModel =
         (model?.trim().isNotEmpty == true ? model!.trim() : lumaDefaultImageModel).toLowerCase();
-    final hasModifySource =
-        primarySourceArtifactId?.trim().isNotEmpty == true || referenceArtifactIds.isNotEmpty;
+    final sourceArtifactId = primarySourceArtifactId?.trim();
+    final hasModifySource = sourceArtifactId != null && sourceArtifactId.isNotEmpty;
     final actionType = _resolveActionType(effectiveModel, modify: hasModifySource);
     if (actionType == null) {
       throw GeminiGatewayException(
@@ -120,6 +134,7 @@ class LumaImageEngine {
       actionType: actionType,
       prompt: prompt,
       size: size,
+      resolution: resolution,
       quality: quality,
       primarySourceArtifactId: primarySourceArtifactId,
       referenceArtifactIds: referenceArtifactIds,
@@ -203,35 +218,40 @@ class LumaImageEngine {
     required String actionType,
     required String prompt,
     String? size,
+    String? resolution,
     String? quality,
     String? primarySourceArtifactId,
     List<String> referenceArtifactIds = const <String>[],
   }) {
     final fields = <String, Object?>{'prompt': prompt};
+    final isModifyAction = actionType.startsWith('modify_image');
     final parsed = _parseSize(size);
-    fields['aspect_ratio'] = parsed.aspectRatio;
-    fields['resolution'] = parsed.resolution;
+    if (!isModifyAction) {
+      fields['aspect_ratio'] = parsed.aspectRatio;
+    }
+    if (_actionSupportsResolution(actionType)) {
+      fields['resolution'] =
+          _normalizeLumaResolution(resolution, actionType: actionType) ?? parsed.resolution;
+    }
     if (actionType.contains('gpt_image')) {
       fields['quality'] = quality?.trim().isNotEmpty == true ? quality!.trim() : 'medium';
       fields['output_format'] = 'png';
     }
-    if (actionType.startsWith('modify_image')) {
+    final references = referenceArtifactIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
+    if (isModifyAction) {
       final source = primarySourceArtifactId?.trim();
       if (source != null && source.isNotEmpty) {
-        fields['source_artifact_id'] = source;
-      } else if (referenceArtifactIds.isNotEmpty) {
-        fields['source_artifact_id'] = referenceArtifactIds.first;
+        fields['source'] = source;
       }
-      final extras = referenceArtifactIds
-          .where((id) => id.trim().isNotEmpty && id != fields['source_artifact_id'])
-          .toList(growable: false);
+      final extras = references.where((id) => id != fields['source']).toList(growable: false);
       if (extras.isNotEmpty) {
-        fields['reference_artifact_ids'] = extras;
+        fields['references'] = extras;
       }
-    } else if (referenceArtifactIds.isNotEmpty) {
-      fields['reference_artifact_ids'] = referenceArtifactIds
-          .where((id) => id.trim().isNotEmpty)
-          .toList(growable: false);
+    } else if (references.isNotEmpty) {
+      fields['references'] = references;
     }
     return fields;
   }
@@ -269,6 +289,24 @@ class LumaImageEngine {
     _client.close();
     _httpClient.close();
   }
+}
+
+bool _actionSupportsResolution(String actionType) {
+  return actionType.contains('nano_banana') ||
+      actionType == 'create_image_gpt_image_2' ||
+      actionType == 'modify_image_gpt_image_2' ||
+      actionType == 'create_image_seedream';
+}
+
+String? _normalizeLumaResolution(String? value, {required String actionType}) {
+  final normalized = value?.trim().toUpperCase();
+  if (normalized == '512' && actionType.contains('nano_banana_2')) {
+    return normalized;
+  }
+  return switch (normalized) {
+    '1K' || '2K' || '4K' => normalized,
+    _ => null,
+  };
 }
 
 class _ParsedSize {

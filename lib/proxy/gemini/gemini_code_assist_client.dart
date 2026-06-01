@@ -2353,9 +2353,25 @@ Set<String> _extractQuotaModelIds(Map<String, Object?> response) {
     if (modelId.isEmpty) {
       continue;
     }
-    models.add(ModelCatalog.normalizeModel(modelId));
+    final normalized = ModelCatalog.normalizeModel(modelId);
+    if (_isDiscoverableGeminiModel(normalized)) {
+      models.add(normalized);
+    }
   }
   return models;
+}
+
+bool _isDiscoverableGeminiModel(String model) {
+  final normalized = model.trim().toLowerCase();
+  if (normalized.isEmpty ||
+      normalized.startsWith('chat_') ||
+      normalized.startsWith('tab_') ||
+      normalized.endsWith('-agent')) {
+    return false;
+  }
+  return normalized.startsWith('gemini-') ||
+      normalized.startsWith('claude-') ||
+      normalized.startsWith('gpt-oss-');
 }
 
 Map<String, Object?>? _typedDetail(List<Map<String, Object?>> details, String type) {
