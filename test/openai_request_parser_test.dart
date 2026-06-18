@@ -254,12 +254,14 @@ void main() {
       ],
     }, requestId: 'req_late_system');
 
-    expect(request.systemInstruction, 'Lead instruction.');
-    expect(request.turns, hasLength(3));
+    // Every system/developer message (leading or mid-conversation) is routed
+    // into the system instruction. This keeps the real conversation turns
+    // intact and prevents an injected instruction from becoming a trailing turn
+    // that the model would answer instead of the actual latest message.
+    expect(request.systemInstruction, 'Lead instruction.\n\nLate policy update.');
+    expect(request.turns, hasLength(2));
     expect(request.turns.first.role, 'user');
     expect(request.turns.first.parts.single.text, 'Hello');
-    expect(request.turns[1].role, 'user');
-    expect(request.turns[1].parts.single.text, 'Late policy update.');
     expect(request.turns.last.role, 'assistant');
     expect(request.turns.last.parts.single.text, 'Hi there');
   });
@@ -275,12 +277,16 @@ void main() {
       ],
     }, requestId: 'req_trailing_system_after_assistant');
 
-    expect(request.systemInstruction, 'You are a roleplay director.');
-    expect(request.turns, hasLength(2));
-    expect(request.turns[0].role, 'assistant');
-    expect(request.turns[0].parts.single.text, 'Previous character reply.');
-    expect(request.turns[1].role, 'user');
-    expect(request.turns[1].parts.single.text, 'Pause roleplay and write the memory book.');
+    // The standalone "<think>" prefill is dropped for Gemini, and the trailing
+    // system instruction is merged into the system instruction rather than
+    // becoming a user turn. Only the genuine assistant reply remains as a turn.
+    expect(
+      request.systemInstruction,
+      'You are a roleplay director.\n\nPause roleplay and write the memory book.',
+    );
+    expect(request.turns, hasLength(1));
+    expect(request.turns.single.role, 'assistant');
+    expect(request.turns.single.parts.single.text, 'Previous character reply.');
   });
 
   test('preserves standalone reasoning prefills for non-Gemini models', () {

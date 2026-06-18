@@ -146,12 +146,11 @@ class OpenAiRequestParser {
       throw const FormatException('`messages` must be an array.');
     }
 
-    final leadingSystemParts = <String>[];
+    final systemParts = <String>[];
     final turns = <UnifiedTurn>[];
     final toolDeclarations = _parseTools(json['tools']);
     final toolCallNames = <String, String>{};
     final shouldIgnoreReasoningPrefill = _isGeminiModel(model);
-    var seenNonSystemMessage = false;
 
     for (final rawMessage in messages) {
       if (rawMessage is! Map) {
@@ -164,15 +163,22 @@ class OpenAiRequestParser {
         if (text.isEmpty) {
           continue;
         }
-        if (!seenNonSystemMessage) {
-          leadingSystemParts.add(text);
-        } else {
-          turns.add(UnifiedTurn(role: 'user', parts: [UnifiedPart.text(text)]));
-        }
+        // System/developer messages can appear anywhere in the request. Clients
+        // like SillyTavern frequently inject large instruction blocks (thinking
+        // protocols, jailbreaks, "post-history instructions") *after* the real
+        // history and even after the user's latest message.
+        //
+        // These must NOT become a trailing user turn, nor be appended to the
+        // last user turn: doing so buries the genuine (often short) user
+        // question under a huge instruction block, and the model ends up
+        // responding to the instruction instead of the actual latest message.
+        //
+        // Instead, route every system/developer message into the system
+        // instruction. This keeps the real last user message as the final turn
+        // while still delivering the instructions where models expect them.
+        systemParts.add(text);
         continue;
       }
-
-      seenNonSystemMessage = true;
 
       if (role == 'assistant' &&
           shouldIgnoreReasoningPrefill &&
@@ -246,7 +252,7 @@ class OpenAiRequestParser {
     final jsonSchema = _readMapValue(responseFormat?['json_schema'], 'response_format.json_schema');
     final googleWebSearchEnabled = _parseGoogleWebSearchEnabled(json);
     final kiroServerToolsEnabled = _parseKiroServerToolsEnabled(json);
-    final mergedSystemInstruction = leadingSystemParts.join('\n\n').trim();
+    final mergedSystemInstruction = systemParts.join('\n\n').trim();
     var systemInstruction = mergedSystemInstruction.isEmpty ? null : mergedSystemInstruction;
     if (turns.isEmpty && systemInstruction != null) {
       turns.add(UnifiedTurn(role: 'user', parts: [UnifiedPart.text(systemInstruction)]));
