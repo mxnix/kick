@@ -243,7 +243,7 @@ void main() {
     expect(functionCall.thoughtSignature, 'sig_read_file');
   });
 
-  test('keeps only leading system and developer notes in system instruction', () {
+  test('routes all system and developer messages into system instruction', () {
     final request = OpenAiRequestParser.parseChatRequest({
       'model': 'gemini-2.5-pro',
       'messages': [
