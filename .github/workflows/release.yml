@@ -68,7 +68,7 @@ jobs:
           echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ steps.ref.outputs.source_ref }}
@@ -140,7 +140,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.metadata.outputs.ref }}
 
@@ -208,7 +208,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.metadata.outputs.ref }}
 
@@ -297,7 +297,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.metadata.outputs.ref }}
 
@@ -455,7 +455,7 @@ jobs:
 
     steps:
       - name: Checkout workflow sources
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -570,7 +570,7 @@ jobs:
 
     steps:
       - name: Checkout workflow sources
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.metadata.outputs.ref }}
 
@@ -660,7 +660,7 @@ jobs:
 
     steps:
       - name: Checkout workflow sources
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.metadata.outputs.ref }}
 
